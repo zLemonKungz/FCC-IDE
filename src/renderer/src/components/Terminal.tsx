@@ -7,6 +7,57 @@ import { useLayoutStore, LAYOUT } from '../stores/layout-store';
 import DragHandle from './DragHandle';
 import { IconClose, IconPlay, IconTerminal } from './icons';
 
+type TermPalette = NonNullable<ConstructorParameters<typeof XTerm>[0]>['theme'];
+
+const TERM_COLORS: Record<'dark' | 'light', TermPalette> = {
+  dark: {
+    background: '#0e1013',
+    foreground: '#e4e7ec',
+    cursor: '#d97a55',
+    cursorAccent: '#0e1013',
+    selectionBackground: 'rgba(108, 140, 255, 0.3)',
+    black: '#262b34',
+    red: '#e06c5a',
+    green: '#9fce8e',
+    yellow: '#e2b86b',
+    blue: '#7fb3d5',
+    magenta: '#c678dd',
+    cyan: '#56b6c2',
+    white: '#a0a8b4',
+    brightBlack: '#3d444f',
+    brightRed: '#e06c5a',
+    brightGreen: '#9fce8e',
+    brightYellow: '#e2b86b',
+    brightBlue: '#7fb3d5',
+    brightMagenta: '#c678dd',
+    brightCyan: '#56b6c2',
+    brightWhite: '#e4e7ec'
+  },
+  light: {
+    background: '#faf8f6',
+    foreground: '#2c2621',
+    cursor: '#c9643c',
+    cursorAccent: '#faf8f6',
+    selectionBackground: 'rgba(79, 111, 221, 0.3)',
+    black: '#cfc6bb',
+    red: '#d85c48',
+    green: '#3d9a6f',
+    yellow: '#b98a2e',
+    blue: '#4f6fdd',
+    magenta: '#a55db8',
+    cyan: '#3d8f9c',
+    white: '#6f665d',
+    brightBlack: '#a1968b',
+    brightRed: '#d85c48',
+    brightGreen: '#3d9a6f',
+    brightYellow: '#b98a2e',
+    brightBlue: '#4f6fdd',
+    brightMagenta: '#a55db8',
+    brightCyan: '#3d8f9c',
+    brightWhite: '#2c2621'
+  }
+};
+
 export default function TerminalPane({
   height,
   onResize
@@ -20,6 +71,7 @@ export default function TerminalPane({
   const root = useExplorerStore((s) => s.root);
   const visible = useLayoutStore((s) => s.terminalVisible);
   const toggleTerminal = useLayoutStore((s) => s.toggleTerminal);
+  const theme = useLayoutStore((s) => s.theme);
 
   useEffect(() => {
     if (!ref.current) return;
@@ -28,29 +80,7 @@ export default function TerminalPane({
       cursorBlink: true,
       fontFamily: 'var(--font-mono)',
       fontSize: 12,
-      theme: {
-        background: '#0e1013',
-        foreground: '#e4e7ec',
-        cursor: '#d97a55',
-        cursorAccent: '#0e1013',
-        selectionBackground: 'rgba(108, 140, 255, 0.3)',
-        black: '#262b34',
-        red: '#e06c5a',
-        green: '#9fce8e',
-        yellow: '#e2b86b',
-        blue: '#7fb3d5',
-        magenta: '#c678dd',
-        cyan: '#56b6c2',
-        white: '#a0a8b4',
-        brightBlack: '#3d444f',
-        brightRed: '#e06c5a',
-        brightGreen: '#9fce8e',
-        brightYellow: '#e2b86b',
-        brightBlue: '#7fb3d5',
-        brightMagenta: '#c678dd',
-        brightCyan: '#56b6c2',
-        brightWhite: '#e4e7ec'
-      }
+      theme: TERM_COLORS[theme]
     });
     termRef.current = term;
     const fit = new FitAddon();
@@ -97,6 +127,10 @@ export default function TerminalPane({
       term.dispose();
     };
   }, [root]);
+
+  useEffect(() => {
+    if (termRef.current) termRef.current.options.theme = TERM_COLORS[theme];
+  }, [theme]);
 
   return (
     <div
