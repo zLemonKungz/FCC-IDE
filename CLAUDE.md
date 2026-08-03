@@ -15,6 +15,7 @@ npm run preview      # electron-vite preview
 npm run typecheck    # tsc --noEmit for both node + web tsconfigs
 npm run test         # vitest run (tests/ directory)
 npm run smoke        # node smoke/sdk-smoke.mjs — live SDK↔FCC proxy round-trip check
+npm run icons        # electron scripts/generate-icons.mjs — re-render build/icon-*.png + icon.ico from resources/icon.svg
 npm run dist:win     # build + electron-builder NSIS Windows installer
 ```
 
@@ -26,7 +27,7 @@ Electron 3-process layout under `electron-vite`, with a shared module imported b
 
 - **`src/main`** — Node side (CJS, bundled). `index.ts` creates the `BrowserWindow` and wires IPC; `ipc.ts` registers every handler; `file-service.ts`, `terminal-service.ts` (node-pty), `fcc-manager.ts` (FCC server health/start), `chat/chat-host.ts` (Claude Agent SDK).
 - **`src/preload`** — exposes `window.fcc`, a typed promise-based API over `ipcRenderer.invoke`/`.on` (see `FccApi` type). The renderer never touches `ipcRenderer` directly.
-- **`src/renderer`** — React + Zustand. Stores under `src/renderer/src/stores/`, components under `components/`, UI theme in `styles.css` (warm-dark terracotta palette, CSS variables, Geist font). Monaco is themed via `monaco-setup.ts` (`fcc-dark` theme, worker config).
+- **`src/renderer`** — React + Zustand. Stores under `src/renderer/src/stores/`, components under `components/`, UI theme in `styles.css` (warm-dark terracotta palette, CSS variables, Geist font). Monaco is themed via `monaco-setup.ts` (`fcc-dark`/`fcc-light` themes, worker config). The app has a custom HTML titlebar (`Titlebar.tsx`) over a hidden native titlebar; the window caption buttons are re-tinted per theme through IPC (see constraints).
 
 State flow: renderer calls `window.fcc.*` → main handles → pushes events back over `ipcRenderer.on` channels. Chat and FCC status are push-driven (channels `chat:event`, `fcc:status-changed`, `term:output`); file ops are invoke/response.
 
@@ -43,6 +44,10 @@ State flow: renderer calls `window.fcc.*` → main handles → pushes events bac
 - **npm 24 `allowScripts` policy** blocks postinstall scripts for `electron`/`esbuild` by default; they are whitelisted in `package.json`. There is deliberately **no `postinstall` script** — node-pty ships N-API prebuilds, so `electron-builder install-app-deps` (which would trigger a node-gyp rebuild) is skipped.
 - **node-pty and the SDK must be externalized** in `electron.vite.config.ts` (`externalizeDepsPlugin()` on main+preload). Bundling node-pty breaks `conpty.node` loading.
 - **Sandboxed renderer**: `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`. All Node capability must go through the preload bridge.
+- **Custom titlebar overlay.** The window is frameless (`titleBarStyle: 'hidden'` + `titleBarOverlay` height 34 in `src/main/index.ts`). The HTML `.titlebar` must keep `padding-right: 150px` to reserve the native caption-button overlay. The caption buttons are re-tinted via the `setTitleBarOverlay` IPC, fired from the App.tsx theme effect with hardcoded hex pairs (`#0e1013`/`#a0a8b4` dark, `#faf8f6`/`#6f665d` light) that must stay in sync with the CSS theme variables.
+- **Theme switching** is `data-theme` on `<html>` + CSS variables (`--bg-*`, `--text-*`, `--accent`). Dark and light are both defined in `styles.css`; store the `theme` in `layout-store` (zustand-persist, key `fcc-layout`). `Ctrl+K Ctrl+T` toggles it. Never hardcode a theme color in a component — components must use `var(--…)`; SVG presentation attributes (which reject `var()`) are colored via inline `style`.
+- **Dirty-tab discard guard.** Closing an unsaved tab only arms it (`closingPath` in `editor-store`); a second ✕ click discards. `closeOthers`/`closeAll` refuse while any tab is dirty. Any other tab interaction cancels the armed state. The UI signals the armed state with a `.tab.closing` red tint + pulsing dot.
+- **App icons.** `resources/icon.svg` is the single source; `npm run icons` rasterizes it (in a hidden Electron window) to `build/icon-*.png` + `icon.ico` used by the BrowserWindow and the NSIS installer. The generator window and page background must stay transparent — `capturePage` only keeps the icon's alpha channel that way. The mark color is `#d97a55` so it reads on both light and dark. Icons are read from disk at window creation; changing them needs a dev restart (HMR won't pick them up).
 
 ## File-system safety (main process)
 
@@ -55,7 +60,7 @@ State flow: renderer calls `window.fcc.*` → main handles → pushes events bac
 
 ## Testing notes
 
-- Unit tests are plain vitest files in `tests/`, mirroring shared/main modules (path-utils, file-service, fcc-manager, chat-reducer). The terminal and editor UIs are not covered by tests.
+- Unit tests are plain vitest files in `tests/`, mirroring shared/main/renderer-store modules (path-utils, file-service, fcc-manager, chat-reducer, layout-store, editor-store). Terminal and editor UI components are not covered by tests.
 - `npm run smoke` is the only test that needs a live FCC server; everything else is offline.
 
 ## FCC server
