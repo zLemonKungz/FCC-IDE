@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import Logo from './Logo';
+import SettingsModal from './SettingsModal';
+import { IconSettings } from './icons';
 
 const SHORTCUTS: { keys: string; label: string }[] = [
   { keys: 'Ctrl+K Ctrl+T', label: 'Toggle dark/light theme' },
@@ -13,6 +15,7 @@ const SHORTCUTS: { keys: string; label: string }[] = [
 
 export default function Titlebar() {
   const [open, setOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
     <div className="titlebar">
@@ -21,6 +24,13 @@ export default function Titlebar() {
         FCC Studio
       </span>
       <span className="titlebar-right">
+        <button
+          className={`titlebar-icon${settingsOpen ? ' active' : ''}`}
+          onClick={() => setSettingsOpen((v) => !v)}
+          title="Settings"
+        >
+          <IconSettings width={13} height={13} />
+        </button>
         <button
           className={`shortcuts-btn${open ? ' active' : ''}`}
           onClick={() => setOpen((v) => !v)}
@@ -41,6 +51,7 @@ export default function Titlebar() {
           </div>
         )}
       </span>
+      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
     </div>
   );
 }

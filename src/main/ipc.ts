@@ -4,6 +4,7 @@ import * as files from './file-service';
 import * as terminal from './terminal-service';
 import * as fcc from './fcc-manager';
 import { ChatHost } from './chat/chat-host';
+import { setChatConfig } from './chat/config';
 
 let ipcRegistered = false;
 
@@ -15,6 +16,10 @@ export function registerIpc(win: BrowserWindow): void {
 
   ipcMain.handle(IPC.setTitleBarOverlay, (_e, color: string, symbolColor: string) => {
     if (win.setTitleBarOverlay) win.setTitleBarOverlay({ color, symbolColor });
+  });
+
+  ipcMain.handle(IPC.setChatSettings, (_e, s: { model: string; maxTurns: number }) => {
+    setChatConfig(s);
   });
 
   ipcMain.handle(IPC.dialogOpenFolder, async () => {

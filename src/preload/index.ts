@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { IPC } from '@shared/ipc';
-import type { FileEntry, FccStatus } from '@shared/types';
+import type { ChatSettings, FileEntry, FccStatus } from '@shared/types';
 
 const api = {
   ping: (): Promise<string> => ipcRenderer.invoke(IPC.ping),
@@ -20,6 +20,8 @@ const api = {
   chatStart: (sessionId: string, folder: string, prompt: string, resume?: string): Promise<void> =>
     ipcRenderer.invoke(IPC.chatStart, sessionId, folder, prompt, resume),
   chatStop: (sessionId: string): Promise<void> => ipcRenderer.invoke(IPC.chatStop, sessionId),
+  setChatSettings: (s: ChatSettings): Promise<void> =>
+    ipcRenderer.invoke(IPC.setChatSettings, s),
   setTitleBarOverlay: (color: string, symbolColor: string): Promise<void> =>
     ipcRenderer.invoke(IPC.setTitleBarOverlay, color, symbolColor),
   onChatEvent: (cb: (payload: { sessionId: string; message: unknown }) => void): void => {

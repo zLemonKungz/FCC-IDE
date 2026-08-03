@@ -1,7 +1,7 @@
 import type { BrowserWindow } from 'electron';
 import { IPC } from '@shared/ipc';
 import { FCC_BASE_URL, FCC_AUTH_TOKEN } from '../fcc-manager';
-import { CHAT_MODEL, CHAT_MAX_TURNS } from './config';
+import { getChatConfig } from './config';
 import type { query as QueryFn } from '@anthropic-ai/claude-agent-sdk';
 
 interface ActiveSession {
@@ -24,14 +24,15 @@ export class ChatHost {
     this.emit(sessionId, { type: 'started' });
 
     try {
+      const { model, maxTurns } = getChatConfig();
       const gen = query({
         prompt,
         options: {
           abortController: abort,
-          model: CHAT_MODEL,
+          model,
           cwd: folder,
           resume,
-          maxTurns: CHAT_MAX_TURNS,
+          maxTurns,
           settingSources: ['local'],
           // The SDK's canUseTool permission bridge does not fire through the FCC proxy
           // with the installed claude CLI (verified by spike). Edits are auto-accepted

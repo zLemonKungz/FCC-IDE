@@ -8,6 +8,7 @@ import StatusBar from './components/StatusBar';
 import ActivityBar from './components/ActivityBar';
 import DragHandle from './components/DragHandle';
 import { useLayoutStore, LAYOUT } from './stores/layout-store';
+import { useSettingsStore } from './stores/settings-store';
 
 export default function App() {
   const sidebarVisible = useLayoutStore((s) => s.sidebarVisible);
@@ -24,6 +25,8 @@ export default function App() {
   const setSidebarWidth = useLayoutStore((s) => s.setSidebarWidth);
   const setChatWidth = useLayoutStore((s) => s.setChatWidth);
   const setTerminalHeight = useLayoutStore((s) => s.setTerminalHeight);
+  const chatModel = useSettingsStore((s) => s.chatModel);
+  const chatMaxTurns = useSettingsStore((s) => s.chatMaxTurns);
 
   const pendingChord = useRef<string | null>(null);
 
@@ -72,6 +75,12 @@ export default function App() {
         : { color: '#0e1013', symbolColor: '#a0a8b4' };
     window.fcc.setTitleBarOverlay(overlay.color, overlay.symbolColor);
   }, [theme]);
+
+  // Persisted chat settings override the main process env defaults. Push on
+  // mount (so a restart re-applies them) and on every change.
+  useEffect(() => {
+    void window.fcc.setChatSettings({ model: chatModel, maxTurns: chatMaxTurns });
+  }, [chatModel, chatMaxTurns]);
 
   return (
     <div className={`app${isDragging ? ' dragging' : ''}`}>

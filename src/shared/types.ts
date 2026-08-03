@@ -14,3 +14,8 @@ export interface ChatEventPayload {
   sessionId: string;
   message: unknown;
 }
+
+export interface ChatSettings {
+  model: string;
+  maxTurns: number;
+}

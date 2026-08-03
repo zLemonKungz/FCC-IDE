@@ -66,4 +66,4 @@ State flow: renderer calls `window.fcc.*` → main handles → pushes events bac
 ## FCC server
 
 - `fcc-manager.ts` polls `GET /health` every 5s and pushes status to the status bar. If offline, "Start" spawns `fcc-server` (override binary via `FCC_SERVER_BIN`, port via `FCC_PORT`, token via `FCC_AUTH_TOKEN`, base URL via `FCC_BASE_URL`).
-- Chat model and turn limit are configurable via env: `FCC_CHAT_MODEL` (default `claude-haiku-4-5-20251001`), `FCC_CHAT_MAX_TURNS` (default 50). See `src/main/chat/config.ts`.
+- Chat model and turn limit default from env: `FCC_CHAT_MODEL` (default `claude-haiku-4-5-20251001`), `FCC_CHAT_MAX_TURNS` (default 50). The renderer's settings UI overrides them at runtime: `settings-store` (zustand-persist `fcc-settings`) is the source of truth, pushed to main via the `settings:set` IPC which calls `setChatConfig` (see `src/main/chat/config.ts`); `chat-host.ts` reads `getChatConfig()` at session start. Editor font size also lives in `settings-store`.

@@ -234,7 +234,8 @@ button.icon-btn:hover {
   -webkit-app-region: no-drag; /* keep the ? button clickable over the drag region */
   position: relative;
 }
-.titlebar .shortcuts-btn {
+.titlebar .shortcuts-btn,
+.titlebar .titlebar-icon {
   width: 22px;
   height: 22px;
   border: none;
@@ -250,7 +251,9 @@ button.icon-btn:hover {
   line-height: 1;
 }
 .titlebar .shortcuts-btn:hover,
-.titlebar .shortcuts-btn.active {
+.titlebar .shortcuts-btn.active,
+.titlebar .titlebar-icon:hover,
+.titlebar .titlebar-icon.active {
   background: var(--bg-4);
   color: var(--text-1);
 }
@@ -553,6 +556,60 @@ button.icon-btn:hover {
 .ctx-menu button:hover {
   background: var(--bg-3);
   color: var(--text-1);
+}
+
+/* Settings modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.settings-modal {
+  width: 320px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+  padding: 16px;
+  animation: msg-in 0.12s ease;
+}
+.settings-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+  margin-bottom: 14px;
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+.settings-row input {
+  width: 150px;
+  background: var(--bg-1);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-sm);
+  color: var(--text-1);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  padding: 5px 8px;
+  outline: none;
+}
+.settings-row input:focus {
+  border-color: var(--accent);
+}
+.settings-note {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 2px;
 }
 
 [data-theme='light'] ::selection {

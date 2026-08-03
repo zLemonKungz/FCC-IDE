@@ -15,6 +15,7 @@ export const IPC = {
   fccStart: 'fcc:start',
   chatStart: 'chat:start',
   chatStop: 'chat:stop',
+  setChatSettings: 'settings:set',
   setTitleBarOverlay: 'window:set-titlebar-overlay',
   // events main -> renderer
   evtChat: 'chat:event',

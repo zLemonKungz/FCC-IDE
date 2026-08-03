@@ -4,6 +4,7 @@ import * as monaco from 'monaco-editor';
 import { useEditorStore } from '../stores/editor-store';
 import { useExplorerStore } from '../stores/explorer-store';
 import { useLayoutStore } from '../stores/layout-store';
+import { useSettingsStore } from '../stores/settings-store';
 import DiffView from './DiffView';
 import FileIcon from './FileIcon';
 import Markdown from '../chat/markdown';
@@ -33,6 +34,7 @@ export default function EditorPane() {
   const closingPath = useEditorStore((s) => s.closingPath);
   const mdPreview = useEditorStore((s) => s.mdPreview);
   const setPreview = useEditorStore((s) => s.setPreview);
+  const editorFontSize = useSettingsStore((s) => s.editorFontSize);
   const [menu, setMenu] = useState<{ path: string; x: number; y: number } | null>(null);
 
   useEffect(() => {
@@ -147,7 +149,7 @@ export default function EditorPane() {
               setCursor({ line: e.position.lineNumber, col: e.position.column })
             );
           }}
-          options={{ minimap: { enabled: false }, fontSize: 14, fontFamily: 'var(--font-mono)' }}
+          options={{ minimap: { enabled: false }, fontSize: editorFontSize, fontFamily: 'var(--font-mono)' }}
         />
       ) : (
         <div className="empty-state">
