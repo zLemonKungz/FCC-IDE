@@ -20,6 +20,8 @@ const api = {
   chatStart: (sessionId: string, folder: string, prompt: string, resume?: string): Promise<void> =>
     ipcRenderer.invoke(IPC.chatStart, sessionId, folder, prompt, resume),
   chatStop: (sessionId: string): Promise<void> => ipcRenderer.invoke(IPC.chatStop, sessionId),
+  setTitleBarOverlay: (color: string, symbolColor: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.setTitleBarOverlay, color, symbolColor),
   onChatEvent: (cb: (payload: { sessionId: string; message: unknown }) => void): void => {
     ipcRenderer.on(IPC.evtChat, (_ev, payload) => cb(payload));
   },

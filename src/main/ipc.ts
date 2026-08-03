@@ -13,6 +13,10 @@ export function registerIpc(win: BrowserWindow): void {
 
   ipcMain.handle(IPC.ping, () => 'pong');
 
+  ipcMain.handle(IPC.setTitleBarOverlay, (_e, color: string, symbolColor: string) => {
+    if (win.setTitleBarOverlay) win.setTitleBarOverlay({ color, symbolColor });
+  });
+
   ipcMain.handle(IPC.dialogOpenFolder, async () => {
     const res = await dialog.showOpenDialog(win, { properties: ['openDirectory'] });
     if (res.canceled || res.filePaths.length === 0) return null;

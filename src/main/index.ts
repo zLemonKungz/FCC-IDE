@@ -14,6 +14,12 @@ function createWindow(): void {
     title: 'FCC Studio',
     show: false,
     icon: join(__dirname, '../../build/icon-256.png'),
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#0e1013',
+      symbolColor: '#a0a8b4',
+      height: 34
+    },
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,

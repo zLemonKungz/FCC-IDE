@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import Titlebar from './components/Titlebar';
 import Explorer from './components/Explorer';
 import Editor from './components/Editor';
 import ChatPanel from './components/ChatPanel';
@@ -63,10 +64,18 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
+    // Keep the native window-control overlay (Windows caption buttons)
+    // tinted to match the current theme.
+    const overlay =
+      theme === 'light'
+        ? { color: '#faf8f6', symbolColor: '#6f665d' }
+        : { color: '#0e1013', symbolColor: '#a0a8b4' };
+    window.fcc.setTitleBarOverlay(overlay.color, overlay.symbolColor);
   }, [theme]);
 
   return (
     <div className={`app${isDragging ? ' dragging' : ''}`}>
+      <Titlebar />
       <ActivityBar />
       <aside className="sidebar" style={{ width: sidebarVisible ? sidebarWidth : 0 }}>
         <Explorer />
