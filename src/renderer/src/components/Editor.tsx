@@ -29,6 +29,7 @@ export default function EditorPane() {
   const markAgentModified = useEditorStore((s) => s.markAgentModified);
   const root = useExplorerStore((s) => s.root);
   const theme = useLayoutStore((s) => s.theme);
+  const closingPath = useEditorStore((s) => s.closingPath);
   const [menu, setMenu] = useState<{ path: string; x: number; y: number } | null>(null);
 
   useEffect(() => {
@@ -65,7 +66,7 @@ export default function EditorPane() {
         {tabs.map((t) => (
           <span
             key={t.path}
-            className={`tab ${t.path === activePath ? 'active' : ''}`}
+            className={`tab ${t.path === activePath ? 'active' : ''}${t.path === closingPath ? ' closing' : ''}`}
             onClick={() => setActive(t.path)}
             onAuxClick={(e) => {
               if (e.button === 1) close(t.path);
@@ -85,12 +86,12 @@ export default function EditorPane() {
             </span>
             {t.dirty && <span className="dirty-dot" />}
             <button
-              className="close"
+              className={`close${t.path === closingPath ? ' armed' : ''}`}
               onClick={(e) => {
                 e.stopPropagation();
                 close(t.path);
               }}
-              title="Close tab"
+              title={t.path === closingPath ? 'Discard changes (click again)' : 'Close tab'}
             >
               <IconClose width={11} height={11} />
             </button>

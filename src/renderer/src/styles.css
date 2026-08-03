@@ -690,6 +690,21 @@ button.icon-btn:hover {
   background: var(--bg-4);
   color: var(--text-1);
 }
+/* armed discard: a dirty tab got one ✕ click, needs a second to discard */
+.tab.closing {
+  color: var(--red);
+}
+.tab.closing .dirty-dot {
+  background: var(--red);
+  animation: dot-arm 0.5s ease;
+}
+.tab .close.armed {
+  color: var(--red);
+  background: var(--bg-4);
+}
+@keyframes dot-arm {
+  50% { transform: scale(1.7); }
+}
 .breadcrumbs {
   display: flex;
   align-items: center;
