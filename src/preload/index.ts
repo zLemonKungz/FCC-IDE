@@ -35,11 +35,7 @@ const api = {
   },
   onFileModified: (cb: (e: { path: string }) => void): void => {
     ipcRenderer.on(IPC.evtFileModified, (_ev, e) => cb(e));
-  },
-  // --- TEMP screenshot harness ---
-  shotFolder: process.env.FCC_SHOT_FOLDER ?? null,
-  shotFile: process.env.FCC_SHOT_FILE ?? null,
-  shotOpenFolder: (folder: string): Promise<FileEntry[]> => ipcRenderer.invoke('shot:open-folder', folder)
+  }
 };
 
 contextBridge.exposeInMainWorld('fcc', api);

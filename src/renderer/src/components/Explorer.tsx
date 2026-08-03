@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useExplorerStore } from '../stores/explorer-store';
 import FileIcon from './FileIcon';
 import {
@@ -89,17 +89,6 @@ export default function Explorer() {
   );
   const openRoot = useExplorerStore((s) => s.openRoot);
   const createFile = useExplorerStore((s) => s.createFile);
-
-  // --- TEMP screenshot harness: auto-open a folder when FCC_SHOT_FOLDER is set ---
-  useEffect(() => {
-    const folder = window.fcc.shotFolder;
-    if (!folder) return;
-    void window.fcc.shotOpenFolder(folder).then((entries) => {
-      useExplorerStore.setState({ root: folder, children: { [folder]: entries }, expanded: { [folder]: true } });
-      const file = window.fcc.shotFile;
-      if (file) useExplorerStore.getState().openFile(file);
-    });
-  }, []);
 
   return (
     <div className="explorer">

@@ -1,6 +1,5 @@
 import { app, BrowserWindow } from 'electron';
 import { join } from 'path';
-import { writeFileSync } from 'fs';
 import { registerIpc } from './ipc';
 import * as fcc from './fcc-manager';
 import { createSplash, closeSplash } from './splash';
@@ -64,24 +63,3 @@ app.on('window-all-closed', () => {
 app.on('will-quit', () => {
   fcc.stopPolling();
 });
-
-// --- TEMP screenshot harness (FCC_SHOT=1) ---
-if (process.env.FCC_SHOT) {
-  app.whenReady().then(() => {
-    setTimeout(() => {
-      const win = BrowserWindow.getAllWindows()[0];
-      if (!win) return;
-      setTimeout(async () => {
-        try {
-          const img = await win.webContents.capturePage();
-          const out = process.env.FCC_SHOT_OUT ?? 'shot.png';
-          writeFileSync(out, img.toPNG());
-          console.log('SHOT_SAVED', out);
-        } catch (e) {
-          console.error('SHOT_ERR', e);
-        }
-        app.quit();
-      }, 6000);
-    }, 2500);
-  });
-}

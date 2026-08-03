@@ -6,12 +6,20 @@ dist/
 out/
 release/
 
+# TypeScript incremental build cache
+*.tsbuildinfo
+
 # logs
 *.log
 
 # session/harness artifacts (ไม่ใช่โค้ดโปรเจกต์)
 .claude/
 .remember/
+
+# scratch / dev artifacts
+tmp_logo/
+.shot-demo/
+shot*.png
 
 # os
 .DS_Store

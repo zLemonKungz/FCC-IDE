@@ -46,10 +46,4 @@ export function registerIpc(win: BrowserWindow): void {
     chatHost.start(sessionId, folder, prompt, resume)
   );
   ipcMain.handle(IPC.chatStop, (_e, sessionId: string) => chatHost.stop(sessionId));
-
-  // --- TEMP screenshot harness (FCC_SHOT=1) ---
-  ipcMain.handle('shot:open-folder', async (_e, folder: string) => {
-    files.setRoot(folder);
-    return files.listDir(folder);
-  });
 }
