@@ -1,0 +1,15 @@
+appId: com.fccstudio.app
+productName: FCC Studio
+directories:
+  buildResources: build
+  output: release
+files:
+  - out/**
+  - "!**/.vscode/*"
+win:
+  target:
+    - nsis
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true

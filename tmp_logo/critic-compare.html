@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { background:#0e1115; color:#e4e7ec; font-family:Segoe UI, system-ui, sans-serif; padding:24px; margin:0; }
+  h3 { color:#67707d; font-size:12px; letter-spacing:.08em; text-transform:uppercase; margin:28px 0 10px;}
+  h3 .n { color:#d97a55; }
+  .row { display:flex; align-items:flex-end; gap:20px; flex-wrap:wrap; }
+  .cell { text-align:center; }
+  .cell span { display:block; font-size:10px; color:#67707d; margin-top:6px; }
+  .chip { background:#14171c; border:1px solid #262b34; border-radius:8px; display:flex; align-items:center; justify-content:center; }
+  .tile { background:#d97a55; border-radius:14%; display:flex; align-items:center; justify-content:center; }
+  .splash { width:340px; height:210px; background:transparent; position:relative; }
+  .splash .card { position:absolute; inset:10px; border-radius:14px; background:#14171c; border:1px solid #262b34; box-shadow:0 18px 50px rgba(0,0,0,.5); display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .splash .wm { margin-top:14px; font-size:16px; font-weight:600; letter-spacing:.04em; }
+  .splash .wm .accent { color:#d97a55; }
+  .splash .bar { margin-top:18px; width:140px; height:3px; border-radius:2px; background:#22262e; }
+</style>
+</head>
+<body>
+
+  <h3><span class="n">A</span> folder-spark — terracotta on warm-dark (#14171c)</h3>
+  <div class="row">
+    <div class="cell"><div class="chip" style="width:16px;height:16px"><svg width="16" height="16" viewBox="0 0 64 64" fill="#d97a55" fill-rule="evenodd"><path d="M5 10L27 10L27 14.5L53 8L55 21L59 56L11 56L9 32.5ZM33 33L36 40L43 43L36 46L33 53L30 46L23 43L30 40Z"/></svg></div><span>16</span></div>
+    <div class="cell"><div class="chip" style="width:20px;height:20px"><svg width="20" height="20" viewBox="0 0 64 64" fill="#d97a55" fill-rule="evenodd"><path d="M5 10L27 10L27 14.5L53 8L55 21L59 56L11 56L9 32.5ZM33 33L36 40L43 43L36 46L33 53L30 46L23 43L30 40Z"/></svg></div><span>20</span></div>
+    <div class="cell"><div class="chip" style="width:32px;height:32px"><svg width="32" height="32" viewBox="0 0 64 64" fill="#d97a55" fill-rule="evenodd"><path d="M5 10L27 10L27 14.5L53 8L55 21L59 56L11 56L9 32.5ZM33 33L36 40L43 43L36 46L33 53L30 46L23 43L30 40Z"/></svg></div><span>32</span></div>
+    <div class="cell"><div class="chip" style="width:64px;height:64px"><svg width="64" height="64" viewBox="0 0 64 64" fill="#d97a55" fill-rule="evenodd"><path d="M5 10L27 10L27 14.5L53 8L55 21L59 56L11 56L9 32.5ZM33 33L36 40L43 43L36 46L33 53L30 46L23 43L30 40Z"/></svg></div><span>64</span></div>
+    <div class="cell"><div class="chip" style="width:128px;height:128px"><svg width="128" height="128" viewBox="0 0 64 64" fill="#d97a55" fill-rule="evenodd"><path d="M5 10L27 10L27 14.5L53 8L55 21L59 56L11 56L9 32.5ZM33 33L36 40L43 43L36 46L33 53L30 46L23 43L30 40Z"/></svg></div><span>128</span></div>
+    <div class="cell"><div class="chip" style="width:256px;height:256px"><svg width="256" height="256" viewBox="0 0 64 64" fill="#d97a55" fill-rule="evenodd"><path d="M5 10L27 10L27 14.5L53 8L55 21L59 56L11 56L9 32.5ZM33 33L36 40L43 43L36 46L33 53L30 46L23 43L30 40Z"/></svg></div><span>256</span></div>
+  </div>
+
+  <h3><span class="n">A</span> folder-spark — white cutout on terracotta tile</h3>
+  <div class="row">
+    <div class="cell"><div class="tile" style="width:64px;height:64px"><svg width="56" height="56" viewBox="0 0 64 64" fill="#e4e7ec" fill-rule="evenodd"><path d="M5 10L27 10L27 14.5L53 8L55 21L59 56L11 56L9 32.5ZM33 33L36 40L43 43L36 46L33 53L30 46L23 43L30 40Z"/></svg></div><span>tile 64</span></div>
+    <div class="cell"><div class="tile" style="width:128px;height:128px"><svg width="112" height="112" viewBox="0 0 64 64" fill="#e4e7ec" fill-rule="evenodd"><path d="M5 10L27 10L27 14.5L53 8L55 21L59 56L11 56L9 32.5ZM33 33L36 40L43 43L36 46L33 53L30 46L23 43L30 40Z"/></svg></div><span>tile 128</span></div>
+  </div>
+
+  <h3><span class="n">B</span> cli-chevron-spark — terracotta on warm-dark (#14171c)</h3>
+  <div class="row">
+    <div class="cell"><div class="chip" style="width:16px;height:16px"><svg width="16" height="16" viewBox="0 0 64 64" fill="#d97a55"><path d="M10 10L54 32L10 54L10 42L30 32L10 22Z"/><path d="M16.5 25L18.5 28.5L22 30.5L18.5 32.5L16.5 36L14.5 32.5L11 30.5L14.5 28.5Z"/></svg></div><span>16</span></div>
+    <div class="cell"><div class="chip" style="width:20px;height:20px"><svg width="20" height="20" viewBox="0 0 64 64" fill="#d97a55"><path d="M10 10L54 32L10 54L10 42L30 32L10 22Z"/><path d="M16.5 25L18.5 28.5L22 30.5L18.5 32.5L16.5 36L14.5 32.5L11 30.5L14.5 28.5Z"/></svg></div><span>20</span></div>
+    <div class="cell"><div class="chip" style="width:32px;height:32px"><svg width="32" height="32" viewBox="0 0 64 64" fill="#d97a55"><path d="M10 10L54 32L10 54L10 42L30 32L10 22Z"/><path d="M16.5 25L18.5 28.5L22 30.5L18.5 32.5L16.5 36L14.5 32.5L11 30.5L14.5 28.5Z"/></svg></div><span>32</span></div>
+    <div class="cell"><div class="chip" style="width:64px;height:64px"><svg width="64" height="64" viewBox="0 0 64 64" fill="#d97a55"><path d="M10 10L54 32L10 54L10 42L30 32L10 22Z"/><path d="M16.5 25L18.5 28.5L22 30.5L18.5 32.5L16.5 36L14.5 32.5L11 30.5L14.5 28.5Z"/></svg></div><span>64</span></div>
+    <div class="cell"><div class="chip" style="width:128px;height:128px"><svg width="128" height="128" viewBox="0 0 64 64" fill="#d97a55"><path d="M10 10L54 32L10 54L10 42L30 32L10 22Z"/><path d="M16.5 25L18.5 28.5L22 30.5L18.5 32.5L16.5 36L14.5 32.5L11 30.5L14.5 28.5Z"/></svg></div><span>128</span></div>
+    <div class="cell"><div class="chip" style="width:256px;height:256px"><svg width="256" height="256" viewBox="0 0 64 64" fill="#d97a55"><path d="M10 10L54 32L10 54L10 42L30 32L10 22Z"/><path d="M16.5 25L18.5 28.5L22 30.5L18.5 32.5L16.5 36L14.5 32.5L11 30.5L14.5 28.5Z"/></svg></div><span>256</span></div>
+  </div>
+
+  <h3><span class="n">B</span> cli-chevron-spark — white cutout on terracotta tile</h3>
+  <div class="row">
+    <div class="cell"><div class="tile" style="width:64px;height:64px"><svg width="56" height="56" viewBox="0 0 64 64" fill="#e4e7ec"><path d="M10 10L54 32L10 54L10 42L30 32L10 22Z"/><path d="M16.5 25L18.5 28.5L22 30.5L18.5 32.5L16.5 36L14.5 32.5L11 30.5L14.5 28.5Z"/></svg></div><span>tile 64</span></div>
+    <div class="cell"><div class="tile" style="width:128px;height:128px"><svg width="112" height="112" viewBox="0 0 64 64" fill="#e4e7ec"><path d="M10 10L54 32L10 54L10 42L30 32L10 22Z"/><path d="M16.5 25L18.5 28.5L22 30.5L18.5 32.5L16.5 36L14.5 32.5L11 30.5L14.5 28.5Z"/></svg></div><span>tile 128</span></div>
+  </div>
+
+  <h3><span class="n">C</span> Splash mock 340x210 — current spark (splash.ts) vs A vs B</h3>
+  <div class="row" style="align-items:flex-start">
+    <div class="cell">
+      <div class="splash"><div class="card">
+        <svg viewBox="0 0 64 64" width="52" height="52" fill="#d97a55"><path d="M32 7c1.7 11.9 4.6 18.2 25 25-20.4 6.8-23.3 13.1-25 25-1.7-11.9-4.6-18.2-25-25 20.4-6.8 23.3-13.1 25-25z"/></svg>
+        <div class="wm">FCC <span class="accent">Studio</span></div><div class="bar"></div>
+      </div></div><span>current spark</span>
+    </div>
+    <div class="cell">
+      <div class="splash"><div class="card">
+        <svg width="56" height="56" viewBox="0 0 64 64" fill="#d97a55" fill-rule="evenodd"><path d="M5 10L27 10L27 14.5L53 8L55 21L59 56L11 56L9 32.5ZM33 33L36 40L43 43L36 46L33 53L30 46L23 43L30 40Z"/></svg>
+        <div class="wm">FCC <span class="accent">Studio</span></div><div class="bar"></div>
+      </div></div><span>A folder-spark</span>
+    </div>
+    <div class="cell">
+      <div class="splash"><div class="card">
+        <svg width="56" height="56" viewBox="0 0 64 64" fill="#d97a55"><path d="M10 10L54 32L10 54L10 42L30 32L10 22Z"/><path d="M16.5 25L18.5 28.5L22 30.5L18.5 32.5L16.5 36L14.5 32.5L11 30.5L14.5 28.5Z"/></svg>
+        <div class="wm">FCC <span class="accent">Studio</span></div><div class="bar"></div>
+      </div></div><span>B cli-chevron-spark</span>
+    </div>
+  </div>
+</body>
+</html>

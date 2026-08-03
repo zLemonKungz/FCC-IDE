@@ -1,0 +1,23 @@
+export const IPC = {
+  ping: 'app:ping',
+  fsList: 'fs:list',
+  fsRead: 'fs:read',
+  fsWrite: 'fs:write',
+  fsCreate: 'fs:create',
+  fsRename: 'fs:rename',
+  fsDelete: 'fs:delete',
+  dialogOpenFolder: 'dialog:open-folder',
+  termCreate: 'term:create',
+  termData: 'term:data',
+  termResize: 'term:resize',
+  termDispose: 'term:dispose',
+  fccStatus: 'fcc:status',
+  fccStart: 'fcc:start',
+  chatStart: 'chat:start',
+  chatStop: 'chat:stop',
+  // events main -> renderer
+  evtChat: 'chat:event',
+  evtFcc: 'fcc:status-changed',
+  evtTerm: 'term:output',
+  evtFileModified: 'file:modified'
+} as const;

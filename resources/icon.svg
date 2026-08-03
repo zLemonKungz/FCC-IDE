@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Terracotta rounded-square tile with the chevron-spark mark cut out in warm-dark. -->
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="#d97a55"/>
+  <g transform="scale(4)">
+    <path d="M10 10L54 32L10 54L10 42L30 32L10 22Z" fill="#14171c"/>
+    <path d="M16.5 25L18.5 28.5L22 30.5L18.5 32.5L16.5 36L14.5 32.5L11 30.5L14.5 28.5Z" fill="#14171c"/>
+  </g>
+</svg>
