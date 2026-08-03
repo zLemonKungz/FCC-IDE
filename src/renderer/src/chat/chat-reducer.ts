@@ -15,6 +15,8 @@ export interface ChatUiState {
   running: boolean;
   error: string | null;
   sessionId: string | null;
+  /** usage of the last completed turn, from the SDK result message */
+  lastUsage: { input: number; output: number; cost?: number } | null;
 }
 export interface FileEvent {
   path: string;
@@ -24,14 +26,20 @@ export type ChatEvent =
   | { type: 'user-message'; text: string }
   | { type: 'assistant'; message: { content?: { type: string; text?: string; id?: string; name?: string; input?: unknown }[] } }
   | { type: 'user'; message?: { content?: { type: string; tool_use_id?: string; is_error?: boolean }[] } }
-  | { type: 'result'; is_error?: boolean; errors?: string[] }
+  | {
+      type: 'result';
+      is_error?: boolean;
+      errors?: string[];
+      usage?: { input_tokens?: number; cache_creation_input_tokens?: number; cache_read_input_tokens?: number; output_tokens?: number };
+      total_cost_usd?: number;
+    }
   | { type: 'session-id'; session_id: string }
   | { type: 'started' }
   | { type: 'stopped' }
   | { type: 'error'; message: string };
 
 export function emptyChatState(): ChatUiState {
-  return { messages: [], running: false, error: null, sessionId: null };
+  return { messages: [], running: false, error: null, sessionId: null, lastUsage: null };
 }
 
 function uid(): string {
@@ -106,7 +114,14 @@ export function applyChatEvent(
       s = {
         ...s,
         running: false,
-        error: ev.is_error ? (ev.errors ?? ['Agent error']).join('; ') : null
+        error: ev.is_error ? (ev.errors ?? ['Agent error']).join('; ') : null,
+        lastUsage: ev.usage
+          ? {
+              input: (ev.usage.input_tokens ?? 0) + (ev.usage.cache_creation_input_tokens ?? 0) + (ev.usage.cache_read_input_tokens ?? 0),
+              output: ev.usage.output_tokens ?? 0,
+              cost: ev.total_cost_usd
+            }
+          : null
       };
       break;
 

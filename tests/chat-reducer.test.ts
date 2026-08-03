@@ -49,4 +49,19 @@ describe('applyChatEvent', () => {
     const s = applyChatEvent(emptyChatState(), { type: 'system' } as ChatEvent).state;
     expect(s.messages).toHaveLength(0);
   });
+
+  it('captures token usage from the result message', () => {
+    const s = applyChatEvent(emptyChatState(), {
+      type: 'result',
+      usage: { input_tokens: 10, cache_creation_input_tokens: 5, cache_read_input_tokens: 2, output_tokens: 7 },
+      total_cost_usd: 0.0012
+    }).state;
+    expect(s.running).toBe(false);
+    expect(s.lastUsage).toEqual({ input: 17, output: 7, cost: 0.0012 });
+  });
+
+  it('keeps lastUsage null when the result has no usage', () => {
+    const s = applyChatEvent(emptyChatState(), { type: 'result' }).state;
+    expect(s.lastUsage).toBeNull();
+  });
 });

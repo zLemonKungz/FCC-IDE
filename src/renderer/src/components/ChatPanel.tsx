@@ -1,19 +1,32 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useChatStore } from '../stores/chat-store';
 import { useExplorerStore } from '../stores/explorer-store';
+import { useLayoutStore } from '../stores/layout-store';
 import ChatMessage from './ChatMessage';
+import Markdown from '../chat/markdown';
 import { IconChat, IconSend, IconSparkles, IconStop } from './icons';
+
+const HELP_TEXT = `Available commands:
+/help  Show this help
+/clear New chat
+/theme Toggle dark / light theme
+
+Keyboard: Ctrl+K Ctrl+T theme · Ctrl+B sidebar · Ctrl+\` terminal · Ctrl+S save
+Type anything else to send it to Claude.`;
 
 export default function ChatPanel({ style }: { style?: CSSProperties }) {
   const messages = useChatStore((s) => s.messages);
   const running = useChatStore((s) => s.running);
   const error = useChatStore((s) => s.error);
   const sessionId = useChatStore((s) => s.sessionId);
+  const lastUsage = useChatStore((s) => s.lastUsage);
   const handleEvent = useChatStore((s) => s.handleEvent);
   const start = useChatStore((s) => s.start);
   const stop = useChatStore((s) => s.stop);
   const root = useExplorerStore((s) => s.root);
+  const toggleTheme = useLayoutStore((s) => s.toggleTheme);
   const [input, setInput] = useState('');
+  const [help, setHelp] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -22,13 +35,27 @@ export default function ChatPanel({ style }: { style?: CSSProperties }) {
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-  }, [messages]);
+  }, [messages, help]);
 
   const send = () => {
     const text = input.trim();
     if (!text || !root) return;
-    start(root, text);
     setInput('');
+    if (text.startsWith('/')) {
+      const [cmd] = text.toLowerCase().split(/\s+/);
+      if (cmd === '/help') {
+        setHelp(HELP_TEXT);
+      } else if (cmd === '/clear' || cmd === '/new') {
+        setHelp(null);
+        useChatStore.getState().reset();
+      } else if (cmd === '/theme') {
+        toggleTheme();
+      } else {
+        setHelp(`Unknown command: ${cmd} — type /help for the list.`);
+      }
+      return;
+    }
+    start(root, text);
   };
 
   return (
@@ -52,7 +79,8 @@ export default function ChatPanel({ style }: { style?: CSSProperties }) {
       </div>
 
       <div className="chat-messages" ref={scrollRef}>
-        {messages.length === 0 && !running ? (
+        {help && <div className="chat-help"><Markdown text={help} /></div>}
+        {messages.length === 0 && !running && !help ? (
           <div className="chat-empty">
             <div className="icon">
               <IconSparkles width={20} height={20} />
@@ -74,6 +102,12 @@ export default function ChatPanel({ style }: { style?: CSSProperties }) {
               </div>
             )}
             {error && <div className="chat-error">{error}</div>}
+            {lastUsage && !running && (
+              <div className="chat-usage">
+                {lastUsage.input.toLocaleString()} in · {lastUsage.output.toLocaleString()} out
+                {lastUsage.cost !== undefined && ` · $${lastUsage.cost.toFixed(4)}`}
+              </div>
+            )}
           </>
         )}
       </div>
