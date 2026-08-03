@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import Explorer from './components/Explorer';
 import Editor from './components/Editor';
 import ChatPanel from './components/ChatPanel';
@@ -17,12 +17,31 @@ export default function App() {
   const toggleSidebar = useLayoutStore((s) => s.toggleSidebar);
   const toggleChat = useLayoutStore((s) => s.toggleChat);
   const toggleTerminal = useLayoutStore((s) => s.toggleTerminal);
+  const toggleTheme = useLayoutStore((s) => s.toggleTheme);
+  const theme = useLayoutStore((s) => s.theme);
+  const isDragging = useLayoutStore((s) => s.isDragging);
   const setSidebarWidth = useLayoutStore((s) => s.setSidebarWidth);
   const setChatWidth = useLayoutStore((s) => s.setChatWidth);
   const setTerminalHeight = useLayoutStore((s) => s.setTerminalHeight);
 
+  const pendingChord = useRef<string | null>(null);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Theme chord: Ctrl+K then Ctrl+T (reset on any other key).
+      if (e.ctrlKey && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        pendingChord.current = 'k';
+        return;
+      }
+      if (pendingChord.current === 'k' && e.key.toLowerCase() === 't' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        pendingChord.current = null;
+        toggleTheme();
+        return;
+      }
+      pendingChord.current = null;
+
       if (!(e.ctrlKey || e.metaKey)) return;
       if (e.code === 'KeyB') {
         e.preventDefault();
@@ -40,10 +59,14 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [toggleSidebar, toggleChat, toggleTerminal]);
+  }, [toggleSidebar, toggleChat, toggleTerminal, toggleTheme]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
 
   return (
-    <div className="app">
+    <div className={`app${isDragging ? ' dragging' : ''}`}>
       <ActivityBar />
       <aside className="sidebar" style={{ width: sidebarVisible ? sidebarWidth : 0 }}>
         <Explorer />
