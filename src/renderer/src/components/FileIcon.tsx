@@ -32,17 +32,16 @@ export default function FileIcon({
   height = 15,
   ...rest
 }: { name: string; width?: number; height?: number } & SVGProps<SVGSVGElement>) {
-  const color = EXT_COLORS[extOf(name)] ?? '#67707d';
+  const color = EXT_COLORS[extOf(name)] ?? 'var(--text-3)';
   return (
     <svg width={width} height={height} viewBox="0 0 16 20" aria-hidden="true" {...rest}>
       <path
         d="M3 1.5h6.5l4 4V17.5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V2.5a1 1 0 0 1 1-1z"
-        fill="#1a1e24"
-        stroke="#3d444f"
+        style={{ fill: 'var(--bg-2)', stroke: 'var(--text-4)' }}
         strokeWidth="1"
       />
-      <path d="M9.5 1.5v4h4z" fill="#0e1013" stroke="#3d444f" strokeWidth="1" />
-      <rect x="2.2" y="3" width="1.8" height="14" rx="0.9" fill={color} />
+      <path d="M9.5 1.5v4h4z" style={{ fill: 'var(--bg-0)', stroke: 'var(--text-4)' }} strokeWidth="1" />
+      <rect x="2.2" y="3" width="1.8" height="14" rx="0.9" style={{ fill: color }} />
     </svg>
   );
 }
