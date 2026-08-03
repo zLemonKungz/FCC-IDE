@@ -6,7 +6,13 @@ import * as fcc from './fcc-manager';
 import { ChatHost } from './chat/chat-host';
 import { setChatConfig } from './chat/config';
 
+let chatHost: ChatHost | null = null;
 let ipcRegistered = false;
+
+export function disposeChatHost(): void {
+  chatHost?.stopAll();
+  chatHost = null;
+}
 
 export function registerIpc(win: BrowserWindow): void {
   if (ipcRegistered) return; // guard against duplicate registration (macOS re-activate)
@@ -46,9 +52,9 @@ export function registerIpc(win: BrowserWindow): void {
   ipcMain.handle(IPC.fccStatus, () => fcc.checkHealth());
   ipcMain.handle(IPC.fccStart, () => fcc.startServer());
 
-  const chatHost = new ChatHost(win);
+  chatHost = new ChatHost(win);
   ipcMain.handle(IPC.chatStart, (_e, sessionId: string, folder: string, prompt: string, resume?: string) =>
-    chatHost.start(sessionId, folder, prompt, resume)
+    chatHost!.start(sessionId, folder, prompt, resume)
   );
-  ipcMain.handle(IPC.chatStop, (_e, sessionId: string) => chatHost.stop(sessionId));
+  ipcMain.handle(IPC.chatStop, (_e, sessionId: string) => chatHost!.stop(sessionId));
 }

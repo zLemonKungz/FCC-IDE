@@ -1,6 +1,6 @@
 import { app, BrowserWindow } from 'electron';
 import { join } from 'path';
-import { registerIpc } from './ipc';
+import { disposeChatHost, registerIpc } from './ipc';
 import * as fcc from './fcc-manager';
 import { createSplash, closeSplash } from './splash';
 
@@ -62,4 +62,5 @@ app.on('window-all-closed', () => {
 
 app.on('will-quit', () => {
   fcc.stopPolling();
+  disposeChatHost();
 });
