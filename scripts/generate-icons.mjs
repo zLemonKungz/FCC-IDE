@@ -43,11 +43,12 @@ app.whenReady().then(async () => {
     height: 1024,
     show: false,
     frame: false,
+    transparent: true, // keep the icon's alpha channel when capturePage runs
     webPreferences: { sandbox: true }
   });
   await win.loadURL(
     `data:text/html,${encodeURIComponent(
-      `<body style="margin:0"><img src="${dataUrl}" width="1024" height="1024" style="display:block"></body>`
+      `<body style="margin:0;background:transparent"><img src="${dataUrl}" width="1024" height="1024" style="display:block"></body>`
     )}`
   );
   // Let the SVG rasterize.
