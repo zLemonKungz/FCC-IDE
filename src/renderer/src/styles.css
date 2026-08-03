@@ -227,6 +227,84 @@ button.icon-btn:hover {
   align-items: center;
   gap: 7px;
 }
+.titlebar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  -webkit-app-region: no-drag; /* keep the ? button clickable over the drag region */
+  position: relative;
+}
+.titlebar .shortcuts-btn {
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.titlebar .shortcuts-btn:hover,
+.titlebar .shortcuts-btn.active {
+  background: var(--bg-4);
+  color: var(--text-1);
+}
+.shortcuts-popover {
+  position: absolute;
+  top: 28px;
+  right: 0;
+  width: 280px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-0);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  padding: 10px 0;
+  z-index: 100;
+  animation: msg-in 0.12s ease;
+}
+.shortcuts-title {
+  padding: 0 14px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.shortcuts-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 14px;
+  font-size: 12px;
+}
+.shortcuts-row kbd {
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--text-1);
+  background: var(--bg-4);
+  border: 1px solid var(--border-0);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+.shortcuts-label {
+  color: var(--text-2);
+  text-align: right;
+}
+.shortcuts-hint {
+  margin-top: 6px;
+  padding: 8px 14px 0;
+  border-top: 1px solid var(--border-0);
+  font-size: 11px;
+  color: var(--text-3);
+}
 
 /* ---------- Activity bar ---------- */
 .activity-bar {
