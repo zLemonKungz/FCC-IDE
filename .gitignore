@@ -16,3 +16,6 @@ release/
 # os
 .DS_Store
 Thumbs.db
+
+# superpowers sdd scratch
+.superpowers/
