@@ -69,6 +69,14 @@ export function IconChevronDown(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconChevronUp(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <path d="M18 15l-6-6-6 6" />
+    </Svg>
+  );
+}
+
 export function IconPlay(props: SVGProps<SVGSVGElement>) {
   return (
     <Svg {...props}>

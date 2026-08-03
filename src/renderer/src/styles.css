@@ -324,6 +324,7 @@ button.icon-btn:hover {
   z-index: 6;
 }
 .activity-bar .activity {
+  position: relative;
   width: 34px;
   height: 34px;
   padding: 0;
@@ -335,6 +336,17 @@ button.icon-btn:hover {
   align-items: center;
   justify-content: center;
   transition: background-color var(--transition), color var(--transition);
+}
+.activity-bar .activity.active::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 20px;
+  border-radius: 2px;
+  background: var(--accent);
 }
 .activity-bar .activity:hover {
   background: var(--bg-2);
@@ -448,6 +460,15 @@ button.icon-btn:hover {
 .term-strip svg {
   color: var(--text-3);
 }
+.term-strip .strip-chev {
+  margin-left: auto;
+  color: var(--text-4);
+  transition: color var(--transition), transform var(--transition);
+}
+.term-strip:hover .strip-chev {
+  color: var(--text-2);
+  transform: translateY(-1px);
+}
 .terminal-pane.collapsed .term-strip {
   display: flex;
 }
@@ -515,6 +536,16 @@ button.icon-btn:hover {
 }
 .statusbar .fcc.down .dot {
   background: var(--red);
+  animation: fcc-down 1.8s ease-out infinite;
+}
+@keyframes fcc-down {
+  0% {
+    box-shadow: 0 0 0 0 rgba(224, 108, 90, 0.35);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 5px rgba(224, 108, 90, 0);
+  }
 }
 .statusbar .fcc.ok {
   color: var(--green);
@@ -688,6 +719,7 @@ button.icon-btn:hover {
   padding: 4px 6px 12px;
 }
 .tree-row {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 5px;
@@ -707,6 +739,16 @@ button.icon-btn:hover {
 .tree-row.selected {
   background: var(--bg-3);
   color: var(--text-1);
+}
+.tree-row.selected::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 3px;
+  bottom: 3px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--accent);
 }
 .tree-row .chev {
   color: var(--text-3);
@@ -799,7 +841,11 @@ button.icon-btn:hover {
 .tab.active {
   color: var(--text-1);
   border-bottom-color: var(--accent);
-  background: var(--bg-2);
+  /* Blend the active tab into the editor surface (VS Code-style "merged" tab). */
+  background: var(--bg-0);
+}
+.tab.active:hover {
+  background: var(--bg-0);
 }
 .tab .tab-name {
   display: flex;
@@ -1285,6 +1331,7 @@ button.icon-btn:hover {
   color: var(--accent);
   margin-bottom: 2px;
   animation: float 3.4s ease-in-out infinite;
+  box-shadow: 0 4px 16px rgba(217, 122, 85, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 @keyframes float {
   0%, 100% { transform: translateY(0); }
@@ -1502,6 +1549,17 @@ button.primary,
   background: linear-gradient(135deg, #d97a55, #e28a66);
   border-color: transparent;
   color: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+button.primary:hover,
+.chat-input .send:hover,
+.agent-banner button.accept:hover {
+  box-shadow: 0 2px 8px rgba(217, 122, 85, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+button.primary:focus-visible,
+.chat-input .send:focus-visible,
+.agent-banner button.accept:focus-visible {
+  box-shadow: 0 0 0 3px var(--accent-border);
 }
 
 /* ---------- Reduced motion ---------- */

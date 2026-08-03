@@ -5,7 +5,7 @@ import '@xterm/xterm/css/xterm.css';
 import { useExplorerStore } from '../stores/explorer-store';
 import { useLayoutStore, LAYOUT } from '../stores/layout-store';
 import DragHandle from './DragHandle';
-import { IconClose, IconPlay, IconTerminal } from './icons';
+import { IconChevronUp, IconClose, IconPlay, IconTerminal } from './icons';
 
 type TermPalette = NonNullable<ConstructorParameters<typeof XTerm>[0]>['theme'];
 
@@ -140,6 +140,7 @@ export default function TerminalPane({
       <div className="term-strip" onClick={toggleTerminal} title="Show terminal (Ctrl+`)">
         <IconTerminal width={13} height={13} />
         Terminal
+        <IconChevronUp width={12} height={12} className="strip-chev" />
       </div>
       {visible && (
         <>

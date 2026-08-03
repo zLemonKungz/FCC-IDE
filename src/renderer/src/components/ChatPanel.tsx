@@ -11,7 +11,7 @@ const HELP_TEXT = `Available commands:
 /clear New chat
 /theme Toggle dark / light theme
 
-Keyboard: Ctrl+K Ctrl+T theme · Ctrl+B sidebar · Ctrl+\` terminal · Ctrl+S save
+Keyboard: Ctrl+K Ctrl+T theme, Ctrl+B sidebar, Ctrl+\` terminal, Ctrl+S save
 Type anything else to send it to Claude.`;
 
 export default function ChatPanel({ style }: { style?: CSSProperties }) {
@@ -51,7 +51,7 @@ export default function ChatPanel({ style }: { style?: CSSProperties }) {
       } else if (cmd === '/theme') {
         toggleTheme();
       } else {
-        setHelp(`Unknown command: ${cmd} — type /help for the list.`);
+        setHelp(`Unknown command: ${cmd}. Type /help for the list.`);
       }
       return;
     }
@@ -88,7 +88,7 @@ export default function ChatPanel({ style }: { style?: CSSProperties }) {
             <div className="title">Ask Claude to build, fix, or explain</div>
             <div className="hint">
               {root
-                ? 'Type a request below — Claude reads and edits files inside the open folder.'
+                ? 'Type a request below. Claude reads and edits files inside the open folder.'
                 : 'Open a folder first, then start a conversation.'}
             </div>
           </div>
