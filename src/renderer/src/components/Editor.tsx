@@ -6,6 +6,7 @@ import { useExplorerStore } from '../stores/explorer-store';
 import { useLayoutStore } from '../stores/layout-store';
 import DiffView from './DiffView';
 import FileIcon from './FileIcon';
+import Markdown from '../chat/markdown';
 import { IconChevronRight, IconClose, IconFile, IconSparkles } from './icons';
 
 loader.config({ monaco });
@@ -30,6 +31,8 @@ export default function EditorPane() {
   const root = useExplorerStore((s) => s.root);
   const theme = useLayoutStore((s) => s.theme);
   const closingPath = useEditorStore((s) => s.closingPath);
+  const mdPreview = useEditorStore((s) => s.mdPreview);
+  const setPreview = useEditorStore((s) => s.setPreview);
   const [menu, setMenu] = useState<{ path: string; x: number; y: number } | null>(null);
 
   useEffect(() => {
@@ -59,6 +62,7 @@ export default function EditorPane() {
   }, [activePath, save]);
 
   const active = tabs.find((t) => t.path === activePath);
+  const isMd = active ? langFor(active.path) === 'markdown' : false;
 
   return (
     <div className="editor-pane">
@@ -97,6 +101,16 @@ export default function EditorPane() {
             </button>
           </span>
         ))}
+        {active && isMd && !diffPath && (
+          <div className="md-toggle" title="Switch between source and rendered preview">
+            <button className={!mdPreview ? 'on' : ''} onClick={() => setPreview(false)}>
+              Source
+            </button>
+            <button className={mdPreview ? 'on' : ''} onClick={() => setPreview(true)}>
+              Preview
+            </button>
+          </div>
+        )}
       </div>
       {active && <Breadcrumbs path={active.path} root={root} />}
       {active && active.agentModified && !diffPath && (
@@ -114,6 +128,12 @@ export default function EditorPane() {
       )}
       {diffPath ? (
         <DiffView path={diffPath} onClose={() => setDiff(null)} />
+      ) : active && mdPreview ? (
+        <div className="md-preview">
+          <div className="md-preview-inner">
+            <Markdown text={active.content} />
+          </div>
+        </div>
       ) : active ? (
         <Editor
           key={active.path}

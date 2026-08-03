@@ -21,6 +21,9 @@ interface EditorState {
   closingPath: string | null;
   diffPath: string | null;
   cursor: CursorPos;
+  /** markdown files render as a live preview instead of the editor */
+  mdPreview: boolean;
+  setPreview: (v: boolean) => void;
   open: (path: string) => Promise<void>;
   setContent: (path: string, content: string) => void;
   save: (path: string) => Promise<void>;
@@ -44,9 +47,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   closingPath: null,
   diffPath: null,
   cursor: { line: 1, col: 1 },
+  mdPreview: false,
+  setPreview: (v) => set({ mdPreview: v }),
   open: async (path) => {
     if (get().tabs.some((t) => t.path === path)) {
-      set({ activePath: path, closingPath: null });
+      set({ activePath: path, closingPath: null, mdPreview: false });
       return;
     }
     const content = await window.fcc.fsRead(path);
@@ -54,7 +59,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({
       tabs: [...get().tabs, { path, name, content, baseContent: content, dirty: false }],
       activePath: path,
-      closingPath: null
+      closingPath: null,
+      mdPreview: false
     });
   },
   setContent: (path, content) => {
@@ -80,7 +86,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return;
     }
     const rest = get().tabs.filter((t) => t.path !== path);
-    set({ tabs: rest, activePath: rest.length ? rest[rest.length - 1].path : null, closingPath: null });
+    set({ tabs: rest, activePath: rest.length ? rest[rest.length - 1].path : null, closingPath: null, mdPreview: false });
   },
   closeOthers: (path) => {
     const dirtyOther = get().tabs.find((t) => t.path !== path && t.dirty);
@@ -89,11 +95,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return;
     }
     const kept = get().tabs.filter((t) => t.path === path);
-    set({ tabs: kept, activePath: path, closingPath: null });
+    set({ tabs: kept, activePath: path, closingPath: null, mdPreview: false });
   },
   closeSaved: () => {
     const rest = get().tabs.filter((t) => t.dirty);
-    set({ tabs: rest, activePath: rest.length ? rest[rest.length - 1].path : null, closingPath: null });
+    set({ tabs: rest, activePath: rest.length ? rest[rest.length - 1].path : null, closingPath: null, mdPreview: false });
   },
   closeAll: () => {
     const dirtyTab = get().tabs.find((t) => t.dirty);
@@ -101,9 +107,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       set({ closingPath: dirtyTab.path });
       return;
     }
-    set({ tabs: [], activePath: null, closingPath: null });
+    set({ tabs: [], activePath: null, closingPath: null, mdPreview: false });
   },
-  setActive: (path) => set({ activePath: path, closingPath: null }),
+  setActive: (path) => set({ activePath: path, closingPath: null, mdPreview: false }),
   setDiff: (path) => set({ diffPath: path }),
   setCursor: (c) => set({ cursor: c }),
   markAgentModified: (path) => {

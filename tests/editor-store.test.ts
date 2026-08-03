@@ -11,7 +11,8 @@ function seed(): void {
     activePath: '/a.ts',
     closingPath: null,
     diffPath: null,
-    cursor: { line: 1, col: 1 }
+    cursor: { line: 1, col: 1 },
+    mdPreview: false
   });
 }
 
@@ -51,5 +52,21 @@ describe('editor store — dirty close guard', () => {
     useEditorStore.getState().close('/b.ts');
     useEditorStore.getState().setActive('/c.ts');
     expect(useEditorStore.getState().closingPath).toBeNull();
+  });
+});
+
+describe('editor store — markdown preview', () => {
+  beforeEach(seed);
+
+  it('toggles preview mode', () => {
+    expect(useEditorStore.getState().mdPreview).toBe(false);
+    useEditorStore.getState().setPreview(true);
+    expect(useEditorStore.getState().mdPreview).toBe(true);
+  });
+
+  it('resets preview when switching tabs', () => {
+    useEditorStore.getState().setPreview(true);
+    useEditorStore.getState().setActive('/b.ts');
+    expect(useEditorStore.getState().mdPreview).toBe(false);
   });
 });
