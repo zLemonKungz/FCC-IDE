@@ -3,6 +3,7 @@ import Editor, { loader } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
 import { useEditorStore } from '../stores/editor-store';
 import { useExplorerStore } from '../stores/explorer-store';
+import { useLayoutStore } from '../stores/layout-store';
 import DiffView from './DiffView';
 import FileIcon from './FileIcon';
 import { IconChevronRight, IconClose, IconFile, IconSparkles } from './icons';
@@ -27,6 +28,7 @@ export default function EditorPane() {
   const revert = useEditorStore((s) => s.revertAgentChange);
   const markAgentModified = useEditorStore((s) => s.markAgentModified);
   const root = useExplorerStore((s) => s.root);
+  const theme = useLayoutStore((s) => s.theme);
   const [menu, setMenu] = useState<{ path: string; x: number; y: number } | null>(null);
 
   useEffect(() => {
@@ -118,7 +120,7 @@ export default function EditorPane() {
           defaultLanguage={langFor(active.path)}
           value={active.content}
           onChange={(v) => v !== undefined && setContent(active.path, v)}
-          theme="fcc-dark"
+          theme={theme === 'dark' ? 'fcc-dark' : 'fcc-light'}
           onMount={(editor) => {
             editor.onDidChangeCursorPosition((e) =>
               setCursor({ line: e.position.lineNumber, col: e.position.column })

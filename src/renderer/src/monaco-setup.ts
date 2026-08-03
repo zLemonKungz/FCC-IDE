@@ -74,3 +74,48 @@ monaco.editor.defineTheme('fcc-dark', {
     'scrollbarSlider.activeBackground': 'rgba(255, 255, 255, 0.25)'
   }
 });
+
+monaco.editor.defineTheme('fcc-light', {
+  base: 'vs',
+  inherit: true,
+  rules: [
+    { token: 'comment', foreground: 'a1968b', fontStyle: 'italic' },
+    { token: 'keyword', foreground: 'c9643c' },
+    { token: 'string', foreground: '3d9a6f' },
+    { token: 'number', foreground: 'b98a2e' },
+    { token: 'type', foreground: '4f6fdd' },
+    { token: 'identifier', foreground: '2c2621' },
+    { token: 'delimiter', foreground: '6f665d' },
+    { token: 'tag', foreground: 'c9643c' },
+    { token: 'attribute.name', foreground: '4f6fdd' },
+    { token: 'attribute.value', foreground: '3d9a6f' },
+    { token: 'metatag', foreground: 'c9643c' }
+  ],
+  colors: {
+    'editor.background': '#faf8f6',
+    'editor.foreground': '#2c2621',
+    'editor.lineHighlightBackground': '#f4f0ec',
+    'editor.selectionBackground': 'rgba(79, 111, 221, 0.18)',
+    'editor.inactiveSelectionBackground': 'rgba(79, 111, 221, 0.08)',
+    'editorCursor.foreground': '#c9643c',
+    'editorLineNumber.foreground': '#cfc6bb',
+    'editorLineNumber.activeForeground': '#6f665d',
+    'editorIndentGuide.background1': '#eae4de',
+    'editorIndentGuide.activeBackground1': '#a1968b',
+    'editorBracketMatch.border': '#c9643c',
+    'editorBracketMatch.background': 'rgba(201, 100, 60, 0.15)',
+    'editorWidget.background': '#f4f0ec',
+    'editorWidget.border': '#ddd4cb',
+    'editorSuggestWidget.background': '#f4f0ec',
+    'editorSuggestWidget.border': '#ddd4cb',
+    'editorSuggestWidget.selectedBackground': '#e1dad3',
+    'editorHoverWidget.background': '#f4f0ec',
+    'editorHoverWidget.border': '#ddd4cb',
+    'editorError.foreground': '#d85c48',
+    'editorWarning.foreground': '#b98a2e',
+    'editorGutter.background': '#faf8f6',
+    'scrollbarSlider.background': 'rgba(60, 45, 30, 0.18)',
+    'scrollbarSlider.hoverBackground': 'rgba(60, 45, 30, 0.30)',
+    'scrollbarSlider.activeBackground': 'rgba(60, 45, 30, 0.42)'
+  }
+});

@@ -2,6 +2,7 @@ import { DiffEditor, loader } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
 import { useEffect, useState } from 'react';
 import { useEditorStore } from '../stores/editor-store';
+import { useLayoutStore } from '../stores/layout-store';
 import { IconCheck, IconClose } from './icons';
 
 loader.config({ monaco });
@@ -10,6 +11,7 @@ export default function DiffView({ path, onClose }: { path: string; onClose: () 
   const base = useEditorStore((s) => s.getBase(path)) ?? '';
   const accept = useEditorStore((s) => s.acceptAgentChange);
   const revert = useEditorStore((s) => s.revertAgentChange);
+  const theme = useLayoutStore((s) => s.theme);
   const [modified, setModified] = useState('');
 
   useEffect(() => {
@@ -33,7 +35,7 @@ export default function DiffView({ path, onClose }: { path: string; onClose: () 
         original={base}
         modified={modified}
         language="plaintext"
-        theme="fcc-dark"
+        theme={theme === 'dark' ? 'fcc-dark' : 'fcc-light'}
         options={{ readOnly: true, minimap: { enabled: false }, fontFamily: 'var(--font-mono)', fontSize: 13 }}
       />
     </div>
