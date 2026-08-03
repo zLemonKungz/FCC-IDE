@@ -31,12 +31,17 @@ interface LayoutState {
   sidebarWidth: number;
   chatWidth: number;
   terminalHeight: number;
+  theme: 'dark' | 'light';
+  isDragging: boolean;
   toggleSidebar: () => void;
   toggleChat: () => void;
   toggleTerminal: () => void;
   setSidebarWidth: (v: number) => void;
   setChatWidth: (v: number) => void;
   setTerminalHeight: (v: number) => void;
+  setTheme: (theme: 'dark' | 'light') => void;
+  toggleTheme: () => void;
+  setDragging: (d: boolean) => void;
 }
 
 export const useLayoutStore = create<LayoutState>()(
@@ -48,12 +53,17 @@ export const useLayoutStore = create<LayoutState>()(
       sidebarWidth: SIDEBAR_DEFAULT,
       chatWidth: CHAT_DEFAULT,
       terminalHeight: TERM_DEFAULT,
+      theme: 'dark',
+      isDragging: false,
       toggleSidebar: () => set((s) => ({ sidebarVisible: !s.sidebarVisible })),
       toggleChat: () => set((s) => ({ chatVisible: !s.chatVisible })),
       toggleTerminal: () => set((s) => ({ terminalVisible: !s.terminalVisible })),
       setSidebarWidth: (v) => set({ sidebarWidth: v }),
       setChatWidth: (v) => set({ chatWidth: v }),
-      setTerminalHeight: (v) => set({ terminalHeight: v })
+      setTerminalHeight: (v) => set({ terminalHeight: v }),
+      setTheme: (theme) => set({ theme }),
+      toggleTheme: () => set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
+      setDragging: (isDragging) => set({ isDragging })
     }),
     { name: 'fcc-layout' }
   )
