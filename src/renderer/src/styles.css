@@ -1268,12 +1268,55 @@ button.icon-btn:hover {
   align-self: flex-end;
 }
 .chat-input {
+  position: relative;
   display: flex;
   gap: 8px;
   padding: 10px 12px;
   border-top: 1px solid var(--border-0);
   flex-shrink: 0;
   align-items: flex-end;
+}
+.slash-picker {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 12px;
+  right: 12px;
+  max-height: 200px;
+  overflow-y: auto;
+  background: var(--bg-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+  padding: 4px;
+  z-index: 20;
+  animation: msg-in 0.12s ease;
+}
+.slash-picker .sp-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  cursor: pointer;
+}
+.slash-picker .sp-item .sp-cmd {
+  font-family: var(--font-mono);
+  color: var(--text-1);
+  flex-shrink: 0;
+}
+.slash-picker .sp-item .sp-desc {
+  color: var(--text-3);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.slash-picker .sp-item.active {
+  background: var(--bg-3);
+}
+.slash-picker .sp-item.active .sp-cmd {
+  color: var(--accent);
 }
 .chat-input textarea {
   flex: 1;

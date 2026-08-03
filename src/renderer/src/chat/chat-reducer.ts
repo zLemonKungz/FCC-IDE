@@ -17,6 +17,8 @@ export interface ChatUiState {
   sessionId: string | null;
   /** usage of the last completed turn, from the SDK result message */
   lastUsage: { input: number; output: number; cost?: number } | null;
+  /** slash commands / skills discovered from the CLI init message (no leading '/') */
+  slashCommands: string[];
 }
 export interface FileEvent {
   path: string;
@@ -34,12 +36,13 @@ export type ChatEvent =
       total_cost_usd?: number;
     }
   | { type: 'session-id'; session_id: string }
+  | { type: 'slash-commands'; commands: string[] }
   | { type: 'started' }
   | { type: 'stopped' }
   | { type: 'error'; message: string };
 
 export function emptyChatState(): ChatUiState {
-  return { messages: [], running: false, error: null, sessionId: null, lastUsage: null };
+  return { messages: [], running: false, error: null, sessionId: null, lastUsage: null, slashCommands: [] };
 }
 
 function uid(): string {
@@ -127,6 +130,10 @@ export function applyChatEvent(
 
     case 'session-id':
       s = { ...s, sessionId: ev.session_id };
+      break;
+
+    case 'slash-commands':
+      s = { ...s, slashCommands: ev.commands };
       break;
 
     case 'started':

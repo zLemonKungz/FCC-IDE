@@ -56,5 +56,6 @@ export function registerIpc(win: BrowserWindow): void {
   ipcMain.handle(IPC.chatStart, (_e, sessionId: string, folder: string, prompt: string, resume?: string) =>
     chatHost!.start(sessionId, folder, prompt, resume)
   );
+  ipcMain.handle(IPC.chatSend, (_e, sessionId: string, prompt: string) => chatHost!.send(sessionId, prompt));
   ipcMain.handle(IPC.chatStop, (_e, sessionId: string) => chatHost!.stop(sessionId));
 }

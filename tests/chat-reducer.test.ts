@@ -64,4 +64,16 @@ describe('applyChatEvent', () => {
     const s = applyChatEvent(emptyChatState(), { type: 'result' }).state;
     expect(s.lastUsage).toBeNull();
   });
+
+  it('stores discovered slash commands from the CLI init message', () => {
+    const s = applyChatEvent(emptyChatState(), {
+      type: 'slash-commands',
+      commands: ['help', 'compact', 'design-taste-frontend']
+    }).state;
+    expect(s.slashCommands).toEqual(['help', 'compact', 'design-taste-frontend']);
+  });
+
+  it('starts with an empty slash command list', () => {
+    expect(emptyChatState().slashCommands).toEqual([]);
+  });
 });

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useChatStore } from '../stores/chat-store';
 import { useExplorerStore } from '../stores/explorer-store';
 import { useLayoutStore } from '../stores/layout-store';
@@ -6,13 +6,23 @@ import ChatMessage from './ChatMessage';
 import Markdown from '../chat/markdown';
 import { IconChat, IconSend, IconSparkles, IconStop } from './icons';
 
-const HELP_TEXT = `Available commands:
-/help  Show this help
-/clear New chat
-/theme Toggle dark / light theme
+// Client-side commands handled here; every other `/cmd` is forwarded to the
+// claude CLI subprocess (slash commands / skills discovered via the init msg).
+const LOCAL_COMMANDS: { name: string; desc: string }[] = [
+  { name: '/help', desc: 'Show this help' },
+  { name: '/theme', desc: 'Toggle dark / light theme' },
+  { name: '/new', desc: 'Start a new chat' }
+];
 
-Keyboard: Ctrl+K Ctrl+T theme, Ctrl+B sidebar, Ctrl+\` terminal, Ctrl+S save
-Type anything else to send it to Claude.`;
+const KNOWN_COMMANDS: Record<string, string> = {
+  '/clear': 'Clear the conversation context',
+  '/compact': 'Compact the conversation history',
+  '/cost': 'Show token usage and cost',
+  '/memory': 'Manage memory',
+  '/model': 'Switch the active model',
+  '/statusline': 'Configure the status line',
+  '/mcp': 'Manage MCP servers'
+};
 
 export default function ChatPanel({ style }: { style?: CSSProperties }) {
   const messages = useChatStore((s) => s.messages);
@@ -20,14 +30,17 @@ export default function ChatPanel({ style }: { style?: CSSProperties }) {
   const error = useChatStore((s) => s.error);
   const sessionId = useChatStore((s) => s.sessionId);
   const lastUsage = useChatStore((s) => s.lastUsage);
+  const slashCommands = useChatStore((s) => s.slashCommands);
   const handleEvent = useChatStore((s) => s.handleEvent);
-  const start = useChatStore((s) => s.start);
+  const send = useChatStore((s) => s.send);
   const stop = useChatStore((s) => s.stop);
   const root = useExplorerStore((s) => s.root);
   const toggleTheme = useLayoutStore((s) => s.toggleTheme);
   const [input, setInput] = useState('');
   const [help, setHelp] = useState<string | null>(null);
+  const [picker, setPicker] = useState<{ open: boolean; index: number }>({ open: false, index: 0 });
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     window.fcc.onChatEvent(({ sessionId: s, message }) => handleEvent(s, message));
@@ -37,25 +50,108 @@ export default function ChatPanel({ style }: { style?: CSSProperties }) {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages, help]);
 
-  const send = () => {
+  // All discoverable commands: local + CLI slash commands / skills.
+  const allCommands = useMemo(() => {
+    const loc = LOCAL_COMMANDS.map((c) => c.name);
+    const cli = slashCommands.map((c) => (c.startsWith('/') ? c : `/${c}`));
+    return Array.from(new Set([...loc, ...cli])).sort();
+  }, [slashCommands]);
+
+  // Filtered list shown in the '/' picker (empty when closed).
+  const matches = useMemo(() => {
+    if (!picker.open) return [];
+    const t = input.trimStart();
+    if (!t.startsWith('/') || t.includes(' ')) return [];
+    const filter = t.slice(1).toLowerCase();
+    return allCommands.filter((c) => c.slice(1).toLowerCase().startsWith(filter));
+  }, [picker.open, input, allCommands]);
+
+  const buildHelp = (): string => {
+    const names = LOCAL_COMMANDS.map((c) => `${c.name}  ${c.desc}`).join('\n');
+    const cliNames = allCommands.filter((c) => !LOCAL_COMMANDS.some((l) => l.name === c));
+    const cliLine = cliNames.length > 0 ? `\nAvailable: ${cliNames.join(', ')}` : '';
+    return `Commands:\n${names}\n\nOther /commands (e.g. /clear, /compact) are sent to Claude.${cliLine}
+
+Keyboard: Ctrl+K Ctrl+T theme, Ctrl+B sidebar, Ctrl+\` terminal, Ctrl+S save
+Type anything else to send it to Claude.`;
+  };
+
+  const completeCommand = (cmd?: string): void => {
+    const target = cmd ?? matches[picker.index];
+    if (!target) return;
+    setInput(`${target} `);
+    setPicker({ open: false, index: 0 });
+    inputRef.current?.focus();
+  };
+
+  const handleChange = (value: string): void => {
+    setInput(value);
+    const t = value.trimStart();
+    if (t.startsWith('/') && !t.includes(' ') && value !== '/') {
+      const filter = t.slice(1).toLowerCase();
+      const hasMatches = allCommands.some((c) => c.slice(1).toLowerCase().startsWith(filter));
+      setPicker({ open: hasMatches, index: 0 });
+    } else {
+      setPicker({ open: false, index: 0 });
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+    if (picker.open && matches.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setPicker((p) => ({ ...p, index: (p.index + 1) % matches.length }));
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setPicker((p) => ({ ...p, index: (p.index - 1 + matches.length) % matches.length }));
+        return;
+      }
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        completeCommand();
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setPicker({ open: false, index: 0 });
+        return;
+      }
+    }
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      submit();
+    }
+  };
+
+  const submit = (): void => {
     const text = input.trim();
     if (!text || !root) return;
     setInput('');
+    setPicker({ open: false, index: 0 });
+    const [cmd] = text.toLowerCase().split(/\s+/);
     if (text.startsWith('/')) {
-      const [cmd] = text.toLowerCase().split(/\s+/);
       if (cmd === '/help') {
-        setHelp(HELP_TEXT);
-      } else if (cmd === '/clear' || cmd === '/new') {
+        setHelp(buildHelp());
+        return;
+      }
+      if (cmd === '/theme') {
+        toggleTheme();
+        return;
+      }
+      if (cmd === '/new') {
         setHelp(null);
         useChatStore.getState().reset();
-      } else if (cmd === '/theme') {
-        toggleTheme();
-      } else {
-        setHelp(`Unknown command: ${cmd}. Type /help for the list.`);
+        return;
       }
+      // Everything else — /clear, /compact, skills, ... — goes to Claude.
+      setHelp(null);
+      send(root, text);
       return;
     }
-    start(root, text);
+    setHelp(null);
+    send(root, text);
   };
 
   return (
@@ -113,20 +209,33 @@ export default function ChatPanel({ style }: { style?: CSSProperties }) {
       </div>
 
       <div className="chat-input">
+        {picker.open && matches.length > 0 && (
+          <div className="slash-picker">
+            {matches.map((c, i) => (
+              <div
+                key={c}
+                className={`sp-item${i === picker.index ? ' active' : ''}`}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  completeCommand(c);
+                }}
+              >
+                <span className="sp-cmd">{c}</span>
+                <span className="sp-desc">{KNOWN_COMMANDS[c] ?? LOCAL_COMMANDS.find((l) => l.name === c)?.desc ?? 'Send to Claude'}</span>
+              </div>
+            ))}
+          </div>
+        )}
         {!root && <div className="hint">Open a folder first</div>}
         <textarea
+          ref={inputRef}
           value={input}
-          placeholder={root ? 'Ask Claude to do something...' : ''}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              send();
-            }
-          }}
+          placeholder={root ? 'Ask Claude to do something... (type / for commands)' : ''}
+          onChange={(e) => handleChange(e.target.value)}
+          onKeyDown={handleKeyDown}
           disabled={!root}
         />
-        <button className="send" onClick={send} disabled={!root || !input.trim()} title="Send">
+        <button className="send" onClick={submit} disabled={!root || !input.trim()} title="Send">
           <IconSend width={14} height={14} />
         </button>
       </div>

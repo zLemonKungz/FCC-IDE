@@ -19,6 +19,8 @@ const api = {
   fccStart: (): Promise<FccStatus> => ipcRenderer.invoke(IPC.fccStart),
   chatStart: (sessionId: string, folder: string, prompt: string, resume?: string): Promise<void> =>
     ipcRenderer.invoke(IPC.chatStart, sessionId, folder, prompt, resume),
+  chatSend: (sessionId: string, prompt: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.chatSend, sessionId, prompt),
   chatStop: (sessionId: string): Promise<void> => ipcRenderer.invoke(IPC.chatStop, sessionId),
   setChatSettings: (s: ChatSettings): Promise<void> =>
     ipcRenderer.invoke(IPC.setChatSettings, s),
