@@ -30,14 +30,52 @@
   --yellow: #d9a44e;
   --blue: #6c8cff;
 
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 10px;
+  --radius-sm: 5px;
+  --radius-md: 9px;
+  --radius-lg: 14px;
 
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-2: 0 4px 14px rgba(0, 0, 0, 0.4);
 
-  --transition: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition: 220ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* ==========================================================================
+   Light theme — warm paper + terracotta (activated by data-theme on <html>)
+   ========================================================================== */
+[data-theme='light'] {
+  --bg-0: #faf8f6;
+  --bg-1: #f4f0ec;
+  --bg-2: #ebe6e1;
+  --bg-3: #e1dad3;
+  --bg-4: #d4cbc2;
+
+  --border-0: #eae4de;
+  --border-1: #ddd4cb;
+
+  --text-1: #2c2621;
+  --text-2: #6f665d;
+  --text-3: #a1968b;
+  --text-4: #cfc6bb;
+
+  --accent: #c9643c;
+  --accent-hover: #da7a52;
+  --accent-dim: rgba(201, 100, 60, 0.12);
+  --accent-border: rgba(201, 100, 60, 0.30);
+
+  --green: #3d9a6f;
+  --red: #d85c48;
+  --yellow: #b98a2e;
+  --blue: #4f6fdd;
+
+  --shadow-1: 0 1px 3px rgba(60, 45, 30, 0.10);
+  --shadow-2: 0 8px 24px rgba(60, 45, 30, 0.14);
+
+  --radius-sm: 5px;
+  --radius-md: 9px;
+  --radius-lg: 14px;
+
+  --transition: 220ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 * {
@@ -87,8 +125,8 @@ body {
 
 /* ---------- Focus ---------- */
 :focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-dim);
   border-radius: var(--radius-sm);
 }
 
@@ -110,6 +148,7 @@ button {
 button:hover {
   background: var(--bg-4);
   color: var(--text-1);
+  transform: translateY(-1px);
 }
 button:active {
   transform: scale(0.97);
@@ -119,7 +158,6 @@ button:disabled {
   cursor: not-allowed;
 }
 button.primary {
-  background: var(--accent);
   border-color: var(--accent);
   color: #fff;
 }
@@ -182,7 +220,7 @@ button.icon-btn:hover {
   height: 34px;
   padding: 0;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   background: transparent;
   color: var(--text-3);
   display: flex;
@@ -197,6 +235,10 @@ button.icon-btn:hover {
 .activity-bar .activity.active {
   background: var(--accent-dim);
   color: var(--accent);
+}
+.activity-bar .theme-toggle {
+  margin-top: auto;
+  margin-bottom: 8px;
 }
 
 /* ---------- Drag handles (panel dividers) ---------- */
@@ -304,6 +346,16 @@ button.icon-btn:hover {
 .terminal-pane.collapsed .term-body {
   display: none;
 }
+.sidebar,
+.chat-pane,
+.terminal-pane {
+  transition: width 220ms cubic-bezier(0.32, 0.72, 0, 1), height 220ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.app.dragging .sidebar,
+.app.dragging .chat-pane,
+.app.dragging .terminal-pane {
+  transition: none;
+}
 .statusbar {
   grid-row: 3;
   grid-column: 1 / -1;
@@ -396,6 +448,16 @@ button.icon-btn:hover {
 .ctx-menu button:hover {
   background: var(--bg-3);
   color: var(--text-1);
+}
+
+[data-theme='light'] ::selection {
+  background: rgba(79, 111, 221, 0.18);
+}
+[data-theme='light'] ::-webkit-scrollbar-thumb {
+  background-color: var(--bg-4);
+}
+[data-theme='light'] .activity-bar {
+  border-right-color: var(--border-0);
 }
 
 /* ---------- Empty state (shared) ---------- */
@@ -572,6 +634,7 @@ button.icon-btn:hover {
 .tab.active {
   color: var(--text-1);
   border-bottom-color: var(--accent);
+  background: var(--accent-dim);
 }
 .tab .tab-name {
   display: flex;
@@ -651,8 +714,6 @@ button.icon-btn:hover {
   background: var(--bg-3);
 }
 .agent-banner button.accept {
-  background: var(--accent);
-  border-color: var(--accent);
   color: #fff;
 }
 .agent-banner button.accept:hover {
@@ -771,8 +832,6 @@ button.icon-btn:hover {
   box-shadow: 0 0 0 2px var(--accent-dim);
 }
 .chat-input .send {
-  background: var(--accent);
-  border-color: var(--accent);
   color: #fff;
   padding: 8px 12px;
   border-radius: var(--radius-md);
@@ -1017,6 +1076,15 @@ button.icon-btn:hover {
 .diff-view .monaco-diff-editor {
   flex: 1;
   min-height: 0;
+}
+
+/* ---------- Primary / accent buttons — soft gradient ---------- */
+button.primary,
+.chat-input .send,
+.agent-banner button.accept {
+  background: linear-gradient(135deg, #d97a55, #e28a66);
+  border-color: transparent;
+  color: #fff;
 }
 
 /* ---------- Reduced motion ---------- */
