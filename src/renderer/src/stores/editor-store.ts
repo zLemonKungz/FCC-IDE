@@ -37,6 +37,8 @@ interface EditorState {
   markAgentModified: (path: string) => void;
   acceptAgentChange: (path: string) => Promise<void>;
   revertAgentChange: (path: string) => Promise<void>;
+  acceptAllAgentChanges: () => Promise<void>;
+  revertAllAgentChanges: () => Promise<void>;
   getBase: (path: string) => string | null;
   getTab: (path: string) => EditorTab | null;
 }
@@ -138,6 +140,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           : t
       )
     });
+  },
+  acceptAllAgentChanges: async () => {
+    for (const t of get().tabs.filter((x) => x.agentModified)) {
+      await get().acceptAgentChange(t.path);
+    }
+  },
+  revertAllAgentChanges: async () => {
+    for (const t of get().tabs.filter((x) => x.agentModified)) {
+      await get().revertAgentChange(t.path);
+    }
   },
   getBase: (path) => get().tabs.find((t) => t.path === path)?.baseContent ?? null,
   getTab: (path) => get().tabs.find((t) => t.path === path) ?? null

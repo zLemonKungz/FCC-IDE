@@ -883,6 +883,17 @@ button.icon-btn:hover {
   color: var(--red);
   background: var(--bg-4);
 }
+/* agent-modified dot — Claude edited this file but the change is unaccepted */
+.tab .agent-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
+  background: var(--blue);
+  flex-shrink: 0;
+}
+.tab.active .agent-dot {
+  background: var(--accent);
+}
 @keyframes dot-arm {
   50% { transform: scale(1.7); }
 }
@@ -1055,6 +1066,52 @@ button.icon-btn:hover {
 }
 .agent-banner button.accept:hover {
   background: var(--accent-hover);
+}
+/* Changes strip — aggregate review of every file Claude modified */
+.changes-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--border-0);
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+.changes-strip .changes-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.changes-strip .changes-chip {
+  padding: 2px 8px;
+  font-size: 11.5px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-2);
+  border-color: var(--border-1);
+  color: var(--text-2);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.changes-strip .changes-chip:hover {
+  background: var(--bg-3);
+  color: var(--text-1);
+  border-color: var(--accent-border);
+}
+.changes-strip .spacer {
+  flex: 1;
+  flex-shrink: 0;
+}
+.changes-strip button.ghost {
+  padding: 2px 8px;
+  font-size: 11.5px;
+  flex-shrink: 0;
 }
 
 /* ---------- Chat ---------- */

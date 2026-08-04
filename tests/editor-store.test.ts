@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { useEditorStore } from '../src/renderer/src/stores/editor-store';
 
 function seed(): void {
@@ -68,5 +68,52 @@ describe('editor store — markdown preview', () => {
     useEditorStore.getState().setPreview(true);
     useEditorStore.getState().setActive('/b.ts');
     expect(useEditorStore.getState().mdPreview).toBe(false);
+  });
+});
+
+describe('editor store — agent change batch actions', () => {
+  const origWindow = (globalThis as { window?: unknown }).window;
+
+  beforeEach(() => {
+    // accept/revert read/write the real file via window.fcc — mock it.
+    (globalThis as { window: unknown }).window = {
+      fcc: {
+        fsRead: async (p: string) => `disk-${p}`,
+        fsWrite: async () => {}
+      }
+    };
+    useEditorStore.setState({
+      tabs: [
+        { path: '/a.ts', name: 'a.ts', content: 'a1', baseContent: 'a0', dirty: false, agentModified: true },
+        { path: '/b.ts', name: 'b.ts', content: 'b1', baseContent: 'b0', dirty: false, agentModified: true },
+        { path: '/c.ts', name: 'c.ts', content: 'c0', baseContent: 'c0', dirty: false }
+      ]
+    });
+  });
+
+  afterEach(() => {
+    if (origWindow === undefined) delete (globalThis as { window?: unknown }).window;
+    else (globalThis as { window: unknown }).window = origWindow;
+  });
+
+  it('acceptAll clears the flag and syncs base/content to disk', async () => {
+    await useEditorStore.getState().acceptAllAgentChanges();
+    const tabs = useEditorStore.getState().tabs;
+    expect(tabs.filter((t) => t.agentModified)).toHaveLength(0);
+    const a = tabs.find((t) => t.path === '/a.ts')!;
+    expect(a.baseContent).toBe('disk-/a.ts');
+    expect(a.content).toBe('disk-/a.ts');
+    expect(a.dirty).toBe(false);
+  });
+
+  it('revertAll clears the flag and restores base content', async () => {
+    await useEditorStore.getState().revertAllAgentChanges();
+    const tabs = useEditorStore.getState().tabs;
+    expect(tabs.filter((t) => t.agentModified)).toHaveLength(0);
+    const a = tabs.find((t) => t.path === '/a.ts')!;
+    expect(a.content).toBe('a0');
+    expect(a.dirty).toBe(false);
+    // untouched tab is unaffected
+    expect(tabs.find((t) => t.path === '/c.ts')?.content).toBe('c0');
   });
 });

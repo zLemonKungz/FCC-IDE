@@ -91,6 +91,7 @@ export default function EditorPane() {
               {t.name}
             </span>
             {t.dirty && <span className="dirty-dot" />}
+            {t.agentModified && !t.dirty && <span className="agent-dot" title="Claude modified this file" />}
             <button
               className={`close${t.path === closingPath ? ' armed' : ''}`}
               onClick={(e) => {
@@ -114,6 +115,7 @@ export default function EditorPane() {
           </div>
         )}
       </div>
+      <ChangesStrip />
       {active && <Breadcrumbs path={active.path} root={root} />}
       {active && active.agentModified && !diffPath && (
         <div className="agent-banner">
@@ -176,6 +178,46 @@ export default function EditorPane() {
   );
 }
 
+// Aggregate view of every file Claude modified this session. Chips open the
+// diff; the strip offers batch accept / revert (VS Code-style review surface).
+function ChangesStrip() {
+  const modified = useEditorStore((s) => s.tabs.filter((t) => t.agentModified));
+  const setDiff = useEditorStore((s) => s.setDiff);
+  const setActive = useEditorStore((s) => s.setActive);
+  const acceptAll = useEditorStore((s) => s.acceptAllAgentChanges);
+  const revertAll = useEditorStore((s) => s.revertAllAgentChanges);
+
+  if (modified.length === 0) return null;
+  return (
+    <div className="changes-strip">
+      <span className="changes-label">
+        <IconSparkles width={12} height={12} />
+        Changed
+      </span>
+      {modified.map((t) => (
+        <button
+          key={t.path}
+          className="changes-chip"
+          title={t.path}
+          onClick={() => {
+            setActive(t.path);
+            setDiff(t.path);
+          }}
+        >
+          {t.name}
+        </button>
+      ))}
+      <span className="spacer" />
+      <button className="ghost" onClick={() => void acceptAll()}>
+        Accept all
+      </button>
+      <button className="ghost" onClick={() => void revertAll()}>
+        Revert all
+      </button>
+    </div>
+  );
+}
+
 // Read-only path trail under the tab bar — file name last, root-relative.
 function Breadcrumbs({ path, root }: { path: string; root: string | null }) {
   const rel =
@@ -194,7 +236,7 @@ function Breadcrumbs({ path, root }: { path: string; root: string | null }) {
   );
 }
 
-function langFor(p: string): string {
+export function langFor(p: string): string {
   const ext = p.split('.').pop()?.toLowerCase() ?? '';
   const map: Record<string, string> = {
     ts: 'typescript',
