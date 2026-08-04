@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Editor, { loader } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
 import { useEditorStore } from '../stores/editor-store';
@@ -35,7 +35,40 @@ export default function EditorPane() {
   const mdPreview = useEditorStore((s) => s.mdPreview);
   const setPreview = useEditorStore((s) => s.setPreview);
   const editorFontSize = useSettingsStore((s) => s.editorFontSize);
+  const autoSave = useSettingsStore((s) => s.autoSave);
   const [menu, setMenu] = useState<{ path: string; x: number; y: number } | null>(null);
+  const saveTimer = useRef<number | null>(null);
+  // Find-in-files "reveal line": set before open(), applied in onMount once the
+  // editor for that file mounts (the <Editor> remounts per file via key).
+  const pendingReveal = useRef<{ path: string; line: number } | null>(null);
+
+  useEffect(() => {
+    const reveal = (e: Event) => {
+      const d = (e as CustomEvent).detail as { path: string; line: number };
+      pendingReveal.current = { path: d.path, line: d.line };
+      void open(d.path);
+    };
+    window.addEventListener('fcc:reveal', reveal);
+    return () => window.removeEventListener('fcc:reveal', reveal);
+  }, [open]);
+
+  // Auto-save: debounce a save on each edit when enabled (saves the latest
+  // content from the store, which setContent already wrote). Never auto-save a
+  // file Claude modified — the user reviews/accepts that edit first, and
+  // auto-saving would clobber the on-disk agent change and corrupt accept/revert.
+  const onEdit = (path: string, v: string): void => {
+    setContent(path, v);
+    if (!autoSave) return;
+    if (useEditorStore.getState().getTab(path)?.agentModified) return;
+    if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(() => void save(path), 800);
+  };
+  useEffect(
+    () => () => {
+      if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
+    },
+    []
+  );
 
   useEffect(() => {
     const handler = (e: Event) => open((e as CustomEvent).detail as string);
@@ -144,12 +177,20 @@ export default function EditorPane() {
           path={active.path}
           defaultLanguage={langFor(active.path)}
           value={active.content}
-          onChange={(v) => v !== undefined && setContent(active.path, v)}
+          onChange={(v) => v !== undefined && onEdit(active.path, v)}
           theme={theme === 'dark' ? 'fcc-dark' : 'fcc-light'}
           onMount={(editor) => {
             editor.onDidChangeCursorPosition((e) =>
               setCursor({ line: e.position.lineNumber, col: e.position.column })
             );
+            // Apply a pending find-in-files reveal for this file.
+            const pr = pendingReveal.current;
+            if (pr && pr.path === active.path) {
+              pendingReveal.current = null;
+              editor.revealLineInCenter(pr.line);
+              editor.setPosition({ lineNumber: pr.line, column: 1 });
+              editor.focus();
+            }
           }}
           options={{ minimap: { enabled: false }, fontSize: editorFontSize, fontFamily: 'var(--font-mono)' }}
         />

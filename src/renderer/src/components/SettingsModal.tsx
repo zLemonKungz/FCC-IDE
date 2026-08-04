@@ -1,26 +1,18 @@
 import { useSettingsStore } from '../stores/settings-store';
 
-// A few sensible model suggestions; the field is free-text because which
-// models are reachable depends on the FCC gateway.
-export const MODEL_SUGGESTIONS = [
-  'claude-haiku-4-5-20251001',
-  'claude-sonnet-5',
-  'claude-opus-5',
-  'claude-fable-5'
-];
-
+// Program (app) settings only — editor font size, auto-save. Chat settings
+// (model, max turns, plan mode) live in the chat settings modal, opened from
+// the gear at the bottom-left of the chat panel.
 export default function SettingsModal({ onClose }: { onClose: () => void }) {
   const editorFontSize = useSettingsStore((s) => s.editorFontSize);
-  const chatModel = useSettingsStore((s) => s.chatModel);
-  const chatMaxTurns = useSettingsStore((s) => s.chatMaxTurns);
+  const autoSave = useSettingsStore((s) => s.autoSave);
   const setEditorFontSize = useSettingsStore((s) => s.setEditorFontSize);
-  const setChatModel = useSettingsStore((s) => s.setChatModel);
-  const setChatMaxTurns = useSettingsStore((s) => s.setChatMaxTurns);
+  const setAutoSave = useSettingsStore((s) => s.setAutoSave);
 
   return (
     <div className="modal-backdrop" onPointerDown={onClose}>
       <div className="settings-modal" onPointerDown={(e) => e.stopPropagation()}>
-        <div className="settings-title">Settings</div>
+        <div className="settings-title">Program settings</div>
         <label className="settings-row">
           <span>Editor font size</span>
           <input
@@ -32,30 +24,9 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
           />
         </label>
         <label className="settings-row">
-          <span>Chat model</span>
-          <input
-            list="settings-models"
-            value={chatModel}
-            spellCheck={false}
-            onChange={(e) => setChatModel(e.target.value)}
-          />
-          <datalist id="settings-models">
-            {MODEL_SUGGESTIONS.map((m) => (
-              <option key={m} value={m} />
-            ))}
-          </datalist>
+          <span>Auto save</span>
+          <input type="checkbox" checked={autoSave} onChange={(e) => setAutoSave(e.target.checked)} />
         </label>
-        <label className="settings-row">
-          <span>Max turns</span>
-          <input
-            type="number"
-            min={1}
-            max={500}
-            value={chatMaxTurns}
-            onChange={(e) => setChatMaxTurns(Number(e.target.value) || 50)}
-          />
-        </label>
-        <div className="settings-note">Chat settings apply to the next conversation.</div>
       </div>
     </div>
   );

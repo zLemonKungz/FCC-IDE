@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
@@ -58,20 +58,31 @@ const TERM_COLORS: Record<'dark' | 'light', TermPalette> = {
   }
 };
 
-export default function TerminalPane({
-  height,
-  onResize
+interface TermTab {
+  id: number; // = the pty id from termCreate
+  title: string;
+}
+
+// One terminal session, owned by its XTerm instance. Always mounted (the pane
+// CSS hides inactive/collapsed bodies) so sessions survive tab switches.
+function TerminalTab({
+  id,
+  cwd,
+  theme,
+  active,
+  register
 }: {
-  height: number;
-  onResize: (px: number) => void;
+  id: number;
+  cwd: string;
+  theme: 'dark' | 'light';
+  active: boolean;
+  register: (id: number, term: XTerm | null) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const termRef = useRef<XTerm | null>(null);
-  const idRef = useRef<number | null>(null);
-  const root = useExplorerStore((s) => s.root);
-  const visible = useLayoutStore((s) => s.terminalVisible);
-  const toggleTerminal = useLayoutStore((s) => s.toggleTerminal);
-  const theme = useLayoutStore((s) => s.theme);
+  const fitRef = useRef<FitAddon | null>(null);
+  const ptyRef = useRef<number | null>(null);
+  const offRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     if (!ref.current) return;
@@ -84,6 +95,7 @@ export default function TerminalPane({
     });
     termRef.current = term;
     const fit = new FitAddon();
+    fitRef.current = fit;
     term.loadAddon(fit);
     term.open(ref.current);
     try {
@@ -91,46 +103,116 @@ export default function TerminalPane({
     } catch {
       // fit can throw if the element has zero size during layout — ignore, next resize fixes it
     }
+    register(id, term);
 
-    const cwd = root ?? '';
-    window.fcc
+    // cwd is captured at creation — each tab keeps the folder it was opened in.
+    void window.fcc
       .termCreate(cwd)
-      .then((id) => {
-        idRef.current = id;
-        window.fcc.onTermData(id, (data) => term.write(data));
+      .then((tid) => {
+        ptyRef.current = tid;
+        offRef.current = window.fcc.onTermData(tid, (data) => term.write(data));
       })
       .catch((err: Error) => {
         term.write(`\r\n[terminal error] ${err.message}\r\n`);
       });
 
-    term.onData((data) => {
-      if (idRef.current !== null) window.fcc.termData(idRef.current, data);
+    const offInput = term.onData((data) => {
+      if (ptyRef.current !== null) window.fcc.termData(ptyRef.current, data);
     });
 
-    const onResize = () => {
+    const fitNow = () => {
       try {
         fit.fit();
       } catch {
         return;
       }
-      if (idRef.current !== null) window.fcc.termResize(idRef.current, term.cols, term.rows);
+      if (ptyRef.current !== null) window.fcc.termResize(ptyRef.current, term.cols, term.rows);
     };
-    window.addEventListener('resize', onResize);
-    const ro = new ResizeObserver(onResize);
+    window.addEventListener('resize', fitNow);
+    const ro = new ResizeObserver(fitNow);
     ro.observe(ref.current);
 
     return () => {
+      offInput.dispose();
+      offRef.current();
       ro.disconnect();
-      window.removeEventListener('resize', onResize);
-      if (idRef.current !== null) window.fcc.termDispose(idRef.current);
+      window.removeEventListener('resize', fitNow);
+      if (ptyRef.current !== null) window.fcc.termDispose(ptyRef.current);
+      register(id, null);
       termRef.current = null;
       term.dispose();
     };
-  }, [root]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (termRef.current) termRef.current.options.theme = TERM_COLORS[theme];
   }, [theme]);
+
+  // Becoming visible (tab switch / expand) — refit since the box was hidden.
+  useEffect(() => {
+    if (!active) return;
+    requestAnimationFrame(() => {
+      try {
+        fitRef.current?.fit();
+      } catch {
+        return;
+      }
+      if (ptyRef.current !== null && termRef.current) {
+        window.fcc.termResize(ptyRef.current, termRef.current.cols, termRef.current.rows);
+      }
+    });
+  }, [active]);
+
+  return <div ref={ref} className={`term-body${active ? '' : ' tab-inactive'}`} />;
+}
+
+export default function TerminalPane({
+  height,
+  onResize
+}: {
+  height: number;
+  onResize: (px: number) => void;
+}) {
+  const root = useExplorerStore((s) => s.root);
+  const visible = useLayoutStore((s) => s.terminalVisible);
+  const toggleTerminal = useLayoutStore((s) => s.toggleTerminal);
+  const theme = useLayoutStore((s) => s.theme);
+  const [tabs, setTabs] = useState<TermTab[]>([]);
+  const [activeId, setActiveId] = useState<number | null>(null);
+  const seqRef = useRef(1);
+  const termMap = useRef(new Map<number, XTerm>());
+
+  const addTerminal = (cwd = root ?? ''): void => {
+    void window.fcc
+      .termCreate(cwd)
+      .then((id) => {
+        setTabs((t) => [...t, { id, title: `Terminal ${seqRef.current++}` }]);
+        setActiveId(id);
+      })
+      .catch(() => undefined);
+  };
+
+  // Start with one terminal, matching the pre-multi-terminal behavior.
+  useEffect(() => {
+    if (tabs.length === 0) addTerminal();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const closeTab = (id: number): void => {
+    setTabs((t) => {
+      if (t.length === 1) return t; // never close the last terminal
+      void window.fcc.termDispose(id);
+      const next = t.filter((x) => x.id !== id);
+      if (activeId === id) setActiveId(next[next.length - 1].id);
+      return next;
+    });
+  };
+
+  const register = (id: number, term: XTerm | null): void => {
+    if (term) termMap.current.set(id, term);
+    else termMap.current.delete(id);
+  };
 
   return (
     <div
@@ -153,19 +235,38 @@ export default function TerminalPane({
             onChange={onResize}
           />
           <div className="term-header">
-            <span className="title">
-              <IconTerminal width={13} height={13} />
-              Terminal
-            </span>
+            <div className="term-tabs">
+              {tabs.map((t) => (
+                <button
+                  key={t.id}
+                  className={`term-tab${t.id === activeId ? ' active' : ''}`}
+                  onClick={() => setActiveId(t.id)}
+                  title={t.title}
+                >
+                  {t.title}
+                  {tabs.length > 1 && (
+                    <span
+                      className="term-tab-x"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        closeTab(t.id);
+                      }}
+                      title="Close terminal"
+                    >
+                      ✕
+                    </span>
+                  )}
+                </button>
+              ))}
+              <button className="term-tab add" onClick={() => addTerminal()} title="New terminal">
+                +
+              </button>
+            </div>
             <span className="term-actions">
-              <button title="Clear terminal" onClick={() => termRef.current?.clear()}>
+              <button title="Clear terminal" onClick={() => termMap.current.get(activeId ?? -1)?.clear()}>
                 <IconClose width={12} height={12} />
               </button>
-              <button
-                onClick={() => {
-                  if (idRef.current !== null) window.fcc.termData(idRef.current, 'fcc-claude\r');
-                }}
-              >
+              <button onClick={() => activeId !== null && window.fcc.termData(activeId, 'fcc-claude\r')}>
                 <IconPlay width={12} height={12} />
                 Run fcc-claude
               </button>
@@ -173,8 +274,16 @@ export default function TerminalPane({
           </div>
         </>
       )}
-      {/* Always mounted so toggling visibility preserves the session; CSS hides it when collapsed */}
-      <div ref={ref} className="term-body" />
+      {tabs.map((t) => (
+        <TerminalTab
+          key={t.id}
+          id={t.id}
+          cwd={root ?? ''}
+          theme={theme}
+          active={t.id === activeId}
+          register={register}
+        />
+      ))}
     </div>
   );
 }

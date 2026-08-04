@@ -10,7 +10,8 @@ import type {
   HistorySummary,
   McpConfig,
   McpServerDef,
-  PermissionMode
+  PermissionMode,
+  SearchHit
 } from '@shared/types';
 
 const api = {
@@ -25,6 +26,7 @@ const api = {
   fsRename: (p: string, newName: string): Promise<void> => ipcRenderer.invoke(IPC.fsRename, p, newName),
   fsDelete: (p: string): Promise<void> => ipcRenderer.invoke(IPC.fsDelete, p),
   fsSearch: (): Promise<string[]> => ipcRenderer.invoke(IPC.fsSearch),
+  fsSearchContent: (query: string): Promise<SearchHit[]> => ipcRenderer.invoke(IPC.fsSearchContent, query),
   openFolder: (): Promise<string | null> => ipcRenderer.invoke(IPC.dialogOpenFolder),
   termCreate: (cwd: string): Promise<number> => ipcRenderer.invoke(IPC.termCreate, cwd),
   termData: (id: number, data: string): void => ipcRenderer.send(IPC.termData, id, data),
@@ -56,10 +58,14 @@ const api = {
   onFccStatus: (cb: (s: FccStatus) => void): void => {
     ipcRenderer.on(IPC.evtFcc, (_ev, s) => cb(s));
   },
-  onTermData: (id: number, cb: (data: string) => void): void => {
-    ipcRenderer.on(IPC.evtTerm, (_ev, tid: number, data: string) => {
+  onTermData: (id: number, cb: (data: string) => void): () => void => {
+    const listener = (_ev: unknown, tid: number, data: string): void => {
       if (tid === id) cb(data);
-    });
+    };
+    ipcRenderer.on(IPC.evtTerm, listener);
+    // Return an unsubscribe — multiple terminals subscribe on the shared
+    // channel and each must remove its listener on unmount.
+    return () => ipcRenderer.removeListener(IPC.evtTerm, listener);
   },
   onFileModified: (cb: (e: { path: string }) => void): void => {
     ipcRenderer.on(IPC.evtFileModified, (_ev, e) => cb(e));

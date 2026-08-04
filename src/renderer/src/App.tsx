@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Titlebar from './components/Titlebar';
 import Explorer from './components/Explorer';
 import Editor from './components/Editor';
@@ -7,6 +7,8 @@ import Terminal from './components/Terminal';
 import StatusBar from './components/StatusBar';
 import ActivityBar from './components/ActivityBar';
 import DragHandle from './components/DragHandle';
+import CommandPalette from './components/CommandPalette';
+import SearchPanel from './components/SearchPanel';
 import { useLayoutStore, LAYOUT } from './stores/layout-store';
 import { useSettingsStore } from './stores/settings-store';
 
@@ -20,6 +22,8 @@ export default function App() {
   const toggleChat = useLayoutStore((s) => s.toggleChat);
   const toggleTerminal = useLayoutStore((s) => s.toggleTerminal);
   const toggleTheme = useLayoutStore((s) => s.toggleTheme);
+  const sidebarView = useLayoutStore((s) => s.sidebarView);
+  const setSidebarView = useLayoutStore((s) => s.setSidebarView);
   const theme = useLayoutStore((s) => s.theme);
   const isDragging = useLayoutStore((s) => s.isDragging);
   const setSidebarWidth = useLayoutStore((s) => s.setSidebarWidth);
@@ -29,6 +33,7 @@ export default function App() {
   const chatMaxTurns = useSettingsStore((s) => s.chatMaxTurns);
 
   const pendingChord = useRef<string | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -59,6 +64,13 @@ export default function App() {
       } else if (e.code === 'KeyJ') {
         e.preventDefault();
         toggleTerminal();
+      } else if (e.code === 'KeyP' && e.shiftKey) {
+        e.preventDefault();
+        setPaletteOpen((p) => !p);
+      } else if (e.code === 'KeyF' && e.shiftKey) {
+        e.preventDefault();
+        setSidebarView('search');
+        if (!sidebarVisible) toggleSidebar();
       }
     };
     window.addEventListener('keydown', onKey);
@@ -87,7 +99,7 @@ export default function App() {
       <Titlebar />
       <ActivityBar />
       <aside className="sidebar" style={{ width: sidebarVisible ? sidebarWidth : 0 }}>
-        <Explorer />
+        {sidebarView === 'search' ? <SearchPanel /> : <Explorer />}
       </aside>
       <DragHandle
         orientation="vertical"
@@ -115,6 +127,7 @@ export default function App() {
       </main>
       <Terminal height={terminalHeight} onResize={setTerminalHeight} />
       <StatusBar />
+      {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} />}
     </div>
   );
 }

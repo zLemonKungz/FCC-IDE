@@ -637,6 +637,10 @@ button.icon-btn:hover {
 .settings-row input:focus {
   border-color: var(--accent);
 }
+.settings-row input[type='checkbox'] {
+  width: auto;
+  accent-color: var(--accent);
+}
 .settings-note {
   font-size: 11px;
   color: var(--text-3);
@@ -779,6 +783,146 @@ button.icon-btn:hover {
 }
 .cs-mcp-add input:focus {
   border-color: var(--accent);
+}
+
+/* Find in files sidebar (Ctrl+Shift+F) */
+.search-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.search-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-0);
+}
+.search-input-row svg {
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+.search-input-row input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-1);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-sm);
+  color: var(--text-1);
+  font-size: 12px;
+  padding: 5px 8px;
+  outline: none;
+}
+.search-input-row input:focus {
+  border-color: var(--accent);
+}
+.search-hint {
+  color: var(--text-3);
+  font-size: 11px;
+  padding: 8px 10px;
+}
+.search-summary {
+  font-size: 11px;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 8px 10px 4px;
+}
+.search-results {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.search-hit {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+.search-hit:hover {
+  background: var(--bg-2);
+}
+.search-hit-path {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.search-hit-text {
+  display: block;
+  font-size: 11px;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Command palette (Ctrl+Shift+P) */
+.palette-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 1000;
+}
+.command-palette {
+  position: fixed;
+  top: 15vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 520px;
+  max-width: calc(100vw - 40px);
+  background: var(--bg-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+  overflow: hidden;
+  animation: msg-in 0.12s ease;
+}
+.command-palette input {
+  width: 100%;
+  background: var(--bg-1);
+  border: none;
+  border-bottom: 1px solid var(--border-0);
+  color: var(--text-1);
+  font-size: 13px;
+  padding: 10px 12px;
+  outline: none;
+}
+.palette-list {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px;
+}
+.palette-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  cursor: pointer;
+}
+.palette-item.active {
+  background: var(--bg-3);
+}
+.palette-item.active .palette-label {
+  color: var(--accent);
+}
+.palette-label {
+  color: var(--text-1);
+}
+.palette-empty {
+  color: var(--text-3);
+  font-size: 12px;
+  padding: 12px;
+  text-align: center;
 }
 
 /* FCC setup modal — install detection + guide */
@@ -1928,9 +2072,54 @@ button.plan-toggle.on {
   text-transform: none;
   letter-spacing: normal;
 }
+.term-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  overflow-x: auto;
+}
+.term-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 600;
+  background: none;
+  border: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.term-tab:hover {
+  color: var(--text-1);
+}
+.term-tab.active {
+  color: var(--accent);
+  background: var(--bg-0);
+}
+.term-tab-x {
+  color: var(--text-3);
+  font-size: 10px;
+  padding: 0 2px;
+}
+.term-tab-x:hover {
+  color: var(--red);
+}
+.term-tab.add {
+  color: var(--text-3);
+  font-size: 13px;
+  padding: 3px 6px;
+}
+.term-tab.add:hover {
+  color: var(--text-1);
+}
 .term-actions {
   display: flex;
   gap: 6px;
+  flex-shrink: 0;
 }
 .term-actions button {
   padding: 3px 6px;
@@ -1943,6 +2132,10 @@ button.plan-toggle.on {
 }
 .term-body .xterm {
   height: 100%;
+}
+/* Inactive terminal tabs stay mounted (session preserved) but hidden. */
+.term-body.tab-inactive {
+  display: none;
 }
 
 /* ---------- Diff view ---------- */

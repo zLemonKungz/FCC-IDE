@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useSettingsStore } from '../stores/settings-store';
+import { useSettingsStore, MODEL_SUGGESTIONS } from '../stores/settings-store';
 import { useChatStore } from '../stores/chat-store';
 import { useExplorerStore } from '../stores/explorer-store';
-import { MODEL_SUGGESTIONS } from './SettingsModal';
 import type { HistorySummary, McpServerDef } from '@shared/types';
 import { IconTrash, IconPlus, IconClose } from './icons';
 

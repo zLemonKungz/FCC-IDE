@@ -1,7 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { isInside, isInsideResolved } from '@shared/path-utils';
-import type { FileEntry } from '@shared/types';
+import type { FileEntry, SearchHit } from '@shared/types';
 
 const SKIP_DIRS = new Set(['node_modules', '.git', '.next', 'dist', 'out', 'release']);
 let rootDir: string | null = null;
@@ -45,6 +45,63 @@ export async function searchFiles(): Promise<string[]> {
   };
   await walk(base);
   return out.sort((a, b) => a.localeCompare(b));
+}
+
+/** Find-in-files: case-insensitive substring search across the root, reusing
+ *  the searchFiles walk (skip dirs, unreadable dirs skipped). Large files and
+ *  binaries are skipped so a PNG or a vendored bundle can't stall the search. */
+const SEARCH_CAP = 1000;
+const SEARCH_FILE_CAP = 1_000_000; // 1 MB
+
+export async function searchContent(query: string): Promise<SearchHit[]> {
+  const base = rootDir;
+  if (!base || !query) return [];
+  const needle = query.toLowerCase();
+  const hits: SearchHit[] = [];
+  const walk = async (dir: string): Promise<void> => {
+    let entries;
+    try {
+      entries = await fs.readdir(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      if (hits.length >= SEARCH_CAP) return;
+      if (SKIP_DIRS.has(e.name)) continue;
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) {
+        await walk(p);
+        continue;
+      }
+      try {
+        const stat = await fs.stat(p);
+        if (stat.size > SEARCH_FILE_CAP) continue;
+      } catch {
+        continue;
+      }
+      let content: string;
+      try {
+        content = await fs.readFile(p, 'utf-8');
+      } catch {
+        continue;
+      }
+      if (content.includes(String.fromCharCode(0))) continue; // binary
+      const lines = content.split('\n');
+      for (let i = 0; i < lines.length && hits.length < SEARCH_CAP; i++) {
+        const line = lines[i];
+        if (line.toLowerCase().includes(needle)) {
+          hits.push({
+            path: p,
+            relative: path.relative(base, p).split(path.sep).join('/'),
+            line: i + 1,
+            text: line.trim().slice(0, 300)
+          });
+        }
+      }
+    }
+  };
+  await walk(base);
+  return hits.sort((a, b) => (a.relative === b.relative ? a.line - b.line : a.relative.localeCompare(b.relative)));
 }
 
 export async function listDir(dir: string): Promise<FileEntry[]> {

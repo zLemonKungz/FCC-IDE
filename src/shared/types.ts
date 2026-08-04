@@ -84,3 +84,15 @@ export interface McpServerDef {
 export interface McpConfig {
   mcpServers: Record<string, McpServerDef>;
 }
+
+/** One match from the find-in-files content search. */
+export interface SearchHit {
+  /** absolute path (editor tabs/explorer key on absolute paths) */
+  path: string;
+  /** forward-slash relative path for display */
+  relative: string;
+  /** 1-based line number */
+  line: number;
+  /** trimmed matching line, capped for display */
+  text: string;
+}

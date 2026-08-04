@@ -28,6 +28,8 @@ interface LayoutState {
   sidebarVisible: boolean;
   chatVisible: boolean;
   terminalVisible: boolean;
+  /** which view the sidebar shows — Explorer or Find-in-files */
+  sidebarView: 'explorer' | 'search';
   sidebarWidth: number;
   chatWidth: number;
   terminalHeight: number;
@@ -36,6 +38,7 @@ interface LayoutState {
   toggleSidebar: () => void;
   toggleChat: () => void;
   toggleTerminal: () => void;
+  setSidebarView: (v: 'explorer' | 'search') => void;
   setSidebarWidth: (v: number) => void;
   setChatWidth: (v: number) => void;
   setTerminalHeight: (v: number) => void;
@@ -50,6 +53,7 @@ export const useLayoutStore = create<LayoutState>()(
       sidebarVisible: true,
       chatVisible: true,
       terminalVisible: true,
+      sidebarView: 'explorer',
       sidebarWidth: SIDEBAR_DEFAULT,
       chatWidth: CHAT_DEFAULT,
       terminalHeight: TERM_DEFAULT,
@@ -58,6 +62,7 @@ export const useLayoutStore = create<LayoutState>()(
       toggleSidebar: () => set((s) => ({ sidebarVisible: !s.sidebarVisible })),
       toggleChat: () => set((s) => ({ chatVisible: !s.chatVisible })),
       toggleTerminal: () => set((s) => ({ terminalVisible: !s.terminalVisible })),
+      setSidebarView: (sidebarView) => set({ sidebarView }),
       setSidebarWidth: (v) => set({ sidebarWidth: v }),
       setChatWidth: (v) => set({ chatWidth: v }),
       setTerminalHeight: (v) => set({ terminalHeight: v }),

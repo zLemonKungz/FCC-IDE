@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Logo from './Logo';
 import SettingsModal from './SettingsModal';
 import { IconSettings } from './icons';
@@ -16,6 +16,13 @@ const SHORTCUTS: { keys: string; label: string }[] = [
 export default function Titlebar() {
   const [open, setOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Command palette "Program Settings" opens this modal.
+  useEffect(() => {
+    const openSettings = () => setSettingsOpen(true);
+    window.addEventListener('fcc:open-settings', openSettings);
+    return () => window.removeEventListener('fcc:open-settings', openSettings);
+  }, []);
 
   return (
     <div className="titlebar">

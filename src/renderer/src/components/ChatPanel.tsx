@@ -62,6 +62,25 @@ export default function ChatPanel({ style }: { style?: CSSProperties }) {
     window.fcc.onChatEvent(({ sessionId: s, message }) => handleEvent(s, message));
   }, [handleEvent]);
 
+  // Command palette: slash commands fill the input so submit()'s
+  // local-vs-forward logic and guards apply. Also open this modal on request.
+  useEffect(() => {
+    const chatInput = (e: Event) => {
+      const text = String((e as CustomEvent).detail ?? '');
+      setInput(text);
+      setPicker({ open: false, index: 0 });
+      setAtPicker({ open: false, index: 0, files: [] });
+      inputRef.current?.focus();
+    };
+    const openSettings = () => setSettingsOpen(true);
+    window.addEventListener('fcc:chat-input', chatInput);
+    window.addEventListener('fcc:open-chat-settings', openSettings);
+    return () => {
+      window.removeEventListener('fcc:chat-input', chatInput);
+      window.removeEventListener('fcc:open-chat-settings', openSettings);
+    };
+  }, []);
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages, help]);
