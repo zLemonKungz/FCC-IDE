@@ -1,11 +1,12 @@
 import { create } from 'zustand';
+import type { ChatImage } from '@shared/types';
 import { emptyChatState, applyChatEvent, type ChatEvent, type ChatUiState, type FileEvent } from '../chat/chat-reducer';
 
 interface ChatStore extends ChatUiState {
   activeSessionId: string | null;
   folder: string | null;
   /** Start a new conversation, or continue the live one if it exists. */
-  send: (folder: string, prompt: string) => void;
+  send: (folder: string, prompt: string, images?: ChatImage[]) => void;
   stop: () => void;
   reset: () => void;
   handleEvent: (sessionId: string, message: unknown) => void;
@@ -23,18 +24,21 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       window.dispatchEvent(new CustomEvent('fcc:file-modified', { detail: f.path }))
     );
   },
-  send: (folder, prompt) => {
+  send: (folder, prompt, images) => {
     const { activeSessionId, messages, running } = get();
     // A live conversation continues on the same subprocess (context preserved).
     // While a turn runs, the Stop button is the only way to interrupt.
     if (running) return;
     if (activeSessionId && messages.length > 0) {
-      void window.fcc.chatSend(activeSessionId, prompt);
+      // Keep the exact 2-arg call when there are no images — chat-store tests
+      // assert it, and an `undefined` third arg is noise over IPC.
+      if (images?.length) void window.fcc.chatSend(activeSessionId, prompt, images);
+      else void window.fcc.chatSend(activeSessionId, prompt);
       return;
     }
     const sid = `s-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     set({ ...emptyChatState(), activeSessionId: sid, folder });
-    void window.fcc.chatStart(sid, folder, prompt);
+    void window.fcc.chatStart(sid, folder, prompt, images?.length ? { images } : undefined);
   },
   stop: () => {
     const sid = get().activeSessionId;

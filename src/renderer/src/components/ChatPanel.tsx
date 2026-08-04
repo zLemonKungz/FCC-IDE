@@ -3,9 +3,10 @@ import { useChatStore } from '../stores/chat-store';
 import { useExplorerStore } from '../stores/explorer-store';
 import { useFccStore } from '../stores/fcc-store';
 import { useLayoutStore } from '../stores/layout-store';
+import type { ChatImage } from '@shared/types';
 import ChatMessage from './ChatMessage';
 import Markdown from '../chat/markdown';
-import { IconChat, IconSend, IconSparkles, IconStop } from './icons';
+import { IconChat, IconClose, IconSend, IconSparkles, IconStop } from './icons';
 
 // Client-side commands handled here; every other `/cmd` is forwarded to the
 // claude CLI subprocess (slash commands / skills discovered via the init msg).
@@ -41,6 +42,7 @@ export default function ChatPanel({ style }: { style?: CSSProperties }) {
   const toggleTheme = useLayoutStore((s) => s.toggleTheme);
   const [input, setInput] = useState('');
   const [help, setHelp] = useState<string | null>(null);
+  const [images, setImages] = useState<ChatImage[]>([]);
   const [picker, setPicker] = useState<{ open: boolean; index: number }>({ open: false, index: 0 });
   const [atPicker, setAtPicker] = useState<{ open: boolean; index: number; files: string[] }>({ open: false, index: 0, files: [] });
   // File list for '@' mentions, cached once per open folder (fs:search walks it).
@@ -202,13 +204,44 @@ Type anything else to send it to Claude.`;
     }
   };
 
+  const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>): Promise<void> => {
+    // 1) An image File on the clipboard (copied file / most apps' screenshots).
+    const fileImages = Array.from(e.clipboardData.files).filter((f) => f.type.startsWith('image/'));
+    if (fileImages.length > 0) {
+      e.preventDefault();
+      const read = (f: File): Promise<ChatImage> =>
+        new Promise((res, rej) => {
+          const r = new FileReader();
+          r.onload = () => {
+            const url = String(r.result);
+            res({ media_type: f.type, data: url.split(',')[1] ?? '' });
+          };
+          r.onerror = () => rej(new Error('read failed'));
+          r.readAsDataURL(f);
+        });
+      const imgs = await Promise.all(fileImages.map(read));
+      setImages((prev) => [...prev, ...imgs]);
+      return;
+    }
+    // 2) A raw bitmap (e.g. Win+Shift+S) — the sandboxed renderer can't read it
+    //    under file://, so main's clipboard.readImage() produces the base64 PNG.
+    if (e.clipboardData.types.includes('image/png') || e.clipboardData.types.includes('image/bitmap')) {
+      const png = await window.fcc.clipboardReadImage().catch(() => null);
+      if (png) {
+        e.preventDefault();
+        setImages((prev) => [...prev, { media_type: 'image/png', data: png }]);
+      }
+    }
+  };
+
   const submit = (): void => {
     const text = input.trim();
     // While a turn runs, sending is blocked (chat-store drops it) — bail
     // BEFORE clearing the box so the draft isn't silently lost.
-    if (!text || !root || running) return;
+    if ((!text && images.length === 0) || !root || running) return;
     if (text === '/') return; // a lone '/' isn't a prompt
     setInput('');
+    setImages([]);
     setPicker({ open: false, index: 0 });
     setAtPicker({ open: false, index: 0, files: [] });
     const [cmd] = text.toLowerCase().split(/\s+/);
@@ -232,7 +265,7 @@ Type anything else to send it to Claude.`;
       return;
     }
     setHelp(null);
-    send(root, text);
+    send(root, text, images.length > 0 ? images : undefined);
   };
 
   return (
@@ -295,6 +328,22 @@ Type anything else to send it to Claude.`;
           FCC isn’t installed — click to set up
         </button>
       )}
+      {images.length > 0 && (
+        <div className="chat-attachments">
+          {images.map((img, i) => (
+            <div key={`${i}-${img.data.length}`} className="attach">
+              <img src={`data:${img.media_type};base64,${img.data}`} alt="attached" />
+              <button
+                className="icon-btn"
+                onClick={() => setImages(images.filter((_, j) => j !== i))}
+                title="Remove image"
+              >
+                <IconClose width={11} height={11} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="chat-input">
         {picker.open && matches.length > 0 && (
           <div className="slash-picker">
@@ -336,9 +385,15 @@ Type anything else to send it to Claude.`;
           placeholder={root ? 'Ask Claude to do something... (type / for commands, @ to mention a file)' : ''}
           onChange={(e) => void handleChange(e.target.value)}
           onKeyDown={handleKeyDown}
+          onPaste={(e) => void handlePaste(e)}
           disabled={!root}
         />
-        <button className="send" onClick={submit} disabled={!root || running || !input.trim()} title="Send">
+        <button
+          className="send"
+          onClick={submit}
+          disabled={!root || running || (!input.trim() && images.length === 0)}
+          title="Send"
+        >
           <IconSend width={14} height={14} />
         </button>
       </div>

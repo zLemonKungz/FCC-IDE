@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { IPC } from '@shared/ipc';
-import type { ChatSettings, FileEntry, FccInstallStatus, FccStatus } from '@shared/types';
+import type { ChatImage, ChatSettings, FileEntry, FccInstallStatus, FccStatus } from '@shared/types';
 
 const api = {
   ping: (): Promise<string> => ipcRenderer.invoke(IPC.ping),
@@ -20,11 +20,12 @@ const api = {
   fccStart: (): Promise<FccStatus> => ipcRenderer.invoke(IPC.fccStart),
   fccStop: (): Promise<FccStatus> => ipcRenderer.invoke(IPC.fccStop),
   fccDetect: (): Promise<FccInstallStatus> => ipcRenderer.invoke(IPC.fccDetect),
-  chatStart: (sessionId: string, folder: string, prompt: string, resume?: string): Promise<void> =>
-    ipcRenderer.invoke(IPC.chatStart, sessionId, folder, prompt, resume),
-  chatSend: (sessionId: string, prompt: string): Promise<void> =>
-    ipcRenderer.invoke(IPC.chatSend, sessionId, prompt),
+  chatStart: (sessionId: string, folder: string, prompt: string, opts?: { resume?: string; images?: ChatImage[] }): Promise<void> =>
+    ipcRenderer.invoke(IPC.chatStart, sessionId, folder, prompt, opts),
+  chatSend: (sessionId: string, prompt: string, images?: ChatImage[]): Promise<void> =>
+    ipcRenderer.invoke(IPC.chatSend, sessionId, prompt, images),
   chatStop: (sessionId: string): Promise<void> => ipcRenderer.invoke(IPC.chatStop, sessionId),
+  clipboardReadImage: (): Promise<string | null> => ipcRenderer.invoke(IPC.clipboardReadImage),
   setChatSettings: (s: ChatSettings): Promise<void> =>
     ipcRenderer.invoke(IPC.setChatSettings, s),
   setTitleBarOverlay: (color: string, symbolColor: string): Promise<void> =>

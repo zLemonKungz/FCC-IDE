@@ -12,6 +12,7 @@ import { resolve } from 'path';
 // `app` is only available in the main process; importing it in a plain-node
 // (vitest) context yields undefined, which resolveCliBinary guards against.
 import { app } from 'electron';
+import type { ChatImage } from '@shared/types';
 
 export interface CliSessionOptions {
   binary: string;
@@ -126,11 +127,19 @@ export class CliSession {
     child.stdin.on('error', () => {});
   }
 
-  /** Send a user turn over stdin. Safe to call repeatedly on one process. */
-  send(content: string): void {
+  /** Send a user turn over stdin. Safe to call repeatedly on one process.
+   *  Images ride along as base64 content blocks alongside the text prompt. */
+  send(prompt: string, images?: ChatImage[]): void {
     if (!this.child || this.stopped) return;
     const stdin = this.child.stdin;
     if (stdin.destroyed || stdin.writableEnded) return;
+    const content =
+      images && images.length > 0
+        ? [
+            ...(prompt ? [{ type: 'text', text: prompt }] : []),
+            ...images.map((i) => ({ type: 'image', source: { type: 'base64', media_type: i.media_type, data: i.data } }))
+          ]
+        : prompt;
     stdin.write(JSON.stringify({ type: 'user', message: { role: 'user', content } }) + '\n');
   }
 

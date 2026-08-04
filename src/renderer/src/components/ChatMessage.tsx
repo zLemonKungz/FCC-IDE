@@ -8,7 +8,16 @@ export default function ChatMessage({ message }: { message: Msg }) {
   const [copied, setCopied] = useState(false);
 
   if (message.role === 'user') {
-    return <div className="msg user">{message.text}</div>;
+    return (
+      <div className="msg user">
+        {message.text}
+        {message.imageCount ? (
+          <span className="msg-images">
+            🖼 {message.imageCount} image{message.imageCount > 1 ? 's' : ''}
+          </span>
+        ) : null}
+      </div>
+    );
   }
 
   const copy = async () => {

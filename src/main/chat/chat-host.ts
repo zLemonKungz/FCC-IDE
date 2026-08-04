@@ -1,5 +1,6 @@
 import type { BrowserWindow } from 'electron';
 import { IPC } from '@shared/ipc';
+import type { ChatImage } from '@shared/types';
 import { FCC_BASE_URL, FCC_AUTH_TOKEN } from '../fcc-manager';
 import { getChatConfig } from './config';
 import { CliSession, resolveCliBinary } from '../cli/cli-runner';
@@ -8,6 +9,11 @@ interface ActiveSession {
   session: CliSession;
   sawResult: boolean;
   cleaned: boolean;
+}
+
+export interface ChatStartOpts {
+  resume?: string;
+  images?: ChatImage[];
 }
 
 interface CliEvent {
@@ -31,7 +37,7 @@ export class ChatHost {
 
   constructor(private win: BrowserWindow) {}
 
-  async start(sessionId: string, folder: string, prompt: string, resume?: string): Promise<void> {
+  async start(sessionId: string, folder: string, prompt: string, opts?: ChatStartOpts): Promise<void> {
     // A new conversation supersedes any previous one — kill processes and drop
     // stored folders so nothing leaks between chats.
     for (const [, s] of this.sessions) {
@@ -42,15 +48,15 @@ export class ChatHost {
     this.folders.clear();
     this.folders.set(sessionId, folder);
 
-    this.emit(sessionId, { type: 'user-message', text: prompt });
+    this.emit(sessionId, { type: 'user-message', text: prompt, images: opts?.images?.length });
     this.emit(sessionId, { type: 'started' });
-    await this.spawn(sessionId, folder, prompt, resume);
+    await this.spawn(sessionId, folder, prompt, opts);
   }
 
   /** Continue an existing conversation: write the next turn to the live
    *  subprocess, or respawn one under the same sessionId if it died. */
-  async send(sessionId: string, prompt: string): Promise<void> {
-    this.emit(sessionId, { type: 'user-message', text: prompt });
+  async send(sessionId: string, prompt: string, images?: ChatImage[]): Promise<void> {
+    this.emit(sessionId, { type: 'user-message', text: prompt, images: images?.length });
     this.emit(sessionId, { type: 'started' });
 
     const live = this.sessions.get(sessionId);
@@ -59,7 +65,7 @@ export class ChatHost {
       // marker so a mid-turn death below is reported as an error instead of
       // being silently swallowed by the stale sawResult=true.
       live.sawResult = false;
-      live.session.send(prompt);
+      live.session.send(prompt, images);
       return;
     }
     const folder = this.folders.get(sessionId);
@@ -67,10 +73,10 @@ export class ChatHost {
       this.emit(sessionId, { type: 'error', message: 'No active conversation for this session.' });
       return;
     }
-    await this.spawn(sessionId, folder, prompt);
+    await this.spawn(sessionId, folder, prompt, { images });
   }
 
-  private async spawn(sessionId: string, folder: string, prompt: string, resume?: string): Promise<void> {
+  private async spawn(sessionId: string, folder: string, prompt: string, opts?: ChatStartOpts): Promise<void> {
     const { model, maxTurns } = getChatConfig();
     const entry: ActiveSession = {
       session: undefined as unknown as CliSession,
@@ -97,7 +103,7 @@ export class ChatHost {
       maxTurns,
       baseUrl: FCC_BASE_URL,
       authToken: FCC_AUTH_TOKEN,
-      resume,
+      resume: opts?.resume,
       onEvent: (msg) => {
         const m = msg as CliEvent;
         if (m.type === 'result') entry.sawResult = true;
@@ -131,7 +137,7 @@ export class ChatHost {
     });
     this.sessions.set(sessionId, entry);
     entry.session.start();
-    entry.session.send(prompt);
+    entry.session.send(prompt, opts?.images);
   }
 
   stop(sessionId: string): void {

@@ -34,3 +34,9 @@ export interface ChatSettings {
   model: string;
   maxTurns: number;
 }
+
+/** Base64 image attached to a chat turn (sent as an image content block). */
+export interface ChatImage {
+  media_type: string;
+  data: string;
+}

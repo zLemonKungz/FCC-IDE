@@ -9,6 +9,8 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   text: string;
   tools: ToolCall[];
+  /** attached images on a user turn (count, shown as a chip) */
+  imageCount?: number;
 }
 export interface ChatUiState {
   messages: ChatMessage[];
@@ -25,7 +27,7 @@ export interface FileEvent {
 }
 
 export type ChatEvent =
-  | { type: 'user-message'; text: string }
+  | { type: 'user-message'; text: string; images?: number }
   | { type: 'assistant'; message: { content?: { type: string; text?: string; id?: string; name?: string; input?: unknown }[] } }
   | { type: 'user'; message?: { content?: { type: string; tool_use_id?: string; is_error?: boolean }[] } }
   | {
@@ -63,7 +65,7 @@ export function applyChatEvent(
 
   switch (ev.type) {
     case 'user-message':
-      s = { ...s, messages: [...s.messages, { id: uid(), role: 'user', text: ev.text, tools: [] }] };
+      s = { ...s, messages: [...s.messages, { id: uid(), role: 'user', text: ev.text, tools: [], imageCount: ev.images }] };
       break;
 
     case 'assistant': {

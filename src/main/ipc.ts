@@ -1,9 +1,10 @@
-import { ipcMain, dialog, type BrowserWindow } from 'electron';
+import { ipcMain, dialog, clipboard, type BrowserWindow } from 'electron';
 import { IPC } from '@shared/ipc';
+import type { ChatImage } from '@shared/types';
 import * as files from './file-service';
 import * as terminal from './terminal-service';
 import * as fcc from './fcc-manager';
-import { ChatHost } from './chat/chat-host';
+import { ChatHost, type ChatStartOpts } from './chat/chat-host';
 import { setChatConfig } from './chat/config';
 
 let chatHost: ChatHost | null = null;
@@ -56,9 +57,20 @@ export function registerIpc(win: BrowserWindow): void {
   ipcMain.handle(IPC.fccDetect, () => fcc.detectInstall());
 
   chatHost = new ChatHost(win);
-  ipcMain.handle(IPC.chatStart, (_e, sessionId: string, folder: string, prompt: string, resume?: string) =>
-    chatHost!.start(sessionId, folder, prompt, resume)
+  ipcMain.handle(IPC.chatStart, (_e, sessionId: string, folder: string, prompt: string, opts?: ChatStartOpts) =>
+    chatHost!.start(sessionId, folder, prompt, opts)
   );
-  ipcMain.handle(IPC.chatSend, (_e, sessionId: string, prompt: string) => chatHost!.send(sessionId, prompt));
+  ipcMain.handle(IPC.chatSend, (_e, sessionId: string, prompt: string, images?: ChatImage[]) =>
+    chatHost!.send(sessionId, prompt, images)
+  );
   ipcMain.handle(IPC.chatStop, (_e, sessionId: string) => chatHost!.stop(sessionId));
+
+  // A bitmap on the system clipboard (e.g. a Win+Shift+S screenshot) can't be
+  // read by the sandboxed renderer's Clipboard API under file:// — read it in
+  // main and hand back the base64 PNG.
+  ipcMain.handle(IPC.clipboardReadImage, () => {
+    const img = clipboard.readImage();
+    if (img.isEmpty()) return null;
+    return img.toPNG().toString('base64');
+  });
 }
