@@ -30,6 +30,7 @@ const api = {
   fsSearch: (): Promise<string[]> => ipcRenderer.invoke(IPC.fsSearch),
   fsSearchContent: (query: string): Promise<SearchHit[]> => ipcRenderer.invoke(IPC.fsSearchContent, query),
   openFolder: (): Promise<string | null> => ipcRenderer.invoke(IPC.dialogOpenFolder),
+  openFolderAt: (dir: string): Promise<boolean> => ipcRenderer.invoke(IPC.openFolderAt, dir),
   termCreate: (cwd: string): Promise<number> => ipcRenderer.invoke(IPC.termCreate, cwd),
   termData: (id: number, data: string): void => ipcRenderer.send(IPC.termData, id, data),
   termResize: (id: number, cols: number, rows: number): void => ipcRenderer.send(IPC.termResize, id, cols, rows),

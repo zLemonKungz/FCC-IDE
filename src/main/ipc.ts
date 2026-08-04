@@ -41,6 +41,7 @@ export function registerIpc(win: BrowserWindow): void {
   });
 
   ipcMain.handle(IPC.fsList, (_e, dir: string) => files.listDir(dir));
+  ipcMain.handle(IPC.openFolderAt, (_e, dir: string) => files.openRootAt(dir));
   ipcMain.handle(IPC.fsRead, (_e, p: string) => files.readFile(p));
   ipcMain.handle(IPC.fsWrite, (_e, p: string, content: string) => files.writeFile(p, content));
   ipcMain.handle(IPC.fsCreate, (_e, p: string, isDir: boolean) => files.createEntry(p, isDir));

@@ -195,21 +195,10 @@ export const useEditorStore = create<EditorState>()(
   getTab: (path) => get().tabs.find((t) => t.path === path) ?? null
     }),
     {
-      // Reopen the tabs that were open when the app last closed. Only the paths
-      // are stored (file contents can be large); on startup the content is
-      // re-read from disk, like VS Code's workspace-restore.
+      // Tab paths are saved here; the startup effect in App re-reads their
+      // contents from disk after the open folder is registered in main.
       name: 'fcc-tabs',
-      partialize: (s) => ({ tabs: s.tabs.map(({ path, name }) => ({ path, name })), activePath: s.activePath }),
-      onRehydrateStorage: () => (state) => {
-        const tabs = state?.tabs;
-        if (!tabs || tabs.length === 0) return;
-        const paths = tabs.map((t) => t.path);
-        const active = state?.activePath ?? null;
-        useEditorStore.setState({ tabs: [], activePath: null });
-        void Promise.all(paths.map((p) => useEditorStore.getState().open(p).catch(() => undefined))).then(() => {
-          if (active) useEditorStore.setState({ activePath: active });
-        });
-      }
+      partialize: (s) => ({ tabs: s.tabs.map(({ path, name }) => ({ path, name })), activePath: s.activePath })
     }
   )
 );

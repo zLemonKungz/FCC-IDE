@@ -11,6 +11,8 @@ import CommandPalette from './components/CommandPalette';
 import SearchPanel from './components/SearchPanel';
 import { useLayoutStore, LAYOUT } from './stores/layout-store';
 import { useSettingsStore } from './stores/settings-store';
+import { useExplorerStore } from './stores/explorer-store';
+import { useEditorStore } from './stores/editor-store';
 
 export default function App() {
   const sidebarVisible = useLayoutStore((s) => s.sidebarVisible);
@@ -95,6 +97,38 @@ export default function App() {
   useEffect(() => {
     void window.fcc.setChatSettings({ model: chatModel, maxTurns: chatMaxTurns, autoCompactWindow });
   }, [chatModel, chatMaxTurns, autoCompactWindow]);
+
+  // Workspace restore. The persisted stores hold the folder path and tab paths
+  // only; contents are re-read from disk. Order matters: the folder must be
+  // registered in the main process (fs:open-root) BEFORE any file IPC, or the
+  // "No folder open" guard rejects every list/read.
+  const restored = useRef(false);
+  useEffect(() => {
+    if (restored.current) return;
+    restored.current = true;
+    const root = useExplorerStore.getState().root;
+    const tabs = useEditorStore.getState().tabs;
+    const active = useEditorStore.getState().activePath;
+    const restore = async (): Promise<void> => {
+      if (!root) {
+        if (tabs.length > 0) useEditorStore.setState({ tabs: [], activePath: null });
+        return;
+      }
+      const ok = await window.fcc.openFolderAt(root);
+      if (!ok) {
+        useExplorerStore.setState({ root: null, children: {}, expanded: {} });
+        useEditorStore.setState({ tabs: [], activePath: null });
+        return;
+      }
+      const entries = await window.fcc.fsList(root);
+      useExplorerStore.setState({ root, children: { [root]: entries }, expanded: { [root]: true } });
+      if (tabs.length === 0) return;
+      useEditorStore.setState({ tabs: [], activePath: null });
+      await Promise.all(tabs.map((t) => useEditorStore.getState().open(t.path).catch(() => undefined)));
+      if (active) useEditorStore.setState({ activePath: active });
+    };
+    void restore();
+  }, []);
 
   // The right column holds the side chat and/or a right-docked terminal. When
   // the chat is centered it leaves the column, which then only exists for the

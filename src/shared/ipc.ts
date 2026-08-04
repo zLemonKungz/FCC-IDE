@@ -9,6 +9,8 @@ export const IPC = {
   fsSearch: 'fs:search',
   fsSearchContent: 'fs:search-content',
   dialogOpenFolder: 'dialog:open-folder',
+  /** re-register a previously-open folder on startup (no dialog) */
+  openFolderAt: 'fs:open-root',
   termCreate: 'term:create',
   termData: 'term:data',
   termResize: 'term:resize',

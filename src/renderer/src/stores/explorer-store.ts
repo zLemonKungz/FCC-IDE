@@ -58,19 +58,11 @@ export const useExplorerStore = create<ExplorerState>()(
   }
     }),
     {
-      // Reopen the folder the user had open (no dialog — it was already theirs).
+      // The open folder is saved here; the actual restore (registering it in
+      // the main process, then listing) happens in App's startup effect so it
+      // can run before editor tabs are re-opened.
       name: 'fcc-explorer',
-      partialize: (s) => ({ root: s.root }),
-      onRehydrateStorage: () => (state) => {
-        const root = state?.root;
-        if (!root) return;
-        void window.fcc
-          .fsList(root)
-          .then((entries) =>
-            useExplorerStore.setState({ root, children: { [root]: entries }, expanded: { [root]: true } })
-          )
-          .catch(() => useExplorerStore.setState({ root: null, children: {}, expanded: {} }));
-      }
+      partialize: (s) => ({ root: s.root })
     }
   )
 );

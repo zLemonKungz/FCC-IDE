@@ -10,6 +10,20 @@ export function setRoot(dir: string): void {
   rootDir = path.resolve(dir);
 }
 
+// Startup restore: register a previously-open folder without a dialog. Returns
+// false (and leaves the root unset) if it no longer exists, so a moved/deleted
+// folder can't silently become the root and break later path checks.
+export async function openRootAt(dir: string): Promise<boolean> {
+  try {
+    const st = await fs.stat(dir);
+    if (!st.isDirectory()) return false;
+  } catch {
+    return false;
+  }
+  setRoot(dir);
+  return true;
+}
+
 export function getRoot(): string | null {
   return rootDir;
 }
