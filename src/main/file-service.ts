@@ -23,6 +23,30 @@ export async function assertInside(target: string): Promise<void> {
   }
 }
 
+/** Recursively list files under the root as forward-slash relative paths
+ *  (skips the same noise dirs as listDir) — feeds the chat '@' mention picker. */
+export async function searchFiles(): Promise<string[]> {
+  const base = rootDir;
+  if (!base) return [];
+  const out: string[] = [];
+  const walk = async (dir: string): Promise<void> => {
+    let entries;
+    try {
+      entries = await fs.readdir(dir, { withFileTypes: true });
+    } catch {
+      return; // unreadable dir (permissions) — skip it
+    }
+    for (const e of entries) {
+      if (SKIP_DIRS.has(e.name)) continue;
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) await walk(p);
+      else out.push(path.relative(base, p).split(path.sep).join('/'));
+    }
+  };
+  await walk(base);
+  return out.sort((a, b) => a.localeCompare(b));
+}
+
 export async function listDir(dir: string): Promise<FileEntry[]> {
   await assertInside(dir);
   const entries = await fs.readdir(dir, { withFileTypes: true });

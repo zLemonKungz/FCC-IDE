@@ -10,6 +10,7 @@ const api = {
   fsCreate: (p: string, isDir: boolean): Promise<void> => ipcRenderer.invoke(IPC.fsCreate, p, isDir),
   fsRename: (p: string, newName: string): Promise<void> => ipcRenderer.invoke(IPC.fsRename, p, newName),
   fsDelete: (p: string): Promise<void> => ipcRenderer.invoke(IPC.fsDelete, p),
+  fsSearch: (): Promise<string[]> => ipcRenderer.invoke(IPC.fsSearch),
   openFolder: (): Promise<string | null> => ipcRenderer.invoke(IPC.dialogOpenFolder),
   termCreate: (cwd: string): Promise<number> => ipcRenderer.invoke(IPC.termCreate, cwd),
   termData: (id: number, data: string): void => ipcRenderer.send(IPC.termData, id, data),

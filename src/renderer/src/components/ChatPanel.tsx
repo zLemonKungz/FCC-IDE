@@ -42,6 +42,10 @@ export default function ChatPanel({ style }: { style?: CSSProperties }) {
   const [input, setInput] = useState('');
   const [help, setHelp] = useState<string | null>(null);
   const [picker, setPicker] = useState<{ open: boolean; index: number }>({ open: false, index: 0 });
+  const [atPicker, setAtPicker] = useState<{ open: boolean; index: number; files: string[] }>({ open: false, index: 0, files: [] });
+  // File list for '@' mentions, cached once per open folder (fs:search walks it).
+  const filesCache = useRef<{ root: string | null; list: string[] }>({ root: null, list: [] });
+  const atStartRef = useRef(-1);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -87,7 +91,31 @@ Type anything else to send it to Claude.`;
     inputRef.current?.focus();
   };
 
-  const handleChange = (value: string): void => {
+  const loadFiles = async (): Promise<void> => {
+    const r = root ?? '';
+    if (filesCache.current.root === r && filesCache.current.list.length > 0) return;
+    const list = await window.fcc.fsSearch().catch(() => [] as string[]);
+    filesCache.current = { root: r, list };
+  };
+
+  // Where a '@mention' begins: the last '@' preceded by whitespace or input start.
+  const mentionStart = (value: string): number => {
+    for (let i = value.length - 1; i >= 0; i--) {
+      if (value[i] === '@' && (i === 0 || /\s/.test(value[i - 1]))) return i;
+    }
+    return -1;
+  };
+
+  const completeAt = (path: string): void => {
+    const start = atStartRef.current;
+    if (start < 0) return;
+    const value = input;
+    setInput(`${value.slice(0, start)}@${path} `);
+    setAtPicker({ open: false, index: 0, files: [] });
+    inputRef.current?.focus();
+  };
+
+  const handleChange = async (value: string): Promise<void> => {
     setInput(value);
     const t = value.trimStart();
     // Open the picker on a lone '/' too — that's how users discover commands.
@@ -98,9 +126,47 @@ Type anything else to send it to Claude.`;
     } else {
       setPicker({ open: false, index: 0 });
     }
+    // '@' file mentions: filter the walk by what follows the @ (no spaces yet).
+    const start = mentionStart(value);
+    if (start >= 0 && !value.slice(start + 1).includes(' ')) {
+      await loadFiles();
+      const frag = value.slice(start + 1).toLowerCase();
+      const hit = filesCache.current.list.filter((f) => f.toLowerCase().startsWith(frag));
+      setAtPicker({ open: hit.length > 0, index: 0, files: hit.slice(0, 50) });
+      atStartRef.current = start;
+    } else if (atPicker.open) {
+      setAtPicker({ open: false, index: 0, files: [] });
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+    if (atPicker.open && atPicker.files.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setAtPicker((a) => ({ ...a, index: (a.index + 1) % a.files.length }));
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setAtPicker((a) => ({ ...a, index: (a.index - 1 + a.files.length) % a.files.length }));
+        return;
+      }
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        completeAt(atPicker.files[atPicker.index]);
+        return;
+      }
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        completeAt(atPicker.files[atPicker.index]);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setAtPicker({ open: false, index: 0, files: [] });
+        return;
+      }
+    }
     if (picker.open && matches.length > 0) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -144,6 +210,7 @@ Type anything else to send it to Claude.`;
     if (text === '/') return; // a lone '/' isn't a prompt
     setInput('');
     setPicker({ open: false, index: 0 });
+    setAtPicker({ open: false, index: 0, files: [] });
     const [cmd] = text.toLowerCase().split(/\s+/);
     if (text.startsWith('/')) {
       if (cmd === '/help') {
@@ -246,12 +313,28 @@ Type anything else to send it to Claude.`;
             ))}
           </div>
         )}
+        {atPicker.open && atPicker.files.length > 0 && (
+          <div className="slash-picker">
+            {atPicker.files.map((f, i) => (
+              <div
+                key={f}
+                className={`sp-item${i === atPicker.index ? ' active' : ''}`}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  completeAt(f);
+                }}
+              >
+                <span className="sp-cmd">@{f}</span>
+              </div>
+            ))}
+          </div>
+        )}
         {!root && <div className="hint">Open a folder first</div>}
         <textarea
           ref={inputRef}
           value={input}
-          placeholder={root ? 'Ask Claude to do something... (type / for commands)' : ''}
-          onChange={(e) => handleChange(e.target.value)}
+          placeholder={root ? 'Ask Claude to do something... (type / for commands, @ to mention a file)' : ''}
+          onChange={(e) => void handleChange(e.target.value)}
           onKeyDown={handleKeyDown}
           disabled={!root}
         />
