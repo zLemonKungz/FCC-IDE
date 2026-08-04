@@ -2,12 +2,17 @@ import { useEffect } from 'react';
 import { useFccStore } from '../stores/fcc-store';
 import { useExplorerStore } from '../stores/explorer-store';
 import { useEditorStore } from '../stores/editor-store';
+import FccSetupModal from './FccSetupModal';
 import Logo from './Logo';
 import { IconFolder } from './icons';
 
 export default function StatusBar() {
   const status = useFccStore((s) => s.status);
+  const install = useFccStore((s) => s.install);
+  const setupOpen = useFccStore((s) => s.setupOpen);
+  const setSetupOpen = useFccStore((s) => s.setSetupOpen);
   const refresh = useFccStore((s) => s.refresh);
+  const detect = useFccStore((s) => s.detect);
   const start = useFccStore((s) => s.start);
   const root = useExplorerStore((s) => s.root);
   const activePath = useEditorStore((s) => s.activePath);
@@ -15,10 +20,11 @@ export default function StatusBar() {
 
   useEffect(() => {
     refresh();
+    void detect();
     window.fcc.onFccStatus((s) => useFccStore.setState({ status: s }));
     const id = setInterval(refresh, 5000);
     return () => clearInterval(id);
-  }, [refresh]);
+  }, [refresh, detect]);
 
   return (
     <div className="statusbar">
@@ -36,15 +42,33 @@ export default function StatusBar() {
           Ln {cursor.line}, Col {cursor.col}
         </span>
       )}
-      <span className={`fcc ${status?.online ? 'ok' : 'down'}`}>
-        <span className="dot" />
-        {status?.online ? 'FCC online' : 'FCC offline'}
-      </span>
-      {!status?.online && (
-        <button onClick={start} className="ghost">
-          Start server
-        </button>
+      {install && !install.installed ? (
+        <>
+          <span className="fcc down">
+            <span className="dot" />
+            FCC not installed
+          </span>
+          <button onClick={() => setSetupOpen(true)} className="ghost">
+            Set up FCC
+          </button>
+        </>
+      ) : status?.online ? (
+        <span className="fcc ok">
+          <span className="dot" />
+          FCC online
+        </span>
+      ) : (
+        <>
+          <span className="fcc down">
+            <span className="dot" />
+            FCC offline
+          </span>
+          <button onClick={start} className="ghost">
+            Start server
+          </button>
+        </>
       )}
+      {setupOpen && <FccSetupModal onClose={() => setSetupOpen(false)} />}
     </div>
   );
 }

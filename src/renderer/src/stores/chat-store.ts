@@ -40,5 +40,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     const sid = get().activeSessionId;
     if (sid) void window.fcc.chatStop(sid);
   },
-  reset: () => set({ ...emptyChatState(), activeSessionId: null })
+  reset: () => {
+    // /new while a turn is running must actually stop the subprocess, not
+    // just drop the renderer state — otherwise the CLI keeps working invisibly
+    // until the next chatStart kills it.
+    const sid = get().activeSessionId;
+    if (sid) void window.fcc.chatStop(sid);
+    set({ ...emptyChatState(), activeSessionId: null });
+  }
 }));

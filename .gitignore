@@ -16,10 +16,15 @@ release/
 .claude/
 .remember/
 
+# dev-only: unit tests + process docs aren't shipped with the app
+tests/
+docs/superpowers/
+
 # scratch / dev artifacts
 tmp_logo/
 .shot-demo/
 shot*.png
+tmp-*.mjs
 
 # os
 .DS_Store

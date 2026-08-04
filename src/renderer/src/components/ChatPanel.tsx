@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useChatStore } from '../stores/chat-store';
 import { useExplorerStore } from '../stores/explorer-store';
+import { useFccStore } from '../stores/fcc-store';
 import { useLayoutStore } from '../stores/layout-store';
 import ChatMessage from './ChatMessage';
 import Markdown from '../chat/markdown';
@@ -35,6 +36,8 @@ export default function ChatPanel({ style }: { style?: CSSProperties }) {
   const send = useChatStore((s) => s.send);
   const stop = useChatStore((s) => s.stop);
   const root = useExplorerStore((s) => s.root);
+  const install = useFccStore((s) => s.install);
+  const setSetupOpen = useFccStore((s) => s.setSetupOpen);
   const toggleTheme = useLayoutStore((s) => s.toggleTheme);
   const [input, setInput] = useState('');
   const [help, setHelp] = useState<string | null>(null);
@@ -87,7 +90,8 @@ Type anything else to send it to Claude.`;
   const handleChange = (value: string): void => {
     setInput(value);
     const t = value.trimStart();
-    if (t.startsWith('/') && !t.includes(' ') && value !== '/') {
+    // Open the picker on a lone '/' too — that's how users discover commands.
+    if (t.startsWith('/') && !t.includes(' ')) {
       const filter = t.slice(1).toLowerCase();
       const hasMatches = allCommands.some((c) => c.slice(1).toLowerCase().startsWith(filter));
       setPicker({ open: hasMatches, index: 0 });
@@ -118,6 +122,13 @@ Type anything else to send it to Claude.`;
         setPicker({ open: false, index: 0 });
         return;
       }
+      if (e.key === 'Enter' && !e.shiftKey) {
+        // With the picker open, Enter completes the highlighted command
+        // instead of forwarding a partial like '/he' to Claude.
+        e.preventDefault();
+        completeCommand();
+        return;
+      }
     }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -127,7 +138,10 @@ Type anything else to send it to Claude.`;
 
   const submit = (): void => {
     const text = input.trim();
-    if (!text || !root) return;
+    // While a turn runs, sending is blocked (chat-store drops it) — bail
+    // BEFORE clearing the box so the draft isn't silently lost.
+    if (!text || !root || running) return;
+    if (text === '/') return; // a lone '/' isn't a prompt
     setInput('');
     setPicker({ open: false, index: 0 });
     const [cmd] = text.toLowerCase().split(/\s+/);
@@ -201,13 +215,19 @@ Type anything else to send it to Claude.`;
             {lastUsage && !running && (
               <div className="chat-usage">
                 {lastUsage.input.toLocaleString()} in · {lastUsage.output.toLocaleString()} out
-                {lastUsage.cost !== undefined && ` · $${lastUsage.cost.toFixed(4)}`}
+                {lastUsage.cost != null && ` · $${lastUsage.cost.toFixed(4)}`}
               </div>
             )}
           </>
         )}
       </div>
 
+      {install && !install.installed && (
+        <button className="fcc-install-banner" onClick={() => setSetupOpen(true)}>
+          <IconSparkles width={12} height={12} />
+          FCC isn’t installed — click to set up
+        </button>
+      )}
       <div className="chat-input">
         {picker.open && matches.length > 0 && (
           <div className="slash-picker">
@@ -235,7 +255,7 @@ Type anything else to send it to Claude.`;
           onKeyDown={handleKeyDown}
           disabled={!root}
         />
-        <button className="send" onClick={submit} disabled={!root || !input.trim()} title="Send">
+        <button className="send" onClick={submit} disabled={!root || running || !input.trim()} title="Send">
           <IconSend width={14} height={14} />
         </button>
       </div>

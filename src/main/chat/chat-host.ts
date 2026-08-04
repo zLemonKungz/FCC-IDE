@@ -55,6 +55,10 @@ export class ChatHost {
 
     const live = this.sessions.get(sessionId);
     if (live && !live.cleaned) {
+      // A new turn on the live process: clear the previous turn's result
+      // marker so a mid-turn death below is reported as an error instead of
+      // being silently swallowed by the stale sawResult=true.
+      live.sawResult = false;
       live.session.send(prompt);
       return;
     }
@@ -76,7 +80,13 @@ export class ChatHost {
     const cleanup = (err?: Error): void => {
       if (entry.cleaned) return;
       entry.cleaned = true;
-      if (err && !entry.sawResult) this.emit(sessionId, { type: 'error', message: err.message });
+      if (err && !entry.sawResult) {
+        // Fold in the CLI's stderr tail — spawn failures and crashes print the
+        // real cause there (missing binary, bad env, node stack trace).
+        const trace = entry.session.stderrTrace();
+        const message = trace ? `${err.message}\n${trace.trim().split('\n').slice(-3).join('\n')}` : err.message;
+        this.emit(sessionId, { type: 'error', message });
+      }
       this.sessions.delete(sessionId);
     };
 
@@ -104,7 +114,18 @@ export class ChatHost {
       onExit: (code) => {
         // A turn that ended cleanly (result seen) leaves the process alive for
         // the next message; reaching here means it exited on its own or was killed.
-        cleanup(code === 0 || code === null ? undefined : new Error(`Claude exited (code ${code})`));
+        // The in-flight turn produced no result (sawResult was cleared at
+        // send/spawn): always surface an error so the renderer's running flag
+        // is cleared — a silent cleanup here wedges the conversation forever.
+        if (!entry.sawResult) {
+          cleanup(
+            code === 0 || code === null
+              ? new Error(`Claude exited before finishing (code ${code})`)
+              : new Error(`Claude exited (code ${code})`)
+          );
+        } else {
+          cleanup();
+        }
       },
       onError: (err) => cleanup(err)
     });

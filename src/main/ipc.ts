@@ -51,6 +51,7 @@ export function registerIpc(win: BrowserWindow): void {
 
   ipcMain.handle(IPC.fccStatus, () => fcc.checkHealth());
   ipcMain.handle(IPC.fccStart, () => fcc.startServer());
+  ipcMain.handle(IPC.fccDetect, () => fcc.detectInstall());
 
   chatHost = new ChatHost(win);
   ipcMain.handle(IPC.chatStart, (_e, sessionId: string, folder: string, prompt: string, resume?: string) =>

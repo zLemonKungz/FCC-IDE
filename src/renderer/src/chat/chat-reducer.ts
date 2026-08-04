@@ -122,7 +122,8 @@ export function applyChatEvent(
           ? {
               input: (ev.usage.input_tokens ?? 0) + (ev.usage.cache_creation_input_tokens ?? 0) + (ev.usage.cache_read_input_tokens ?? 0),
               output: ev.usage.output_tokens ?? 0,
-              cost: ev.total_cost_usd
+              // JSON null bypasses TS — never store null for a number field.
+              cost: ev.total_cost_usd ?? undefined
             }
           : null
       };

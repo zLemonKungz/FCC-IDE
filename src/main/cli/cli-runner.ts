@@ -9,6 +9,9 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'child_process';
 import { existsSync } from 'fs';
 import { resolve } from 'path';
+// `app` is only available in the main process; importing it in a plain-node
+// (vitest) context yields undefined, which resolveCliBinary guards against.
+import { app } from 'electron';
 
 export interface CliSessionOptions {
   binary: string;
@@ -26,16 +29,29 @@ export interface CliSessionOptions {
 /** Resolve the claude CLI binary: CLI_PATH env > SDK-bundled platform binary > PATH. */
 export function resolveCliBinary(): string {
   if (process.env.CLI_PATH) return process.env.CLI_PATH;
-  const candidates: string[] = [];
-  if (process.platform === 'win32') {
-    candidates.push(resolve(process.cwd(), 'node_modules/@anthropic-ai/claude-agent-sdk-win32-x64/claude.exe'));
-  } else if (process.platform === 'darwin') {
-    candidates.push(resolve(process.cwd(), 'node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64/claude'));
-  } else if (process.platform === 'linux') {
-    candidates.push(resolve(process.cwd(), 'node_modules/@anthropic-ai/claude-agent-sdk-linux-x64/claude'));
+  const rel = cliBinaryRelPath();
+  if (!rel) return 'claude';
+  // Dev / test: the project root carries node_modules. Packaged app:
+  // app.getAppPath() is the asar, and electron-builder unpacks the native
+  // exe to resources/app.asar.unpacked (see the build.asarUnpack config).
+  const bases = [process.cwd()];
+  const appPath = typeof app?.getAppPath === 'function' ? app.getAppPath() : null;
+  if (appPath) {
+    bases.push(appPath);
+    if (process.resourcesPath) bases.push(resolve(process.resourcesPath, 'app.asar.unpacked'));
   }
-  const found = candidates.find((p) => existsSync(p));
-  return found ?? 'claude'; // fall back to whatever is on PATH
+  for (const base of bases) {
+    const p = resolve(base, rel);
+    if (existsSync(p)) return p;
+  }
+  return 'claude'; // fall back to whatever is on PATH
+}
+
+function cliBinaryRelPath(): string | null {
+  if (process.platform === 'win32') return 'node_modules/@anthropic-ai/claude-agent-sdk-win32-x64/claude.exe';
+  if (process.platform === 'darwin') return 'node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64/claude';
+  if (process.platform === 'linux') return 'node_modules/@anthropic-ai/claude-agent-sdk-linux-x64/claude';
+  return null;
 }
 
 /**
@@ -63,6 +79,8 @@ export class CliSession {
   private child: ChildProcessWithoutNullStreams | null = null;
   private buffer = '';
   private stopped = false;
+  /** Tail of stderr, kept so a crash produces a diagnosable error message. */
+  private stderrTail = '';
 
   constructor(private opts: CliSessionOptions) {}
 
@@ -79,6 +97,9 @@ export class CliSession {
 
     const child = spawn(this.opts.binary, args, {
       cwd: this.opts.cwd,
+      // windowsHide: without it the console-subsystem claude.exe pops a cmd
+      // window on every chat turn in the packaged GUI app.
+      windowsHide: true,
       env: {
         ...process.env,
         ANTHROPIC_BASE_URL: this.opts.baseUrl,
@@ -93,22 +114,42 @@ export class CliSession {
       this.buffer = rest;
       for (const ev of events) this.opts.onEvent(ev);
     });
-    child.stderr.on('data', () => {
-      /* ignore — the CLI writes non-JSON diagnostics to stderr */
+    child.stderr.on('data', (d) => {
+      // Keep a bounded tail; the CLI writes non-JSON diagnostics (node
+      // stack traces, env errors) here that are the first clue on a crash.
+      this.stderrTail = (this.stderrTail + d.toString()).slice(-4096);
     });
     child.on('error', (err) => this.opts.onError(err));
     child.on('exit', (code) => this.opts.onExit(code));
+    // Swallow stdin EPIPE — writing to a child that just died must not crash
+    // the main process (an unhandled 'error' on the stream does).
+    child.stdin.on('error', () => {});
   }
 
   /** Send a user turn over stdin. Safe to call repeatedly on one process. */
   send(content: string): void {
     if (!this.child || this.stopped) return;
-    this.child.stdin.write(JSON.stringify({ type: 'user', message: { role: 'user', content } }) + '\n');
+    const stdin = this.child.stdin;
+    if (stdin.destroyed || stdin.writableEnded) return;
+    stdin.write(JSON.stringify({ type: 'user', message: { role: 'user', content } }) + '\n');
   }
 
-  /** Terminate the subprocess (Stop button / session teardown). */
+  /** Terminate the subprocess and, on Windows, its whole process tree.
+   *  child.kill() on win32 only targets the direct child — the claude CLI can
+   *  have grandchildren (Bash tool, MCP-server node children) that would
+   *  otherwise leak. taskkill /T /F tears the tree down. */
   stop(): void {
     this.stopped = true;
-    if (this.child) this.child.kill();
+    if (!this.child || this.child.pid === undefined) return;
+    if (process.platform === 'win32') {
+      spawn('taskkill', ['/pid', String(this.child.pid), '/T', '/F'], { windowsHide: true });
+    } else {
+      this.child.kill();
+    }
+  }
+
+  /** Last ~4KB the CLI wrote to stderr (empty if it was clean). */
+  stderrTrace(): string {
+    return this.stderrTail;
   }
 }

@@ -1,11 +1,99 @@
 import { spawn } from 'child_process';
+import { existsSync } from 'fs';
+import { homedir } from 'os';
+import { join } from 'path';
 import { net, type BrowserWindow } from 'electron';
 import { IPC } from '@shared/ipc';
-import type { FccStatus } from '@shared/types';
+import type { FccInstallStatus, FccStatus } from '@shared/types';
 
 export const FCC_PORT = Number(process.env.FCC_PORT ?? 8082);
 export const FCC_BASE_URL = process.env.FCC_BASE_URL ?? `http://127.0.0.1:${FCC_PORT}`;
 export const FCC_AUTH_TOKEN = process.env.FCC_AUTH_TOKEN ?? 'freecc';
+
+/**
+ * Decide the install state from gathered facts. Pure so it is unit-testable
+ * without spawning anything.
+ */
+export function classifyInstall(opts: {
+  override: string | null;
+  localPath: string;
+  localPathExists: boolean;
+  onPath: string | null;
+}): Pick<FccInstallStatus, 'installed' | 'serverPath' | 'reason'> {
+  if (opts.override) return { installed: true, serverPath: opts.override, reason: 'installed' };
+  if (opts.localPathExists) {
+    return {
+      installed: true,
+      serverPath: opts.localPath,
+      reason: opts.onPath ? 'installed' : 'path-missing'
+    };
+  }
+  if (opts.onPath) return { installed: true, serverPath: opts.onPath, reason: 'installed' };
+  return { installed: false, serverPath: null, reason: 'missing' };
+}
+
+/** Run a short, harmless command (where/which/python --version/uv --version) with a timeout. */
+function probe(cmd: string, args: string[]): Promise<{ code: number | null; out: string }> {
+  return new Promise((resolve) => {
+    let child;
+    try {
+      child = spawn(cmd, args, { windowsHide: true });
+    } catch {
+      resolve({ code: null, out: '' });
+      return;
+    }
+    let out = '';
+    const timer = setTimeout(() => {
+      try { child.kill(); } catch { /* already gone */ }
+      resolve({ code: null, out });
+    }, 3000);
+    child.stdout?.on('data', (d: Buffer) => (out += d.toString()));
+    child.stderr?.on('data', (d: Buffer) => (out += d.toString()));
+    child.on('error', () => { clearTimeout(timer); resolve({ code: null, out }); });
+    child.on('close', (code) => { clearTimeout(timer); resolve({ code, out }); });
+  });
+}
+
+function probeOnPath(cmd: string): Promise<string | null> {
+  return probe(process.platform === 'win32' ? 'where' : 'which', [cmd]).then(({ code, out }) => {
+    if (code !== 0) return null;
+    return out.trim().split(/\r?\n/)[0]?.trim() || null;
+  });
+}
+
+async function probePythonVersion(): Promise<string | null> {
+  const { out } = await probe(process.platform === 'win32' ? 'python' : 'python3', ['--version']);
+  const m = out.match(/Python\s+(\d+\.\d+(?:\.\d+)?)/);
+  return m ? m[1] : null;
+}
+
+async function probeUv(): Promise<boolean> {
+  return (await probe('uv', ['--version'])).code === 0;
+}
+
+/**
+ * Detect whether free-claude-code (fcc-server) is installed. Resolves the
+ * binary without executing the server: explicit FCC_SERVER_BIN override, then
+ * the uv-managed ~/.local/bin install dir, then the PATH. Python 3.14 + uv are
+ * probed too so the setup guide can tailor its message.
+ */
+export async function detectInstall(): Promise<FccInstallStatus> {
+  const [pythonVersion, hasUv, onPath] = await Promise.all([
+    probePythonVersion(),
+    probeUv(),
+    probeOnPath('fcc-server')
+  ]);
+  const override =
+    process.env.FCC_SERVER_BIN && existsSync(process.env.FCC_SERVER_BIN) ? process.env.FCC_SERVER_BIN : null;
+  const localPath = join(homedir(), '.local', 'bin', process.platform === 'win32' ? 'fcc-server.exe' : 'fcc-server');
+  const classified = classifyInstall({
+    override,
+    localPath,
+    localPathExists: existsSync(localPath),
+    onPath
+  });
+  return { ...classified, pythonVersion, hasUv };
+}
 
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 let lastStatus: FccStatus = { online: false, port: FCC_PORT };
@@ -42,8 +130,16 @@ export async function checkHealth(): Promise<FccStatus> {
 export async function startServer(): Promise<FccStatus> {
   const before = await checkHealth();
   if (!before.online) {
-    const bin = process.env.FCC_SERVER_BIN ?? 'fcc-server';
-    spawn(bin, [], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+    const inst = await detectInstall();
+    // Not installed: don't spawn a phantom command — return offline and let
+    // the renderer route to the setup guide.
+    if (!inst.installed) return buildStatus(false, FCC_PORT);
+    const bin = inst.serverPath ?? 'fcc-server';
+    const child = spawn(bin, [], { detached: true, stdio: 'ignore', windowsHide: true });
+    // Missing/invalid binary shouldn't crash the app — the 5s health poll
+    // simply keeps reporting offline.
+    child.on('error', () => {});
+    child.unref();
     for (let i = 0; i < 10; i++) {
       await new Promise((r) => setTimeout(r, 500));
       const s = await checkHealth();

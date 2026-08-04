@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { IPC } from '@shared/ipc';
-import type { ChatSettings, FileEntry, FccStatus } from '@shared/types';
+import type { ChatSettings, FileEntry, FccInstallStatus, FccStatus } from '@shared/types';
 
 const api = {
   ping: (): Promise<string> => ipcRenderer.invoke(IPC.ping),
@@ -17,6 +17,7 @@ const api = {
   termDispose: (id: number): Promise<void> => ipcRenderer.invoke(IPC.termDispose, id),
   fccStatus: (): Promise<FccStatus> => ipcRenderer.invoke(IPC.fccStatus),
   fccStart: (): Promise<FccStatus> => ipcRenderer.invoke(IPC.fccStart),
+  fccDetect: (): Promise<FccInstallStatus> => ipcRenderer.invoke(IPC.fccDetect),
   chatStart: (sessionId: string, folder: string, prompt: string, resume?: string): Promise<void> =>
     ipcRenderer.invoke(IPC.chatStart, sessionId, folder, prompt, resume),
   chatSend: (sessionId: string, prompt: string): Promise<void> =>
