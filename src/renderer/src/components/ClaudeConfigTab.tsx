@@ -82,7 +82,12 @@ export default function ClaudeConfigTab() {
   const env = draft.env ?? {};
   const setEnv = (next: Record<string, string>): void => set({ env: next });
 
-  if (!loaded) return <div className="cs-empty">Loading…</div>;
+  if (!loaded)
+    return (
+      <div className="cs-empty">
+        <span className="spinner" /> Loading…
+      </div>
+    );
 
   return (
     <div className="cs-config">

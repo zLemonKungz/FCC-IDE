@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSettingsStore, CURATED_CLAUDE_MODELS, claudeLabel } from '../stores/settings-store';
 import { useChatStore } from '../stores/chat-store';
 import { useExplorerStore } from '../stores/explorer-store';
+import { useModalFocus } from '../hooks/useModal';
 import ClaudeConfigTab from './ClaudeConfigTab';
 import type { GatewayModel, HistorySummary, McpServerDef } from '@shared/types';
 import { IconTrash, IconPlus, IconClose } from './icons';
@@ -22,10 +23,11 @@ export default function ChatSettingsModal({ onClose }: { onClose: () => void }) 
   // Call the hook unconditionally — a hook inside a `tab === 'mcp' &&` JSX
   // expression would change the hook count between renders and crash React.
   const root = useExplorerStore((s) => s.root);
+  const modalRef = useModalFocus(true, onClose);
 
   return (
     <div className="modal-backdrop" onPointerDown={onClose}>
-      <div className="chat-settings-modal" onPointerDown={(e) => e.stopPropagation()}>
+      <div ref={modalRef} tabIndex={-1} className="chat-settings-modal" onPointerDown={(e) => e.stopPropagation()}>
         <div className="settings-title">
           <span>Chat settings</span>
           <button className="icon-btn" onClick={onClose} title="Close">
@@ -184,7 +186,12 @@ function HistoryTab({ onClose }: { onClose: () => void }) {
     load();
   };
 
-  if (items === null) return <div className="cs-empty">Loading…</div>;
+  if (items === null)
+    return (
+      <div className="cs-empty">
+        <span className="spinner" /> Loading…
+      </div>
+    );
   if (items.length === 0) return <div className="cs-empty">No saved conversations yet.</div>;
   return (
     <>
@@ -245,7 +252,12 @@ function McpTab({ root }: { root: string | null }) {
     await save(next);
   };
 
-  if (servers === null) return <div className="cs-empty">Loading…</div>;
+  if (servers === null)
+    return (
+      <div className="cs-empty">
+        <span className="spinner" /> Loading…
+      </div>
+    );
 
   return (
     <>

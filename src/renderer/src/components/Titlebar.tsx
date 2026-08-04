@@ -5,10 +5,11 @@ import { IconSettings } from './icons';
 
 const SHORTCUTS: { keys: string; label: string }[] = [
   { keys: 'Ctrl+K Ctrl+T', label: 'Toggle dark/light theme' },
+  { keys: 'Ctrl+Shift+P', label: 'Command palette' },
+  { keys: 'Ctrl+Shift+F', label: 'Search files' },
   { keys: 'Ctrl+B', label: 'Toggle sidebar' },
   { keys: 'Ctrl+`', label: 'Toggle terminal' },
   { keys: 'Ctrl+Shift+`', label: 'Toggle chat panel' },
-  { keys: 'Ctrl+J', label: 'Toggle terminal' },
   { keys: 'Ctrl+S', label: 'Save active file' },
   { keys: 'Middle-click tab', label: 'Close tab' }
 ];

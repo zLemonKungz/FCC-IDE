@@ -11,6 +11,7 @@ export default function SearchPanel() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchHit[] | null>(null);
   const [searching, setSearching] = useState(false);
+  const [error, setError] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -24,9 +25,11 @@ export default function SearchPanel() {
     if (!q) {
       setResults(null);
       setSearching(false);
+      setError(false);
       return;
     }
     setSearching(true);
+    setError(false);
     const t = window.setTimeout(() => {
       void window.fcc
         .fsSearchContent(q)
@@ -35,8 +38,10 @@ export default function SearchPanel() {
           setSearching(false);
         })
         .catch(() => {
-          setResults([]);
+          // A failed search is an error, not "no matches".
+          setResults(null);
           setSearching(false);
+          setError(true);
         });
     }, 400);
     return () => window.clearTimeout(t);
@@ -60,8 +65,14 @@ export default function SearchPanel() {
         />
       </div>
       {!root && <div className="search-hint">Open a project folder to search its files.</div>}
-      {searching && <div className="search-hint">Searching…</div>}
-      {results !== null && !searching && (
+      {error && <div className="search-hint">Search failed — try again.</div>}
+      {searching && (
+        <div className="search-hint">
+          <span className="spinner" />
+          Searching…
+        </div>
+      )}
+      {!error && results !== null && !searching && (
         <>
           <div className="search-summary">
             {results.length} {results.length === 1 ? 'result' : 'results'}

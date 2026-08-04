@@ -102,14 +102,16 @@ export default function App() {
       <aside className="sidebar" style={{ width: sidebarVisible ? sidebarWidth : 0 }}>
         {sidebarView === 'search' ? <SearchPanel /> : <Explorer />}
       </aside>
-      <DragHandle
-        orientation="vertical"
-        value={sidebarWidth}
-        min={LAYOUT.SIDEBAR_MIN}
-        max={LAYOUT.SIDEBAR_MAX}
-        defaultValue={LAYOUT.SIDEBAR_DEFAULT}
-        onChange={setSidebarWidth}
-      />
+      {sidebarVisible && (
+        <DragHandle
+          orientation="vertical"
+          value={sidebarWidth}
+          min={LAYOUT.SIDEBAR_MIN}
+          max={LAYOUT.SIDEBAR_MAX}
+          defaultValue={LAYOUT.SIDEBAR_DEFAULT}
+          onChange={setSidebarWidth}
+        />
+      )}
       <main className="center">
         <Editor />
         {chatVisible && (

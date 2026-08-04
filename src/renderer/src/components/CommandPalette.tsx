@@ -59,8 +59,12 @@ export default function CommandPalette({ onClose }: { onClose: () => void }) {
     inputRef.current?.focus();
   }, []);
 
+  // Only the first 20 matches render — the highlight index must cycle over
+  // that same window, or an index ≥20 has no highlighted row.
+  const visible = matches.slice(0, 20);
+
   const handleKey = (e: React.KeyboardEvent<HTMLInputElement>): void => {
-    const n = matches.length;
+    const n = visible.length;
     if (e.key === 'Escape') {
       e.preventDefault();
       onClose();
@@ -102,7 +106,7 @@ export default function CommandPalette({ onClose }: { onClose: () => void }) {
         />
         <div className="palette-list">
           {matches.length === 0 && <div className="palette-empty">No matching commands</div>}
-          {matches.slice(0, 20).map((c, i) => (
+          {visible.map((c, i) => (
             <div
               key={c.id}
               className={`palette-item${i === index ? ' active' : ''}`}

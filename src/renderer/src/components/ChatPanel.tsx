@@ -53,6 +53,7 @@ export default function ChatPanel({ style }: { style?: CSSProperties }) {
   const [images, setImages] = useState<ChatImage[]>([]);
   const [picker, setPicker] = useState<{ open: boolean; index: number }>({ open: false, index: 0 });
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [atBottom, setAtBottom] = useState(true);
   const [atPicker, setAtPicker] = useState<{ open: boolean; index: number; files: string[] }>({ open: false, index: 0, files: [] });
   // File list for '@' mentions, cached once per open folder (fs:search walks it).
   const filesCache = useRef<{ root: string | null; list: string[] }>({ root: null, list: [] });
@@ -84,8 +85,10 @@ export default function ChatPanel({ style }: { style?: CSSProperties }) {
   }, []);
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-  }, [messages, help]);
+    // Follow new content only while the user is at the bottom — otherwise they
+    // are reading older turns and shouldn't be yanked down.
+    if (atBottom) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+  }, [messages, help, atBottom]);
 
   // Auto-grow the input with its content (1 line up to a ~6-line cap).
   useEffect(() => {
@@ -347,7 +350,27 @@ Type anything else to send it to Claude.`;
         )}
       </div>
 
-      <div className="chat-messages" ref={scrollRef}>
+      <div
+        className="chat-messages"
+        ref={scrollRef}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 40);
+        }}
+      >
+        {!atBottom && (
+          <button
+            className="chat-scroll-down"
+            onClick={() => {
+              scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+              setAtBottom(true);
+            }}
+            title="Scroll to latest"
+            aria-label="Scroll to latest"
+          >
+            ↓
+          </button>
+        )}
         {help && <div className="chat-help"><Markdown text={help} /></div>}
         {messages.length === 0 && !running && !help ? (
           <div className="chat-empty">
@@ -467,7 +490,7 @@ Type anything else to send it to Claude.`;
           disabled={!root}
         />
         <button
-          className="send"
+          className={`send${running ? ' busy' : ''}`}
           onClick={submit}
           disabled={!root || running || (!input.trim() && images.length === 0)}
           title="Send (Enter)"

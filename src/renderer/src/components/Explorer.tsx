@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useExplorerStore } from '../stores/explorer-store';
 import FileIcon from './FileIcon';
 import {
-  IconChevronDown,
   IconChevronRight,
   IconFolder,
   IconPlus,
@@ -24,7 +23,9 @@ function Node({ entry }: { entry: { name: string; path: string; isDir: boolean }
     return (
       <div>
         <div className="tree-row dir" onClick={() => toggle(entry.path)}>
-          <span className="chev">{expanded ? <IconChevronDown width={14} height={14} /> : <IconChevronRight width={14} height={14} />}</span>
+          <span className={`chev${expanded ? ' expanded' : ''}`}>
+            <IconChevronRight width={14} height={14} />
+          </span>
           <span className="type-icon"><IconFolder width={15} height={15} /></span>
           <span className="label">{entry.name}</span>
           <span className="row-actions">

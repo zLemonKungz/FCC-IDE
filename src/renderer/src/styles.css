@@ -3,8 +3,20 @@
    ========================================================================== */
 
 :root {
-  --font-ui: 'Geist Variable', 'Segoe UI', system-ui, sans-serif;
-  --font-mono: 'Cascadia Code', Consolas, 'Courier New', monospace;
+  --font-ui: 'Comic Neue', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', Consolas, 'Courier New', monospace;
+
+  /* Type scale — Comic Neue is wide, so sizes run a step bigger than Geist */
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-md: 14px;
+  --fs-lg: 15px;
+  /* Spacing scale for consistent rhythm */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
 
   --bg-0: #0e1013;
   --bg-1: #14171c;
@@ -36,6 +48,10 @@
 
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-2: 0 4px 14px rgba(0, 0, 0, 0.4);
+  /* Floating surfaces (modals, palette, context menu) — deep + warm-lit */
+  --shadow-3: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--border-0);
+  /* 1px lighter top edge — gives panels a "lit" dimension */
+  --surface-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 
   --transition: 220ms cubic-bezier(0.32, 0.72, 0, 1);
 }
@@ -55,8 +71,8 @@
 
   --text-1: #2c2621;
   --text-2: #6f665d;
-  --text-3: #a1968b;
-  --text-4: #cfc6bb;
+  --text-3: #8a7f74; /* darkened for contrast on the warm paper bg */
+  --text-4: #c6bcb0;
 
   --accent: #c9643c;
   --accent-hover: #da7a52;
@@ -70,6 +86,8 @@
 
   --shadow-1: 0 1px 3px rgba(60, 45, 30, 0.10);
   --shadow-2: 0 8px 24px rgba(60, 45, 30, 0.14);
+  --shadow-3: 0 16px 48px rgba(60, 45, 30, 0.22), 0 0 0 1px var(--border-0);
+  --surface-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.5);
 
   --radius-sm: 5px;
   --radius-md: 9px;
@@ -91,7 +109,9 @@ body,
 
 body {
   font-family: var(--font-ui);
-  font-size: 13px;
+  /* Comic Neue reads small at 13px/400 — bump to 14px/500 (weight synthesized) */
+  font-size: 14px;
+  font-weight: 500;
   line-height: 1.5;
   background: var(--bg-0);
   color: var(--text-1);
@@ -216,7 +236,7 @@ button.icon-btn:hover {
   display: flex;
   align-items: center;
   padding: 0 12px;
-  background: var(--bg-0);
+  background: linear-gradient(180deg, var(--bg-1), var(--bg-0));
   border-bottom: 1px solid var(--border-0);
   color: var(--text-2);
   font-size: 12px;
@@ -430,6 +450,7 @@ button.icon-btn:hover {
   grid-row: 2 / 4;
   grid-column: 2;
   background: var(--bg-1);
+  box-shadow: var(--surface-highlight);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -446,6 +467,8 @@ button.icon-btn:hover {
   grid-row: 3;
   grid-column: 4;
   background: var(--bg-0);
+  box-shadow: var(--surface-highlight);
+  border-top: 1px solid var(--border-0);
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -590,9 +613,10 @@ button.icon-btn:hover {
   border: 1px solid var(--border-1);
   border-radius: var(--radius-md);
   padding: 4px;
-  box-shadow: var(--shadow-2);
+  box-shadow: var(--shadow-3);
   display: flex;
   flex-direction: column;
+  animation: modal-in 160ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 .ctx-menu button {
   border: none;
@@ -615,6 +639,7 @@ button.icon-btn:hover {
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  animation: backdrop-in 180ms ease;
 }
 .settings-modal {
   width: 360px;
@@ -624,14 +649,20 @@ button.icon-btn:hover {
   background: var(--bg-2);
   border: 1px solid var(--border-1);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-2);
+  box-shadow: var(--shadow-3);
   padding: 16px;
-  animation: msg-in 0.12s ease;
+  animation: modal-in 180ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 .settings-modal .settings-title {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+/* Modal panels are focused programmatically (a11y) — don't draw the focus ring */
+.settings-modal:focus-visible,
+.chat-settings-modal:focus-visible,
+.fcc-setup-modal:focus-visible {
+  box-shadow: var(--shadow-3);
 }
 .settings-section {
   font-size: 11px;
@@ -759,6 +790,9 @@ button.icon-btn:hover {
   transform: translateX(16px);
   background: #fff;
 }
+.switch input:focus-visible + .switch-track {
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
 .switch.disabled {
   opacity: 0.45;
 }
@@ -787,9 +821,9 @@ button.icon-btn:hover {
   background: var(--bg-2);
   border: 1px solid var(--border-1);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-2);
+  box-shadow: var(--shadow-3);
   padding: 16px;
-  animation: msg-in 0.12s ease;
+  animation: modal-in 180ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 .chat-settings-modal .settings-title {
   display: flex;
@@ -810,6 +844,7 @@ button.icon-btn:hover {
   padding: 6px 10px;
   border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   cursor: pointer;
+  transition: color var(--transition), border-color var(--transition);
 }
 .cs-tab:hover {
   color: var(--text-1);
@@ -1054,6 +1089,11 @@ button.icon-btn:hover {
   font-size: 11px;
   padding: 8px 10px;
 }
+.search-hint .spinner {
+  display: inline-block;
+  margin-right: 6px;
+  vertical-align: -1px;
+}
 .search-summary {
   font-size: 11px;
   color: var(--text-3);
@@ -1074,6 +1114,7 @@ button.icon-btn:hover {
   border: none;
   padding: 5px 10px;
   cursor: pointer;
+  transition: background var(--transition);
 }
 .search-hit:hover {
   background: var(--bg-2);
@@ -1102,6 +1143,7 @@ button.icon-btn:hover {
   inset: 0;
   background: rgba(0, 0, 0, 0.35);
   z-index: 1000;
+  animation: backdrop-in 180ms ease;
 }
 .command-palette {
   position: fixed;
@@ -1113,9 +1155,9 @@ button.icon-btn:hover {
   background: var(--bg-2);
   border: 1px solid var(--border-1);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-2);
+  box-shadow: var(--shadow-3);
   overflow: hidden;
-  animation: msg-in 0.12s ease;
+  animation: modal-in 180ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 .command-palette input {
   width: 100%;
@@ -1126,6 +1168,9 @@ button.icon-btn:hover {
   font-size: 13px;
   padding: 10px 12px;
   outline: none;
+}
+.command-palette input:focus-visible {
+  box-shadow: inset 0 -2px 0 var(--accent-border);
 }
 .palette-list {
   max-height: 320px;
@@ -1140,6 +1185,10 @@ button.icon-btn:hover {
   border-radius: var(--radius-sm);
   font-size: 12px;
   cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+.palette-item:hover {
+  background: var(--bg-2);
 }
 .palette-item.active {
   background: var(--bg-3);
@@ -1164,9 +1213,9 @@ button.icon-btn:hover {
   background: var(--bg-2);
   border: 1px solid var(--border-1);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-2);
+  box-shadow: var(--shadow-3);
   padding: 16px;
-  animation: msg-in 0.12s ease;
+  animation: modal-in 180ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 .fcc-setup-modal .settings-title {
   display: flex;
@@ -1403,6 +1452,11 @@ button.icon-btn:hover {
   color: var(--text-3);
   flex-shrink: 0;
   display: inline-flex;
+  transition: transform var(--transition), color var(--transition);
+}
+.tree-row .chev.expanded {
+  transform: rotate(90deg);
+  color: var(--text-2);
 }
 .tree-row .type-icon {
   color: var(--text-3);
@@ -1692,7 +1746,7 @@ button.icon-btn:hover {
   color: var(--text-1);
   font-size: 12.5px;
   flex-shrink: 0;
-  animation: msg-in 180ms cubic-bezier(0.4, 0, 0.2, 1) both;
+  animation: fade-up 180ms cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 .agent-banner .msg {
   flex: 1;
@@ -1726,6 +1780,7 @@ button.icon-btn:hover {
   border-bottom: 1px solid var(--border-0);
   flex-shrink: 0;
   overflow-x: auto;
+  animation: fade-up 180ms cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 .changes-strip .changes-label {
   display: inline-flex;
@@ -1747,6 +1802,7 @@ button.icon-btn:hover {
   color: var(--text-2);
   flex-shrink: 0;
   white-space: nowrap;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
 }
 .changes-strip .changes-chip:hover {
   background: var(--bg-3);
@@ -1766,6 +1822,7 @@ button.icon-btn:hover {
 /* ---------- Chat ---------- */
 .chat-pane {
   background: var(--bg-1);
+  box-shadow: var(--surface-highlight);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -1799,6 +1856,7 @@ button.icon-btn:hover {
   font-size: 11px;
 }
 .chat-messages {
+  position: relative;
   flex: 1;
   overflow-y: auto;
   padding: 14px;
@@ -1817,6 +1875,20 @@ button.icon-btn:hover {
 }
 @keyframes msg-in {
   from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: none; }
+}
+/* Backdrop fade + panel scale-in for modals/palette/context menus */
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+/* Subtle rise for in-flow bars (agent banner, plan approval, changes strip) */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: none; }
 }
 .msg.user {
@@ -2009,6 +2081,7 @@ button.icon-btn:hover {
   background: var(--accent-dim);
   border-radius: var(--radius-md);
   flex-shrink: 0;
+  animation: fade-up 180ms cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 .plan-approval .pa-text {
   font-size: 12px;
@@ -2053,7 +2126,7 @@ button.plan-toggle.on {
   background: var(--bg-2);
   border: 1px solid var(--border-1);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-2);
+  box-shadow: var(--shadow-3);
   padding: 4px;
   z-index: 20;
   animation: msg-in 0.12s ease;
@@ -2066,6 +2139,10 @@ button.plan-toggle.on {
   border-radius: var(--radius-sm);
   font-size: 12px;
   cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+.slash-picker .sp-item:hover {
+  background: var(--bg-2);
 }
 .slash-picker .sp-item .sp-cmd {
   font-family: var(--font-mono);
@@ -2100,7 +2177,11 @@ button.plan-toggle.on {
   font-family: inherit;
   font-size: 13px;
   line-height: 1.4;
-  transition: border-color var(--transition), box-shadow var(--transition);
+  transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+}
+.chat-input textarea:hover {
+  border-color: var(--border-1);
+  background: var(--bg-1);
 }
 .chat-input textarea:focus {
   outline: none;
@@ -2161,6 +2242,33 @@ button.plan-toggle.on {
 .hint {
   color: var(--text-3);
   font-size: 11px;
+}
+
+/* scroll-to-bottom button (shown while the user is reading older turns) */
+.chat-scroll-down {
+  position: absolute;
+  right: 16px;
+  bottom: 14px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--bg-3);
+  color: var(--text-1);
+  box-shadow: var(--shadow-2);
+  z-index: 5;
+}
+.chat-scroll-down:hover {
+  background: var(--bg-4);
+}
+/* busy pulse on the send button while a turn runs */
+@keyframes send-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--accent-border); }
+  50% { box-shadow: 0 0 0 4px var(--accent-dim); }
+}
+.chat-input .send.busy {
+  animation: send-pulse 1.2s ease-in-out infinite;
+  opacity: 1;
 }
 
 /* chat empty state */
@@ -2272,6 +2380,7 @@ button.plan-toggle.on {
   gap: 8px;
   padding: 7px 9px;
   cursor: pointer;
+  transition: background var(--transition);
 }
 .tool-line:hover {
   background: var(--bg-2);
@@ -2365,6 +2474,7 @@ button.plan-toggle.on {
   color: var(--text-2);
   font-size: 11px;
   font-weight: 600;
+  transition: color var(--transition), background var(--transition), border-color var(--transition);
   background: none;
   border: none;
   white-space: nowrap;
@@ -2376,6 +2486,7 @@ button.plan-toggle.on {
 .term-tab.active {
   color: var(--accent);
   background: var(--bg-0);
+  border-bottom: 2px solid var(--accent);
 }
 .term-tab-x {
   color: var(--text-3);
@@ -2444,6 +2555,10 @@ button.plan-toggle.on {
   padding: 5px 12px;
   font-size: 12px;
   border-top: 1px solid var(--border-0);
+  transition: background var(--transition);
+}
+.diff-hunk:hover {
+  background: var(--bg-0);
 }
 .diff-hunk .dh-range {
   font-family: var(--font-mono);
@@ -2492,20 +2607,34 @@ button.plan-toggle.on {
 button.primary,
 .chat-input .send,
 .agent-banner button.accept {
-  background: linear-gradient(135deg, #d97a55, #e28a66);
+  /* theme-aware: dark accent + light accent, per data-theme */
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
   border-color: transparent;
   color: #fff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  box-shadow: var(--shadow-1), inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 button.primary:hover,
 .chat-input .send:hover,
 .agent-banner button.accept:hover {
-  box-shadow: 0 2px 8px rgba(217, 122, 85, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  box-shadow: 0 2px 8px var(--accent-border), inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 button.primary:focus-visible,
 .chat-input .send:focus-visible,
 .agent-banner button.accept:focus-visible {
   box-shadow: 0 0 0 3px var(--accent-border);
+}
+
+/* small loading spinner */
+.spinner {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--border-1);
+  border-top-color: var(--accent);
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* ---------- Reduced motion ---------- */

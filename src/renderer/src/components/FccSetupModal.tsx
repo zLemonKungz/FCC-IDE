@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useFccStore } from '../stores/fcc-store';
+import { useModalFocus } from '../hooks/useModal';
 import { IconCheck, IconClose, IconCopy } from './icons';
 
 // Official free-claude-code bootstrap, per platform (see the repo README).
@@ -15,6 +16,7 @@ export default function FccSetupModal({ onClose }: { onClose: () => void }) {
   const detect = useFccStore((s) => s.detect);
   const start = useFccStore((s) => s.start);
   const [copied, setCopied] = useState(false);
+  const modalRef = useModalFocus(true, onClose);
 
   const copy = async () => {
     try {
@@ -35,7 +37,7 @@ export default function FccSetupModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="modal-backdrop" onPointerDown={onClose}>
-      <div className="fcc-setup-modal" onPointerDown={(e) => e.stopPropagation()}>
+      <div ref={modalRef} tabIndex={-1} className="fcc-setup-modal" onPointerDown={(e) => e.stopPropagation()}>
         <div className="settings-title">
           <span>Free Claude Code setup</span>
           <button className="icon-btn" onClick={onClose} title="Close">

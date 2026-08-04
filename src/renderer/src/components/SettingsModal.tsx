@@ -1,5 +1,6 @@
 import { useSettingsStore } from '../stores/settings-store';
 import { useLayoutStore } from '../stores/layout-store';
+import { useModalFocus } from '../hooks/useModal';
 import Switch from './Switch';
 import { IconClose, IconMoon, IconSun } from './icons';
 
@@ -23,10 +24,11 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
   const setAutoSave = useSettingsStore((s) => s.setAutoSave);
   const autoSaveDelay = useSettingsStore((s) => s.autoSaveDelay);
   const setAutoSaveDelay = useSettingsStore((s) => s.setAutoSaveDelay);
+  const modalRef = useModalFocus(true, onClose);
 
   return (
     <div className="modal-backdrop" onPointerDown={onClose}>
-      <div className="settings-modal" onPointerDown={(e) => e.stopPropagation()}>
+      <div ref={modalRef} tabIndex={-1} className="settings-modal" onPointerDown={(e) => e.stopPropagation()}>
         <div className="settings-title">
           <span>Program settings</span>
           <button className="icon-btn" onClick={onClose} title="Close">
