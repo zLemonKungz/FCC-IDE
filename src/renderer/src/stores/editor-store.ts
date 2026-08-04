@@ -14,6 +14,15 @@ export interface CursorPos {
   col: number;
 }
 
+/** A single diff hunk between baseContent (original) and the file on disk —
+ *  line ranges are 1-based inclusive, from Monaco's ILineChange. */
+export interface HunkRange {
+  originalStart: number;
+  originalEnd: number;
+  modifiedStart: number;
+  modifiedEnd: number;
+}
+
 interface EditorState {
   tabs: EditorTab[];
   activePath: string | null;
@@ -37,6 +46,7 @@ interface EditorState {
   markAgentModified: (path: string) => void;
   acceptAgentChange: (path: string) => Promise<void>;
   revertAgentChange: (path: string) => Promise<void>;
+  revertAgentHunk: (path: string, hunk: HunkRange) => Promise<void>;
   acceptAllAgentChanges: () => Promise<void>;
   revertAllAgentChanges: () => Promise<void>;
   getBase: (path: string) => string | null;
@@ -137,6 +147,33 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       tabs: get().tabs.map((t) =>
         t.path === path
           ? { ...t, content: t.baseContent, dirty: false, agentModified: false }
+          : t
+      )
+    });
+  },
+  // Undo ONE agent hunk: replace the hunk's lines in the current (disk) content
+  // with the original lines from baseContent. Operates on disk because the tab's
+  // content may be stale after the agent edits the file externally.
+  revertAgentHunk: async (path, hunk) => {
+    const tab = get().tabs.find((t) => t.path === path);
+    if (!tab) return;
+    const disk = await window.fcc.fsRead(path).catch(() => tab.content);
+    const baseLines = tab.baseContent.split('\n');
+    const curLines = disk.split('\n');
+    const orig = baseLines.slice(hunk.originalStart - 1, hunk.originalEnd);
+    const next = curLines.slice();
+    next.splice(hunk.modifiedStart - 1, hunk.modifiedEnd - hunk.modifiedStart + 1, ...orig);
+    const newContent = next.join('\n');
+    await window.fcc.fsWrite(path, newContent);
+    set({
+      tabs: get().tabs.map((t) =>
+        t.path === path
+          ? {
+              ...t,
+              content: newContent,
+              dirty: newContent !== tab.baseContent,
+              agentModified: newContent !== tab.baseContent
+            }
           : t
       )
     });
