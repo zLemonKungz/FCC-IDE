@@ -33,6 +33,8 @@ export interface ChatEventPayload {
 export interface ChatSettings {
   model: string;
   maxTurns: number;
+  /** auto-compact threshold in thousands of tokens (CLAUDE_CODE_AUTO_COMPACT_WINDOW / 1000). */
+  autoCompactWindow?: number;
 }
 
 /** Base64 image attached to a chat turn (sent as an image content block). */
@@ -83,6 +85,33 @@ export interface McpServerDef {
 /** The .mcp.json shape the app reads/writes. */
 export interface McpConfig {
   mcpServers: Record<string, McpServerDef>;
+}
+
+/** A model the FCC gateway can route (from GET /v1/models). */
+export interface GatewayModel {
+  id: string;
+  display_name?: string;
+}
+
+/** The editable subset of Claude Code's settings.json (user + project). The
+ *  main process preserves any fields the UI doesn't render (hooks, statusLine,
+ *  …) when saving. */
+export interface ClaudePermissions {
+  defaultMode?: 'default' | 'acceptEdits' | 'plan' | 'bypassPermissions';
+  allow?: string[];
+  deny?: string[];
+  ask?: string[];
+  additionalDirectories?: string[];
+  disableBypassPermissionsMode?: boolean;
+}
+
+export interface ClaudeSettingsFile {
+  permissions?: ClaudePermissions;
+  env?: Record<string, string>;
+  model?: string;
+  includeCoAuthoredBy?: boolean;
+  theme?: 'dark' | 'light';
+  verbose?: boolean;
 }
 
 /** One match from the find-in-files content search. */

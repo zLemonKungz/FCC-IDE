@@ -117,7 +117,7 @@ export class ChatHost {
   }
 
   private async spawn(sessionId: string, folder: string, prompt: string, opts?: ChatStartOpts): Promise<void> {
-    const { model, maxTurns } = getChatConfig();
+    const { model, maxTurns, autoCompactWindow } = getChatConfig();
     const entry: ActiveSession = {
       session: undefined as unknown as CliSession,
       sawResult: false,
@@ -145,6 +145,7 @@ export class ChatHost {
       authToken: FCC_AUTH_TOKEN,
       resume: opts?.resume,
       permissionMode: opts?.permissionMode,
+      autoCompactWindow,
       onEvent: (msg) => {
         const m = msg as CliEvent;
         if (m.type === 'result') entry.sawResult = true;

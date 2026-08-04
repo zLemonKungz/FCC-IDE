@@ -31,6 +31,7 @@ export default function App() {
   const setTerminalHeight = useLayoutStore((s) => s.setTerminalHeight);
   const chatModel = useSettingsStore((s) => s.chatModel);
   const chatMaxTurns = useSettingsStore((s) => s.chatMaxTurns);
+  const autoCompactWindow = useSettingsStore((s) => s.autoCompactWindow);
 
   const pendingChord = useRef<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -91,8 +92,8 @@ export default function App() {
   // Persisted chat settings override the main process env defaults. Push on
   // mount (so a restart re-applies them) and on every change.
   useEffect(() => {
-    void window.fcc.setChatSettings({ model: chatModel, maxTurns: chatMaxTurns });
-  }, [chatModel, chatMaxTurns]);
+    void window.fcc.setChatSettings({ model: chatModel, maxTurns: chatMaxTurns, autoCompactWindow });
+  }, [chatModel, chatMaxTurns, autoCompactWindow]);
 
   return (
     <div className={`app${isDragging ? ' dragging' : ''}`}>

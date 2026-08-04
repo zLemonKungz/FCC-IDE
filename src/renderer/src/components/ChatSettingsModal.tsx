@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useSettingsStore, MODEL_SUGGESTIONS } from '../stores/settings-store';
+import { useSettingsStore, CURATED_CLAUDE_MODELS, claudeLabel } from '../stores/settings-store';
 import { useChatStore } from '../stores/chat-store';
 import { useExplorerStore } from '../stores/explorer-store';
-import type { HistorySummary, McpServerDef } from '@shared/types';
+import ClaudeConfigTab from './ClaudeConfigTab';
+import type { GatewayModel, HistorySummary, McpServerDef } from '@shared/types';
 import { IconTrash, IconPlus, IconClose } from './icons';
 
-type Tab = 'settings' | 'history' | 'mcp';
+type Tab = 'settings' | 'history' | 'mcp' | 'config';
 
 function fmtTime(ts: number): string {
   const d = new Date(ts);
@@ -32,7 +33,7 @@ export default function ChatSettingsModal({ onClose }: { onClose: () => void }) 
           </button>
         </div>
         <div className="cs-tabs">
-          {(['settings', 'history', 'mcp'] as Tab[]).map((t) => (
+          {(['settings', 'history', 'mcp', 'config'] as Tab[]).map((t) => (
             <button key={t} className={`cs-tab${tab === t ? ' active' : ''}`} onClick={() => setTab(t)}>
               {t[0].toUpperCase() + t.slice(1)}
             </button>
@@ -42,6 +43,7 @@ export default function ChatSettingsModal({ onClose }: { onClose: () => void }) 
           {tab === 'settings' && <SettingsTab />}
           {tab === 'history' && <HistoryTab onClose={onClose} />}
           {tab === 'mcp' && <McpTab root={root} />}
+          {tab === 'config' && <ClaudeConfigTab />}
         </div>
       </div>
     </div>
@@ -51,11 +53,51 @@ export default function ChatSettingsModal({ onClose }: { onClose: () => void }) 
 function SettingsTab() {
   const chatModel = useSettingsStore((s) => s.chatModel);
   const chatMaxTurns = useSettingsStore((s) => s.chatMaxTurns);
+  const autoCompactWindow = useSettingsStore((s) => s.autoCompactWindow);
   const setChatModel = useSettingsStore((s) => s.setChatModel);
   const setChatMaxTurns = useSettingsStore((s) => s.setChatMaxTurns);
+  const setAutoCompactWindow = useSettingsStore((s) => s.setAutoCompactWindow);
   const planMode = useChatStore((s) => s.planMode);
   const setPlanMode = useChatStore((s) => s.setPlanMode);
   const sessionUsage = useChatStore((s) => s.sessionUsage);
+  // Models the connected FCC gateway serves — fetched from /v1/models, filtered
+  // to claude-related entries and de-duplicated against the curated list.
+  const [discovered, setDiscovered] = useState<GatewayModel[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    window.fcc
+      .chatModels()
+      .then((m) => {
+        if (!cancelled) setDiscovered(m);
+      })
+      .catch(() => {
+        if (!cancelled) setDiscovered(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const curatedLabels = new Set(CURATED_CLAUDE_MODELS.map((m) => m.label));
+  // Gateway models: claude-related, excluding the curated ones (by id AND by
+  // friendly label, so aliases like anthropic/opencode/claude-fable-5 don't
+  // duplicate "Fable 5") and the noisy "no thinking" prefix. De-duped by label.
+  const available = Array.from(
+    new Map(
+      (discovered ?? [])
+        .filter((m) => {
+          const label = claudeLabel(m.id);
+          return (
+            /claude/i.test(m.id) &&
+            !m.id.startsWith('claude-3-freecc-no-thinking/') &&
+            !CURATED_CLAUDE_MODELS.some((c) => c.id === m.id) &&
+            !curatedLabels.has(label)
+          );
+        })
+        .map((m) => [claudeLabel(m.id), m])
+    ).values()
+  ).sort((a, b) => claudeLabel(a.id).localeCompare(claudeLabel(b.id)));
 
   return (
     <>
@@ -67,19 +109,29 @@ function SettingsTab() {
         </span>
       </div>
       <label className="settings-row">
-        <span>Chat model</span>
-        <input
-          list="cs-models"
-          value={chatModel}
-          spellCheck={false}
-          onChange={(e) => setChatModel(e.target.value)}
-        />
-        <datalist id="cs-models">
-          {MODEL_SUGGESTIONS.map((m) => (
-            <option key={m} value={m} />
-          ))}
-        </datalist>
+        <span>Model</span>
+        <select value={chatModel} onChange={(e) => setChatModel(e.target.value)} className="settings-select">
+          <optgroup label="Claude">
+            {CURATED_CLAUDE_MODELS.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+          </optgroup>
+          {available.length > 0 && (
+            <optgroup label="Available on gateway">
+              {available.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {claudeLabel(m.id)}
+                </option>
+              ))}
+            </optgroup>
+          )}
+        </select>
       </label>
+      {discovered === null && (
+        <div className="cs-note">Couldn’t reach the gateway — showing the main Claude models.</div>
+      )}
       <label className="settings-row">
         <span>Max turns</span>
         <input
@@ -88,6 +140,17 @@ function SettingsTab() {
           max={500}
           value={chatMaxTurns}
           onChange={(e) => setChatMaxTurns(Number(e.target.value) || 50)}
+        />
+      </label>
+      <label className="settings-row">
+        <span>Auto-compact (k tokens)</span>
+        <input
+          type="number"
+          min={10}
+          max={1000}
+          step={10}
+          value={autoCompactWindow}
+          onChange={(e) => setAutoCompactWindow(Number(e.target.value) || 190)}
         />
       </label>
       <div className="cs-toggle-row">

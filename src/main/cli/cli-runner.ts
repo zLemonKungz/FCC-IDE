@@ -23,6 +23,8 @@ export interface CliSessionOptions {
   authToken: string;
   resume?: string;
   permissionMode?: PermissionMode;
+  /** auto-compact threshold in thousands of tokens (0 = leave unset). */
+  autoCompactWindow?: number;
   onEvent: (msg: unknown) => void;
   onExit: (code: number | null) => void;
   onError: (err: Error) => void;
@@ -107,7 +109,9 @@ export class CliSession {
         ANTHROPIC_BASE_URL: this.opts.baseUrl,
         ANTHROPIC_AUTH_TOKEN: this.opts.authToken,
         CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY: '1',
-        CLAUDE_CODE_AUTO_COMPACT_WINDOW: '190000'
+        ...(this.opts.autoCompactWindow
+          ? { CLAUDE_CODE_AUTO_COMPACT_WINDOW: String(this.opts.autoCompactWindow * 1000) }
+          : {})
       }
     });
     this.child = child;

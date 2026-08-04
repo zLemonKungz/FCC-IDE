@@ -6,6 +6,8 @@ import type {
   FileEntry,
   FccInstallStatus,
   FccStatus,
+  GatewayModel,
+  ClaudeSettingsFile,
   HistoryRecord,
   HistorySummary,
   McpConfig,
@@ -48,6 +50,11 @@ const api = {
   historyDelete: (id: string): Promise<void> => ipcRenderer.invoke(IPC.historyDelete, id),
   mcpGet: (): Promise<McpConfig> => ipcRenderer.invoke(IPC.mcpGet),
   mcpSet: (servers: Record<string, McpServerDef>): Promise<void> => ipcRenderer.invoke(IPC.mcpSet, servers),
+  chatModels: (): Promise<GatewayModel[] | null> => ipcRenderer.invoke(IPC.chatModels),
+  claudeSettingsGet: (): Promise<{ user: ClaudeSettingsFile; project: ClaudeSettingsFile | null }> =>
+    ipcRenderer.invoke(IPC.claudeSettingsGet),
+  claudeSettingsSet: (scope: 'user' | 'project', patch: ClaudeSettingsFile): Promise<void> =>
+    ipcRenderer.invoke(IPC.claudeSettingsSet, scope, patch),
   setChatSettings: (s: ChatSettings): Promise<void> =>
     ipcRenderer.invoke(IPC.setChatSettings, s),
   setTitleBarOverlay: (color: string, symbolColor: string): Promise<void> =>

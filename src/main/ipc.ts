@@ -1,11 +1,13 @@
 import { ipcMain, dialog, clipboard, type BrowserWindow } from 'electron';
 import { IPC } from '@shared/ipc';
-import type { ChatImage, McpServerDef } from '@shared/types';
+import type { ChatImage, ClaudeSettingsFile, McpServerDef } from '@shared/types';
 import * as files from './file-service';
 import * as terminal from './terminal-service';
 import * as fcc from './fcc-manager';
 import * as history from './chat/history';
 import * as mcp from './mcp-service';
+import * as claudeSettings from './claude-settings';
+import { listModels } from './chat/models';
 import { ChatHost, type ChatStartOpts } from './chat/chat-host';
 import { setChatConfig } from './chat/config';
 
@@ -83,4 +85,9 @@ export function registerIpc(win: BrowserWindow): void {
   ipcMain.handle(IPC.historyDelete, (_e, id: string) => history.remove(id));
   ipcMain.handle(IPC.mcpGet, () => mcp.getMcpConfig());
   ipcMain.handle(IPC.mcpSet, (_e, servers: Record<string, McpServerDef>) => mcp.setMcpConfig(servers));
+  ipcMain.handle(IPC.chatModels, () => listModels());
+  ipcMain.handle(IPC.claudeSettingsGet, () => claudeSettings.getSettings());
+  ipcMain.handle(IPC.claudeSettingsSet, (_e, scope: 'user' | 'project', patch: ClaudeSettingsFile) =>
+    claudeSettings.setSettings(scope, patch)
+  );
 }
