@@ -3,6 +3,7 @@ import { useChatStore } from '../stores/chat-store';
 import { useExplorerStore } from '../stores/explorer-store';
 import { useFccStore } from '../stores/fcc-store';
 import { useLayoutStore } from '../stores/layout-store';
+import { useSettingsStore, claudeLabel } from '../stores/settings-store';
 import type { ChatImage } from '@shared/types';
 import ChatMessage from './ChatMessage';
 import ChatSettingsModal from './ChatSettingsModal';
@@ -46,6 +47,7 @@ export default function ChatPanel({ style }: { style?: CSSProperties }) {
   const install = useFccStore((s) => s.install);
   const setSetupOpen = useFccStore((s) => s.setSetupOpen);
   const toggleTheme = useLayoutStore((s) => s.toggleTheme);
+  const chatModel = useSettingsStore((s) => s.chatModel);
   const [input, setInput] = useState('');
   const [help, setHelp] = useState<string | null>(null);
   const [images, setImages] = useState<ChatImage[]>([]);
@@ -84,6 +86,17 @@ export default function ChatPanel({ style }: { style?: CSSProperties }) {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages, help]);
+
+  // Auto-grow the input with its content (1 line up to a ~6-line cap).
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
+  }, [input]);
+
+  // Rough token estimate (chars / 4) for the input footer.
+  const tokenEstimate = input.trim() ? Math.max(1, Math.round(input.trim().length / 4)) : 0;
 
   // All discoverable commands: local + CLI slash commands / skills.
   const allCommands = useMemo(() => {
@@ -457,10 +470,22 @@ Type anything else to send it to Claude.`;
           className="send"
           onClick={submit}
           disabled={!root || running || (!input.trim() && images.length === 0)}
-          title="Send"
+          title="Send (Enter)"
         >
           <IconSend width={14} height={14} />
         </button>
+      </div>
+      <div className="chat-input-footer">
+        <span className="cif-left">
+          <span className="cif-model" title={chatModel}>
+            {claudeLabel(chatModel)}
+          </span>
+          {planMode && <span className="cif-plan">Plan</span>}
+        </span>
+        <span className="cif-right">
+          {tokenEstimate > 0 && <span className="cif-tokens">~{tokenEstimate.toLocaleString()} tokens</span>}
+          <span className="cif-keys">Enter ↵ send · Shift+Enter ⏎ newline</span>
+        </span>
       </div>
       {settingsOpen && <ChatSettingsModal onClose={() => setSettingsOpen(false)} />}
     </div>

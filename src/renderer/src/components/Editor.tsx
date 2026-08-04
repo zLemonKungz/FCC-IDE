@@ -36,6 +36,11 @@ export default function EditorPane() {
   const setPreview = useEditorStore((s) => s.setPreview);
   const editorFontSize = useSettingsStore((s) => s.editorFontSize);
   const autoSave = useSettingsStore((s) => s.autoSave);
+  const autoSaveDelay = useSettingsStore((s) => s.autoSaveDelay);
+  const tabSize = useSettingsStore((s) => s.tabSize);
+  const wordWrap = useSettingsStore((s) => s.wordWrap);
+  const minimap = useSettingsStore((s) => s.minimap);
+  const lineNumbers = useSettingsStore((s) => s.lineNumbers);
   const [menu, setMenu] = useState<{ path: string; x: number; y: number } | null>(null);
   const saveTimer = useRef<number | null>(null);
   // Find-in-files "reveal line": set before open(), applied in onMount once the
@@ -61,7 +66,8 @@ export default function EditorPane() {
     if (!autoSave) return;
     if (useEditorStore.getState().getTab(path)?.agentModified) return;
     if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
-    saveTimer.current = window.setTimeout(() => void save(path), 800);
+    const delayMs = Math.max(500, autoSaveDelay * 1000);
+    saveTimer.current = window.setTimeout(() => void save(path), delayMs);
   };
   useEffect(
     () => () => {
@@ -192,7 +198,14 @@ export default function EditorPane() {
               editor.focus();
             }
           }}
-          options={{ minimap: { enabled: false }, fontSize: editorFontSize, fontFamily: 'var(--font-mono)' }}
+          options={{
+            minimap: { enabled: minimap },
+            fontSize: editorFontSize,
+            fontFamily: 'var(--font-mono)',
+            tabSize,
+            wordWrap: wordWrap ? 'on' : 'off',
+            lineNumbers: lineNumbers ? 'on' : 'off'
+          }}
         />
       ) : (
         <div className="empty-state">
