@@ -19,6 +19,8 @@ export interface ChatUiState {
   sessionId: string | null;
   /** usage of the last completed turn, from the SDK result message */
   lastUsage: { input: number; output: number; cost?: number } | null;
+  /** cumulative tokens/cost across all completed turns of this conversation */
+  sessionUsage: { input: number; output: number; cost: number };
   /** slash commands / skills discovered from the CLI init message (no leading '/') */
   slashCommands: string[];
   /** plan mode surfaced a proposal — the input should offer Approve / Reject. */
@@ -54,7 +56,8 @@ export function emptyChatState(): ChatUiState {
     sessionId: null,
     lastUsage: null,
     slashCommands: [],
-    awaitingPlanApproval: false
+    awaitingPlanApproval: false,
+    sessionUsage: { input: 0, output: 0, cost: 0 }
   };
 }
 
@@ -126,21 +129,30 @@ export function applyChatEvent(
       break;
     }
 
-    case 'result':
+    case 'result': {
+      const usage = ev.usage
+        ? {
+            input: (ev.usage.input_tokens ?? 0) + (ev.usage.cache_creation_input_tokens ?? 0) + (ev.usage.cache_read_input_tokens ?? 0),
+            output: ev.usage.output_tokens ?? 0,
+            // JSON null bypasses TS — never store null for a number field.
+            cost: ev.total_cost_usd ?? undefined
+          }
+        : null;
       s = {
         ...s,
         running: false,
         error: ev.is_error ? (ev.errors ?? ['Agent error']).join('; ') : null,
-        lastUsage: ev.usage
+        lastUsage: usage,
+        sessionUsage: usage
           ? {
-              input: (ev.usage.input_tokens ?? 0) + (ev.usage.cache_creation_input_tokens ?? 0) + (ev.usage.cache_read_input_tokens ?? 0),
-              output: ev.usage.output_tokens ?? 0,
-              // JSON null bypasses TS — never store null for a number field.
-              cost: ev.total_cost_usd ?? undefined
+              input: s.sessionUsage.input + usage.input,
+              output: s.sessionUsage.output + usage.output,
+              cost: s.sessionUsage.cost + (usage.cost ?? 0)
             }
-          : null
+          : s.sessionUsage
       };
       break;
+    }
 
     case 'session-id':
       s = { ...s, sessionId: ev.session_id };

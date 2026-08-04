@@ -5,8 +5,9 @@ import { useFccStore } from '../stores/fcc-store';
 import { useLayoutStore } from '../stores/layout-store';
 import type { ChatImage } from '@shared/types';
 import ChatMessage from './ChatMessage';
+import ChatSettingsModal from './ChatSettingsModal';
 import Markdown from '../chat/markdown';
-import { IconChat, IconClose, IconSend, IconSparkles, IconStop } from './icons';
+import { IconChat, IconClose, IconSend, IconSettings, IconSparkles, IconStop } from './icons';
 
 // Client-side commands handled here; every other `/cmd` is forwarded to the
 // claude CLI subprocess (slash commands / skills discovered via the init msg).
@@ -49,6 +50,7 @@ export default function ChatPanel({ style }: { style?: CSSProperties }) {
   const [help, setHelp] = useState<string | null>(null);
   const [images, setImages] = useState<ChatImage[]>([]);
   const [picker, setPicker] = useState<{ open: boolean; index: number }>({ open: false, index: 0 });
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [atPicker, setAtPicker] = useState<{ open: boolean; index: number; files: string[] }>({ open: false, index: 0, files: [] });
   // File list for '@' mentions, cached once per open folder (fs:search walks it).
   const filesCache = useRef<{ root: string | null; list: string[] }>({ root: null, list: [] });
@@ -415,6 +417,14 @@ Type anything else to send it to Claude.`;
           </div>
         )}
         {!root && <div className="hint">Open a folder first</div>}
+        <button
+          className="ghost chat-gear"
+          onClick={() => setSettingsOpen(true)}
+          title="Chat settings"
+          aria-label="Chat settings"
+        >
+          <IconSettings width={14} height={14} />
+        </button>
         <textarea
           ref={inputRef}
           value={input}
@@ -433,6 +443,7 @@ Type anything else to send it to Claude.`;
           <IconSend width={14} height={14} />
         </button>
       </div>
+      {settingsOpen && <ChatSettingsModal onClose={() => setSettingsOpen(false)} />}
     </div>
   );
 }

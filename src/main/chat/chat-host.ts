@@ -4,6 +4,7 @@ import type { ChatImage, PermissionMode } from '@shared/types';
 import { FCC_BASE_URL, FCC_AUTH_TOKEN } from '../fcc-manager';
 import { getChatConfig } from './config';
 import { CliSession, resolveCliBinary } from '../cli/cli-runner';
+import * as history from './history';
 
 interface ActiveSession {
   session: CliSession;
@@ -43,16 +44,21 @@ export class ChatHost {
 
   async start(sessionId: string, folder: string, prompt: string, opts?: ChatStartOpts): Promise<void> {
     // A new conversation supersedes any previous one — kill processes and drop
-    // stored folders so nothing leaks between chats.
+    // stored folders so nothing leaks between chats. Persist the superseded
+    // conversations BEFORE clearing, so their in-memory transcripts survive.
     for (const [, s] of this.sessions) {
       s.cleaned = true;
       s.session.stop();
     }
+    history.flushAll();
     this.sessions.clear();
     this.folders.clear();
     this.modes.clear();
     this.folders.set(sessionId, folder);
     this.modes.set(sessionId, opts?.permissionMode ?? 'acceptEdits');
+    // Open the new transcript before the first user-message so the title + first
+    // turn land in it.
+    history.begin(sessionId, folder);
 
     this.emit(sessionId, { type: 'user-message', text: prompt, images: opts?.images?.length });
     this.emit(sessionId, { type: 'started' });
@@ -188,6 +194,7 @@ export class ChatHost {
       this.sessions.delete(sessionId);
       // folders kept so a follow-up message respawns under the same thread.
     }
+    void history.flush(sessionId);
   }
 
   /** Kill every subprocess (app quit). */
@@ -196,12 +203,15 @@ export class ChatHost {
       s.cleaned = true;
       s.session.stop();
     }
+    history.flushAll();
     this.sessions.clear();
     this.folders.clear();
     this.modes.clear();
   }
 
   private emit(sessionId: string, message: unknown): void {
+    // Record every chat event (synthetic + raw) into the transcript funnel.
+    history.record(sessionId, message);
     this.win.webContents.send(IPC.evtChat, { sessionId, message });
   }
 }

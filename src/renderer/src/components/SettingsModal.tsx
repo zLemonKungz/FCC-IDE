@@ -2,7 +2,7 @@ import { useSettingsStore } from '../stores/settings-store';
 
 // A few sensible model suggestions; the field is free-text because which
 // models are reachable depends on the FCC gateway.
-const MODEL_SUGGESTIONS = [
+export const MODEL_SUGGESTIONS = [
   'claude-haiku-4-5-20251001',
   'claude-sonnet-5',
   'claude-opus-5',

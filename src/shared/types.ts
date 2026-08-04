@@ -44,3 +44,43 @@ export interface ChatImage {
 /** CLI --permission-mode: 'acceptEdits' (auto-accept agent edits, the default)
  *  or 'plan' (analyze + propose before acting). */
 export type PermissionMode = 'acceptEdits' | 'plan';
+
+/** One turn in a persisted chat transcript (display + resume, not tool detail). */
+export interface HistoryMessage {
+  role: 'user' | 'assistant';
+  text: string;
+}
+
+/** A saved conversation, persisted by main to userData/sessions/<id>.json. */
+export interface HistoryRecord {
+  /** renderer sessionId ("s-...") — doubles as the history file id. */
+  id: string;
+  /** first user message, truncated to 80 chars; fallback "Untitled". */
+  title: string;
+  folder: string;
+  /** the CLI agent session id, used for --resume; null if never produced. */
+  cliSessionId: string | null;
+  messages: HistoryMessage[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** History list row (no full transcript). */
+export interface HistorySummary {
+  id: string;
+  title: string;
+  folder: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** A server definition inside .mcp.json (Claude Code schema). */
+export interface McpServerDef {
+  command: string;
+  args?: string[];
+}
+
+/** The .mcp.json shape the app reads/writes. */
+export interface McpConfig {
+  mcpServers: Record<string, McpServerDef>;
+}

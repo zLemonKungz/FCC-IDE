@@ -1,6 +1,17 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { IPC } from '@shared/ipc';
-import type { ChatImage, ChatSettings, FileEntry, FccInstallStatus, FccStatus } from '@shared/types';
+import type {
+  ChatImage,
+  ChatSettings,
+  FileEntry,
+  FccInstallStatus,
+  FccStatus,
+  HistoryRecord,
+  HistorySummary,
+  McpConfig,
+  McpServerDef,
+  PermissionMode
+} from '@shared/types';
 
 const api = {
   // The sandboxed renderer has no `process` global — surface the platform
@@ -23,13 +34,18 @@ const api = {
   fccStart: (): Promise<FccStatus> => ipcRenderer.invoke(IPC.fccStart),
   fccStop: (): Promise<FccStatus> => ipcRenderer.invoke(IPC.fccStop),
   fccDetect: (): Promise<FccInstallStatus> => ipcRenderer.invoke(IPC.fccDetect),
-  chatStart: (sessionId: string, folder: string, prompt: string, opts?: { resume?: string; images?: ChatImage[] }): Promise<void> =>
+  chatStart: (sessionId: string, folder: string, prompt: string, opts?: { resume?: string; images?: ChatImage[]; permissionMode?: PermissionMode }): Promise<void> =>
     ipcRenderer.invoke(IPC.chatStart, sessionId, folder, prompt, opts),
   chatSend: (sessionId: string, prompt: string, images?: ChatImage[]): Promise<void> =>
     ipcRenderer.invoke(IPC.chatSend, sessionId, prompt, images),
   chatStop: (sessionId: string): Promise<void> => ipcRenderer.invoke(IPC.chatStop, sessionId),
   chatApprove: (sessionId: string, plan: string): Promise<void> => ipcRenderer.invoke(IPC.chatApprove, sessionId, plan),
   clipboardReadImage: (): Promise<string | null> => ipcRenderer.invoke(IPC.clipboardReadImage),
+  historyList: (): Promise<HistorySummary[]> => ipcRenderer.invoke(IPC.historyList),
+  historyOpen: (id: string): Promise<HistoryRecord | null> => ipcRenderer.invoke(IPC.historyOpen, id),
+  historyDelete: (id: string): Promise<void> => ipcRenderer.invoke(IPC.historyDelete, id),
+  mcpGet: (): Promise<McpConfig> => ipcRenderer.invoke(IPC.mcpGet),
+  mcpSet: (servers: Record<string, McpServerDef>): Promise<void> => ipcRenderer.invoke(IPC.mcpSet, servers),
   setChatSettings: (s: ChatSettings): Promise<void> =>
     ipcRenderer.invoke(IPC.setChatSettings, s),
   setTitleBarOverlay: (color: string, symbolColor: string): Promise<void> =>

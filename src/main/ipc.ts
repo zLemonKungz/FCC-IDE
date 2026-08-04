@@ -1,9 +1,11 @@
 import { ipcMain, dialog, clipboard, type BrowserWindow } from 'electron';
 import { IPC } from '@shared/ipc';
-import type { ChatImage } from '@shared/types';
+import type { ChatImage, McpServerDef } from '@shared/types';
 import * as files from './file-service';
 import * as terminal from './terminal-service';
 import * as fcc from './fcc-manager';
+import * as history from './chat/history';
+import * as mcp from './mcp-service';
 import { ChatHost, type ChatStartOpts } from './chat/chat-host';
 import { setChatConfig } from './chat/config';
 
@@ -74,4 +76,10 @@ export function registerIpc(win: BrowserWindow): void {
     if (img.isEmpty()) return null;
     return img.toPNG().toString('base64');
   });
+
+  ipcMain.handle(IPC.historyList, () => history.list());
+  ipcMain.handle(IPC.historyOpen, (_e, id: string) => history.read(id));
+  ipcMain.handle(IPC.historyDelete, (_e, id: string) => history.remove(id));
+  ipcMain.handle(IPC.mcpGet, () => mcp.getMcpConfig());
+  ipcMain.handle(IPC.mcpSet, (_e, servers: Record<string, McpServerDef>) => mcp.setMcpConfig(servers));
 }

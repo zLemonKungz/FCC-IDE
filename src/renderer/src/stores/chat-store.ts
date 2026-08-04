@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ChatImage, PermissionMode } from '@shared/types';
+import type { ChatImage, HistoryRecord, PermissionMode } from '@shared/types';
 import { emptyChatState, applyChatEvent, type ChatEvent, type ChatUiState, type FileEvent } from '../chat/chat-reducer';
 
 interface ChatStore extends ChatUiState {
@@ -8,6 +8,8 @@ interface ChatStore extends ChatUiState {
   /** Plan mode: the next conversation spawns with --permission-mode plan and
    *  surfaces an Approve/Reject prompt when the CLI proposes a plan. */
   planMode: boolean;
+  /** CLI session id armed by openHistory — the next send spawns with --resume. */
+  pendingResume: string | null;
   /** Start a new conversation, or continue the live one if it exists. */
   send: (folder: string, prompt: string, images?: ChatImage[]) => void;
   stop: () => void;
@@ -17,6 +19,8 @@ interface ChatStore extends ChatUiState {
   /** Reject the proposed plan — stop the session, back to planning. */
   reject: () => void;
   setPlanMode: (v: boolean) => void;
+  /** Restore a saved conversation: show its transcript and arm --resume. */
+  openHistory: (rec: HistoryRecord) => void;
   handleEvent: (sessionId: string, message: unknown) => void;
 }
 
@@ -25,6 +29,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   activeSessionId: null,
   folder: null,
   planMode: false,
+  pendingResume: null,
   handleEvent: (sessionId, message) => {
     if (sessionId !== get().activeSessionId) return;
     const { state, fileEvents } = applyChatEvent(get(), message as ChatEvent);
@@ -34,10 +39,24 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     );
   },
   send: (folder, prompt, images) => {
-    const { activeSessionId, messages, running, planMode } = get();
+    const { activeSessionId, messages, running, planMode, pendingResume } = get();
     // A live conversation continues on the same subprocess (context preserved).
     // While a turn runs, the Stop button is the only way to interrupt.
     if (running) return;
+    // A restored conversation's first send spawns the CLI with --resume so it
+    // rebuilds context from the saved session. Uses the saved folder, not the
+    // (possibly different) currently-open one.
+    if (pendingResume) {
+      const cliId = pendingResume;
+      const fld = get().folder ?? folder;
+      if (!fld) return; // no folder to spawn in — shouldn't happen after openHistory
+      set({ pendingResume: null });
+      const opts: { resume: string; images?: ChatImage[]; permissionMode?: PermissionMode } = { resume: cliId };
+      if (images?.length) opts.images = images;
+      if (planMode) opts.permissionMode = 'plan';
+      void window.fcc.chatStart(activeSessionId!, fld, prompt, opts);
+      return;
+    }
     if (activeSessionId && messages.length > 0) {
       // Keep the exact 2-arg call when there are no images — chat-store tests
       // assert it, and an `undefined` third arg is noise over IPC.
@@ -68,12 +87,32 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ awaitingPlanApproval: false, planMode: false, running: false });
   },
   setPlanMode: (v) => set({ planMode: v }),
+  openHistory: (rec) => {
+    // Abandon the live conversation (already persisted by main on each result).
+    const cur = get().activeSessionId;
+    if (cur) void window.fcc.chatStop(cur);
+    const sid = `s-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    set({
+      ...emptyChatState(),
+      messages: rec.messages.map((m) => ({
+        id: `h-${Math.random().toString(36).slice(2)}`,
+        role: m.role,
+        text: m.text,
+        tools: []
+      })),
+      activeSessionId: sid,
+      folder: rec.folder,
+      // The transcript is shown even if --resume is unsupported; the next send
+      // just spawns fresh without it (chatStart drops an unusable resume id).
+      pendingResume: rec.cliSessionId
+    });
+  },
   reset: () => {
     // /new while a turn is running must actually stop the subprocess, not
     // just drop the renderer state — otherwise the CLI keeps working invisibly
     // until the next chatStart kills it.
     const sid = get().activeSessionId;
     if (sid) void window.fcc.chatStop(sid);
-    set({ ...emptyChatState(), activeSessionId: null });
+    set({ ...emptyChatState(), activeSessionId: null, pendingResume: null });
   }
 }));

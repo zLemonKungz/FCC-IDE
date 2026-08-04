@@ -21,6 +21,11 @@ export const IPC = {
   chatStop: 'chat:stop',
   chatApprove: 'chat:approve',
   clipboardReadImage: 'clipboard:read-image',
+  historyList: 'history:list',
+  historyOpen: 'history:open',
+  historyDelete: 'history:delete',
+  mcpGet: 'mcp:get',
+  mcpSet: 'mcp:set',
   setChatSettings: 'settings:set',
   setTitleBarOverlay: 'window:set-titlebar-overlay',
   // events main -> renderer
