@@ -238,10 +238,10 @@ button.icon-btn:hover {
 .titlebar .titlebar-icon {
   width: 22px;
   height: 22px;
-  border: none;
+  border: 1px solid var(--border-1);
   border-radius: 4px;
-  background: transparent;
-  color: var(--text-3);
+  background: var(--bg-1);
+  color: var(--text-2);
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
@@ -254,7 +254,8 @@ button.icon-btn:hover {
 .titlebar .shortcuts-btn.active,
 .titlebar .titlebar-icon:hover,
 .titlebar .titlebar-icon.active {
-  background: var(--bg-4);
+  background: var(--bg-3);
+  border-color: var(--border-1);
   color: var(--text-1);
 }
 .shortcuts-popover {
@@ -607,6 +608,11 @@ button.icon-btn:hover {
   box-shadow: var(--shadow-2);
   padding: 16px;
   animation: msg-in 0.12s ease;
+}
+.settings-modal .settings-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 .settings-title {
   font-size: 13px;

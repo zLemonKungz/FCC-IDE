@@ -1,4 +1,5 @@
 import { useSettingsStore } from '../stores/settings-store';
+import { IconClose } from './icons';
 
 // Program (app) settings only — editor font size, auto-save. Chat settings
 // (model, max turns, plan mode) live in the chat settings modal, opened from
@@ -12,7 +13,12 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="modal-backdrop" onPointerDown={onClose}>
       <div className="settings-modal" onPointerDown={(e) => e.stopPropagation()}>
-        <div className="settings-title">Program settings</div>
+        <div className="settings-title">
+          <span>Program settings</span>
+          <button className="icon-btn" onClick={onClose} title="Close">
+            <IconClose width={13} height={13} />
+          </button>
+        </div>
         <label className="settings-row">
           <span>Editor font size</span>
           <input
