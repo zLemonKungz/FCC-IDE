@@ -4,10 +4,10 @@ import { IconCheck, IconClose, IconCopy } from './icons';
 
 // Official free-claude-code bootstrap, per platform (see the repo README).
 // Runs `fcc-server` afterwards; on Windows it also installs the tray app.
-const INSTALL_CMD =
-  process.platform === 'win32'
-    ? '& ([scriptblock]::Create((irm "https://raw.githubusercontent.com/Alishahryar1/free-claude-code/main/scripts/install.ps1")))'
-    : 'curl -fsSL "https://raw.githubusercontent.com/Alishahryar1/free-claude-code/main/scripts/install.sh" | sh';
+const IS_WIN = window.fcc.platform === 'win32';
+const INSTALL_CMD = IS_WIN
+  ? '& ([scriptblock]::Create((irm "https://raw.githubusercontent.com/Alishahryar1/free-claude-code/main/scripts/install.ps1")))'
+  : 'curl -fsSL "https://raw.githubusercontent.com/Alishahryar1/free-claude-code/main/scripts/install.sh" | sh';
 
 export default function FccSetupModal({ onClose }: { onClose: () => void }) {
   const install = useFccStore((s) => s.install);
@@ -80,7 +80,7 @@ export default function FccSetupModal({ onClose }: { onClose: () => void }) {
           <p className="setup-note amber">
             Found FCC at <code>{install.serverPath}</code> — FCC Studio can still start it. To use{' '}
             <code>fcc-claude</code> in your own terminal too, add{' '}
-            <code>{process.platform === 'win32' ? '%USERPROFILE%\\.local\\bin' : '~/.local/bin'}</code> to PATH.
+            <code>{IS_WIN ? '%USERPROFILE%\\.local\\bin' : '~/.local/bin'}</code> to PATH.
           </p>
         )}
 

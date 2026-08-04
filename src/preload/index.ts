@@ -3,6 +3,9 @@ import { IPC } from '@shared/ipc';
 import type { ChatImage, ChatSettings, FileEntry, FccInstallStatus, FccStatus } from '@shared/types';
 
 const api = {
+  // The sandboxed renderer has no `process` global — surface the platform
+  // (win32 / darwin / linux) so components can pick platform-specific text.
+  platform: process.platform,
   ping: (): Promise<string> => ipcRenderer.invoke(IPC.ping),
   fsList: (dir: string): Promise<FileEntry[]> => ipcRenderer.invoke(IPC.fsList, dir),
   fsRead: (p: string): Promise<string> => ipcRenderer.invoke(IPC.fsRead, p),

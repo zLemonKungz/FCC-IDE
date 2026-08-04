@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Editor, { loader } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
 import { useEditorStore } from '../stores/editor-store';
@@ -181,7 +181,11 @@ export default function EditorPane() {
 // Aggregate view of every file Claude modified this session. Chips open the
 // diff; the strip offers batch accept / revert (VS Code-style review surface).
 function ChangesStrip() {
-  const modified = useEditorStore((s) => s.tabs.filter((t) => t.agentModified));
+  // Select the stable `tabs` reference, not the filtered result — a selector
+  // returning a fresh array every snapshot makes useSyncExternalStore re-render
+  // forever ("Maximum update depth exceeded"). Memoize the filter instead.
+  const tabs = useEditorStore((s) => s.tabs);
+  const modified = useMemo(() => tabs.filter((t) => t.agentModified), [tabs]);
   const setDiff = useEditorStore((s) => s.setDiff);
   const setActive = useEditorStore((s) => s.setActive);
   const acceptAll = useEditorStore((s) => s.acceptAllAgentChanges);
