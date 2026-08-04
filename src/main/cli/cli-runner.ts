@@ -12,7 +12,7 @@ import { resolve } from 'path';
 // `app` is only available in the main process; importing it in a plain-node
 // (vitest) context yields undefined, which resolveCliBinary guards against.
 import { app } from 'electron';
-import type { ChatImage } from '@shared/types';
+import type { ChatImage, PermissionMode } from '@shared/types';
 
 export interface CliSessionOptions {
   binary: string;
@@ -22,6 +22,7 @@ export interface CliSessionOptions {
   baseUrl: string;
   authToken: string;
   resume?: string;
+  permissionMode?: PermissionMode;
   onEvent: (msg: unknown) => void;
   onExit: (code: number | null) => void;
   onError: (err: Error) => void;
@@ -92,7 +93,7 @@ export class CliSession {
       '--verbose',
       '--model', this.opts.model,
       '--max-turns', String(this.opts.maxTurns),
-      '--permission-mode', 'acceptEdits'
+      '--permission-mode', this.opts.permissionMode ?? 'acceptEdits'
     ];
     if (this.opts.resume) args.push('--resume', this.opts.resume);
 

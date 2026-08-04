@@ -64,6 +64,7 @@ export function registerIpc(win: BrowserWindow): void {
     chatHost!.send(sessionId, prompt, images)
   );
   ipcMain.handle(IPC.chatStop, (_e, sessionId: string) => chatHost!.stop(sessionId));
+  ipcMain.handle(IPC.chatApprove, (_e, sessionId: string, plan: string) => chatHost!.approve(sessionId, plan));
 
   // A bitmap on the system clipboard (e.g. a Win+Shift+S screenshot) can't be
   // read by the sandboxed renderer's Clipboard API under file:// — read it in

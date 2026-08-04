@@ -1484,6 +1484,32 @@ button.icon-btn:hover {
   padding: 8px 12px 0;
   flex-shrink: 0;
 }
+.plan-approval {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  margin: 0 12px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent-dim);
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+.plan-approval .pa-text {
+  font-size: 12px;
+  color: var(--text-1);
+}
+.plan-approval .pa-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+button.plan-toggle.on {
+  color: var(--accent);
+  border-color: var(--accent-border);
+  background: var(--accent-dim);
+}
 .chat-attachments .attach {
   position: relative;
 }

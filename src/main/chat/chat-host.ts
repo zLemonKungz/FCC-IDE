@@ -1,6 +1,6 @@
 import type { BrowserWindow } from 'electron';
 import { IPC } from '@shared/ipc';
-import type { ChatImage } from '@shared/types';
+import type { ChatImage, PermissionMode } from '@shared/types';
 import { FCC_BASE_URL, FCC_AUTH_TOKEN } from '../fcc-manager';
 import { getChatConfig } from './config';
 import { CliSession, resolveCliBinary } from '../cli/cli-runner';
@@ -14,6 +14,7 @@ interface ActiveSession {
 export interface ChatStartOpts {
   resume?: string;
   images?: ChatImage[];
+  permissionMode?: PermissionMode;
 }
 
 interface CliEvent {
@@ -21,6 +22,7 @@ interface CliEvent {
   subtype?: string;
   session_id?: string;
   slash_commands?: unknown;
+  permission_mode?: string;
 }
 
 // Drives the `claude` CLI as a subprocess instead of the Agent SDK. The CLI's
@@ -34,6 +36,8 @@ export class ChatHost {
   private sessions = new Map<string, ActiveSession>();
   /** sessionId -> folder, kept after the process dies so send() can respawn. */
   private folders = new Map<string, string>();
+  /** sessionId -> permission mode of the spawned process (respawn keeps it). */
+  private modes = new Map<string, PermissionMode>();
 
   constructor(private win: BrowserWindow) {}
 
@@ -46,7 +50,9 @@ export class ChatHost {
     }
     this.sessions.clear();
     this.folders.clear();
+    this.modes.clear();
     this.folders.set(sessionId, folder);
+    this.modes.set(sessionId, opts?.permissionMode ?? 'acceptEdits');
 
     this.emit(sessionId, { type: 'user-message', text: prompt, images: opts?.images?.length });
     this.emit(sessionId, { type: 'started' });
@@ -73,7 +79,35 @@ export class ChatHost {
       this.emit(sessionId, { type: 'error', message: 'No active conversation for this session.' });
       return;
     }
-    await this.spawn(sessionId, folder, prompt, { images });
+    // A dead process respawns under the same session — keep its permission mode
+    // so a plan-mode conversation stays in plan mode across a crash.
+    await this.spawn(sessionId, folder, prompt, { images, permissionMode: this.modes.get(sessionId) });
+  }
+
+  /** Approve a plan-mode proposal: switch the session to acting (acceptEdits).
+   *  Uses the same stop→respawn path as Stop, NOT a control signal — the
+   *  {"type":"interrupt"} control family is unreliable through the FCC proxy,
+   *  while kill+respawn under the same sessionId is empirically solid. The
+   *  plan text is re-sent so the fresh process has the approved plan in context. */
+  async approve(sessionId: string, plan: string): Promise<void> {
+    const entry = this.sessions.get(sessionId);
+    // Mark cleaned BEFORE stopping so onExit doesn't surface an error for the
+    // aborted plan turn (no result was seen while waiting for approval).
+    if (entry) {
+      entry.cleaned = true;
+      entry.session.stop();
+    }
+    const folder = this.folders.get(sessionId);
+    if (folder === undefined) {
+      this.emit(sessionId, { type: 'error', message: 'No active conversation for this session.' });
+      return;
+    }
+    this.modes.set(sessionId, 'acceptEdits');
+    this.emit(sessionId, { type: 'user-message', text: 'Plan approved — implementing now.' });
+    this.emit(sessionId, { type: 'started' });
+    await this.spawn(sessionId, folder, `The user approved this plan — implement it now:\n\n${plan}`, {
+      permissionMode: 'acceptEdits'
+    });
   }
 
   private async spawn(sessionId: string, folder: string, prompt: string, opts?: ChatStartOpts): Promise<void> {
@@ -104,6 +138,7 @@ export class ChatHost {
       baseUrl: FCC_BASE_URL,
       authToken: FCC_AUTH_TOKEN,
       resume: opts?.resume,
+      permissionMode: opts?.permissionMode,
       onEvent: (msg) => {
         const m = msg as CliEvent;
         if (m.type === 'result') entry.sawResult = true;
@@ -115,6 +150,10 @@ export class ChatHost {
         if (m.type === 'system' && m.subtype === 'init' && Array.isArray(m.slash_commands)) {
           const commands = m.slash_commands.map((c) => String(c)).filter(Boolean);
           if (commands.length > 0) this.emit(sessionId, { type: 'slash-commands', commands });
+        }
+        // Plan mode: the CLI signals a proposal is waiting for user approval.
+        if (m.type === 'control' && m.subtype === 'plan_approval') {
+          this.emit(sessionId, { type: 'plan-approval' });
         }
       },
       onExit: (code) => {
@@ -159,6 +198,7 @@ export class ChatHost {
     }
     this.sessions.clear();
     this.folders.clear();
+    this.modes.clear();
   }
 
   private emit(sessionId: string, message: unknown): void {

@@ -33,9 +33,14 @@ export default function ChatPanel({ style }: { style?: CSSProperties }) {
   const sessionId = useChatStore((s) => s.sessionId);
   const lastUsage = useChatStore((s) => s.lastUsage);
   const slashCommands = useChatStore((s) => s.slashCommands);
+  const planMode = useChatStore((s) => s.planMode);
+  const awaitingPlanApproval = useChatStore((s) => s.awaitingPlanApproval);
   const handleEvent = useChatStore((s) => s.handleEvent);
   const send = useChatStore((s) => s.send);
   const stop = useChatStore((s) => s.stop);
+  const approve = useChatStore((s) => s.approve);
+  const reject = useChatStore((s) => s.reject);
+  const setPlanMode = useChatStore((s) => s.setPlanMode);
   const root = useExplorerStore((s) => s.root);
   const install = useFccStore((s) => s.install);
   const setSetupOpen = useFccStore((s) => s.setSetupOpen);
@@ -65,6 +70,15 @@ export default function ChatPanel({ style }: { style?: CSSProperties }) {
     const cli = slashCommands.map((c) => (c.startsWith('/') ? c : `/${c}`));
     return Array.from(new Set([...loc, ...cli])).sort();
   }, [slashCommands]);
+
+  // The proposal awaiting approval is the latest assistant text (the CLI emits
+  // plan_approval after streaming the plan; the text is already in the store).
+  const planText = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'assistant') return messages[i].text;
+    }
+    return '';
+  }, [messages]);
 
   // Filtered list shown in the '/' picker (empty when closed).
   const matches = useMemo(() => {
@@ -280,6 +294,17 @@ Type anything else to send it to Claude.`;
             New chat
           </button>
         )}
+        <button
+          className={`ghost plan-toggle${planMode ? ' on' : ''}`}
+          onClick={() => setPlanMode(!planMode)}
+          title={
+            planMode
+              ? 'Plan mode is on — the next chat proposes a plan before acting. Click to switch back to Act.'
+              : 'Plan mode is off. Click to plan first (propose before acting).'
+          }
+        >
+          {planMode ? 'Act' : 'Plan'}
+        </button>
         {running && (
           <button className="ghost" onClick={stop}>
             <IconStop width={12} height={12} />
@@ -327,6 +352,17 @@ Type anything else to send it to Claude.`;
           <IconSparkles width={12} height={12} />
           FCC isn’t installed — click to set up
         </button>
+      )}
+      {awaitingPlanApproval && (
+        <div className="plan-approval">
+          <span className="pa-text">Claude proposed a plan — approve to implement, or reject.</span>
+          <div className="pa-actions">
+            <button className="primary" onClick={() => approve(planText)} disabled={!planText}>
+              Approve plan
+            </button>
+            <button onClick={reject}>Reject</button>
+          </div>
+        </div>
       )}
       {images.length > 0 && (
         <div className="chat-attachments">

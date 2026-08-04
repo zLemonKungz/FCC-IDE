@@ -21,6 +21,8 @@ export interface ChatUiState {
   lastUsage: { input: number; output: number; cost?: number } | null;
   /** slash commands / skills discovered from the CLI init message (no leading '/') */
   slashCommands: string[];
+  /** plan mode surfaced a proposal — the input should offer Approve / Reject. */
+  awaitingPlanApproval: boolean;
 }
 export interface FileEvent {
   path: string;
@@ -28,6 +30,7 @@ export interface FileEvent {
 
 export type ChatEvent =
   | { type: 'user-message'; text: string; images?: number }
+  | { type: 'plan-approval' }
   | { type: 'assistant'; message: { content?: { type: string; text?: string; id?: string; name?: string; input?: unknown }[] } }
   | { type: 'user'; message?: { content?: { type: string; tool_use_id?: string; is_error?: boolean }[] } }
   | {
@@ -44,7 +47,15 @@ export type ChatEvent =
   | { type: 'error'; message: string };
 
 export function emptyChatState(): ChatUiState {
-  return { messages: [], running: false, error: null, sessionId: null, lastUsage: null, slashCommands: [] };
+  return {
+    messages: [],
+    running: false,
+    error: null,
+    sessionId: null,
+    lastUsage: null,
+    slashCommands: [],
+    awaitingPlanApproval: false
+  };
 }
 
 function uid(): string {
@@ -145,6 +156,12 @@ export function applyChatEvent(
 
     case 'stopped':
       s = { ...s, running: false };
+      break;
+
+    case 'plan-approval':
+      // The CLI is idle, waiting for the user to approve/reject the proposal —
+      // not doing work, so the running flag clears and the input re-enables.
+      s = { ...s, running: false, awaitingPlanApproval: true };
       break;
 
     case 'error':

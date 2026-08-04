@@ -25,6 +25,7 @@ const api = {
   chatSend: (sessionId: string, prompt: string, images?: ChatImage[]): Promise<void> =>
     ipcRenderer.invoke(IPC.chatSend, sessionId, prompt, images),
   chatStop: (sessionId: string): Promise<void> => ipcRenderer.invoke(IPC.chatStop, sessionId),
+  chatApprove: (sessionId: string, plan: string): Promise<void> => ipcRenderer.invoke(IPC.chatApprove, sessionId, plan),
   clipboardReadImage: (): Promise<string | null> => ipcRenderer.invoke(IPC.clipboardReadImage),
   setChatSettings: (s: ChatSettings): Promise<void> =>
     ipcRenderer.invoke(IPC.setChatSettings, s),

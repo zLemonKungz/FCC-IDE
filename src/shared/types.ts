@@ -40,3 +40,7 @@ export interface ChatImage {
   media_type: string;
   data: string;
 }
+
+/** CLI --permission-mode: 'acceptEdits' (auto-accept agent edits, the default)
+ *  or 'plan' (analyze + propose before acting). */
+export type PermissionMode = 'acceptEdits' | 'plan';
