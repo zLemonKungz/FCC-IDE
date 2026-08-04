@@ -29,6 +29,11 @@ export default function CommandPalette({ onClose }: { onClose: () => void }) {
     const base: Command[] = [
       { id: 'toggle-sidebar', label: 'View: Toggle Sidebar', run: () => layout.toggleSidebar() },
       { id: 'toggle-terminal', label: 'View: Toggle Terminal', run: () => layout.toggleTerminal() },
+      {
+        id: 'move-terminal',
+        label: `View: Move Terminal ${layout.terminalPosition === 'bottom' ? 'Right' : 'to Bottom'}`,
+        run: () => layout.setTerminalPosition(layout.terminalPosition === 'bottom' ? 'right' : 'bottom')
+      },
       { id: 'toggle-chat', label: 'View: Toggle Chat', run: () => layout.toggleChat() },
       { id: 'toggle-theme', label: 'Theme: Toggle Dark / Light', run: () => layout.toggleTheme() },
       { id: 'open-folder', label: 'File: Open Folder…', run: () => void useExplorerStore.getState().openRoot() },

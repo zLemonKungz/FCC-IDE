@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type { FileEntry } from '@shared/types';
 
 interface ExplorerState {
@@ -14,7 +15,9 @@ interface ExplorerState {
   openFile: (path: string) => void;
 }
 
-export const useExplorerStore = create<ExplorerState>((set, get) => ({
+export const useExplorerStore = create<ExplorerState>()(
+  persist(
+    (set, get) => ({
   root: null,
   children: {},
   expanded: {},
@@ -53,4 +56,21 @@ export const useExplorerStore = create<ExplorerState>((set, get) => ({
     set({ selectedPath: path });
     window.dispatchEvent(new CustomEvent('fcc:open-file', { detail: path }));
   }
-}));
+    }),
+    {
+      // Reopen the folder the user had open (no dialog — it was already theirs).
+      name: 'fcc-explorer',
+      partialize: (s) => ({ root: s.root }),
+      onRehydrateStorage: () => (state) => {
+        const root = state?.root;
+        if (!root) return;
+        void window.fcc
+          .fsList(root)
+          .then((entries) =>
+            useExplorerStore.setState({ root, children: { [root]: entries }, expanded: { [root]: true } })
+          )
+          .catch(() => useExplorerStore.setState({ root: null, children: {}, expanded: {} }));
+      }
+    }
+  )
+);

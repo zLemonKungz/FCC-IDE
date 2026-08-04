@@ -3,7 +3,6 @@ import { useFccStore } from '../stores/fcc-store';
 import { useExplorerStore } from '../stores/explorer-store';
 import { useEditorStore } from '../stores/editor-store';
 import FccSetupModal from './FccSetupModal';
-import Logo from './Logo';
 import { IconFolder } from './icons';
 
 export default function StatusBar() {
@@ -29,10 +28,6 @@ export default function StatusBar() {
 
   return (
     <div className="statusbar">
-      <span className="brand">
-        <Logo width={13} height={13} style={{ color: 'var(--accent)' }} />
-        FCC Studio
-      </span>
       <span className="folder">
         <IconFolder width={12} height={12} />
         {root ?? 'No folder open'}

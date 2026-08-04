@@ -5,7 +5,7 @@ import '@xterm/xterm/css/xterm.css';
 import { useExplorerStore } from '../stores/explorer-store';
 import { useLayoutStore, LAYOUT } from '../stores/layout-store';
 import DragHandle from './DragHandle';
-import { IconChevronUp, IconClose, IconPlay, IconTerminal } from './icons';
+import { IconChevronDown, IconChevronRight, IconClose, IconPlay, IconTrash } from './icons';
 
 type TermPalette = NonNullable<ConstructorParameters<typeof XTerm>[0]>['theme'];
 
@@ -70,12 +70,15 @@ function TerminalTab({
   cwd,
   theme,
   active,
+  visible,
   register
 }: {
   id: number;
   cwd: string;
   theme: 'dark' | 'light';
   active: boolean;
+  /** the whole pane is visible — refit when it comes back from display:none */
+  visible: boolean;
   register: (id: number, term: XTerm | null) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -149,9 +152,10 @@ function TerminalTab({
     if (termRef.current) termRef.current.options.theme = TERM_COLORS[theme];
   }, [theme]);
 
-  // Becoming visible (tab switch / expand) — refit since the box was hidden.
+  // Becoming visible (tab switch / pane re-opened) — refit since the box was
+  // hidden (display:none gives a zero-size element that fit() can't use).
   useEffect(() => {
-    if (!active) return;
+    if (!active || !visible) return;
     requestAnimationFrame(() => {
       try {
         fitRef.current?.fit();
@@ -162,21 +166,18 @@ function TerminalTab({
         window.fcc.termResize(ptyRef.current, termRef.current.cols, termRef.current.rows);
       }
     });
-  }, [active]);
+  }, [active, visible]);
 
   return <div ref={ref} className={`term-body${active ? '' : ' tab-inactive'}`} />;
 }
 
-export default function TerminalPane({
-  height,
-  onResize
-}: {
-  height: number;
-  onResize: (px: number) => void;
-}) {
+export default function TerminalPane({ position }: { position: 'bottom' | 'right' }) {
   const root = useExplorerStore((s) => s.root);
   const visible = useLayoutStore((s) => s.terminalVisible);
+  const height = useLayoutStore((s) => s.terminalHeight);
   const toggleTerminal = useLayoutStore((s) => s.toggleTerminal);
+  const setTerminalPosition = useLayoutStore((s) => s.setTerminalPosition);
+  const setHeight = useLayoutStore((s) => s.setTerminalHeight);
   const theme = useLayoutStore((s) => s.theme);
   const [tabs, setTabs] = useState<TermTab[]>([]);
   const [activeId, setActiveId] = useState<number | null>(null);
@@ -215,15 +216,7 @@ export default function TerminalPane({
   };
 
   return (
-    <div
-      className={`terminal-pane ${visible ? '' : 'collapsed'}`}
-      style={{ height: visible ? height : 30 }}
-    >
-      <div className="term-strip" onClick={toggleTerminal} title="Show terminal (Ctrl+`)">
-        <IconTerminal width={13} height={13} />
-        Terminal
-        <IconChevronUp width={12} height={12} className="strip-chev" />
-      </div>
+    <div className={`terminal-pane ${position}${visible ? '' : ' hidden'}`} style={{ height }}>
       {visible && (
         <>
           <DragHandle
@@ -232,7 +225,8 @@ export default function TerminalPane({
             min={LAYOUT.TERM_MIN}
             max={LAYOUT.TERM_MAX}
             defaultValue={LAYOUT.TERM_DEFAULT}
-            onChange={onResize}
+            onChange={setHeight}
+            invert
           />
           <div className="term-header">
             <div className="term-tabs">
@@ -263,12 +257,27 @@ export default function TerminalPane({
               </button>
             </div>
             <span className="term-actions">
+              <button
+                title={
+                  position === 'bottom' ? 'Move terminal to the right side' : 'Move terminal to the bottom'
+                }
+                onClick={() => setTerminalPosition(position === 'bottom' ? 'right' : 'bottom')}
+              >
+                {position === 'bottom' ? (
+                  <IconChevronRight width={12} height={12} />
+                ) : (
+                  <IconChevronDown width={12} height={12} />
+                )}
+              </button>
               <button title="Clear terminal" onClick={() => termMap.current.get(activeId ?? -1)?.clear()}>
-                <IconClose width={12} height={12} />
+                <IconTrash width={12} height={12} />
               </button>
               <button onClick={() => activeId !== null && window.fcc.termData(activeId, 'fcc-claude\r')}>
                 <IconPlay width={12} height={12} />
                 Run fcc-claude
+              </button>
+              <button title="Hide terminal (Ctrl+`)" onClick={toggleTerminal}>
+                <IconClose width={12} height={12} />
               </button>
             </span>
           </div>
@@ -281,6 +290,7 @@ export default function TerminalPane({
           cwd={root ?? ''}
           theme={theme}
           active={t.id === activeId}
+          visible={visible}
           register={register}
         />
       ))}

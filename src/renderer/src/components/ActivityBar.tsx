@@ -9,8 +9,6 @@ export default function ActivityBar() {
   const terminalVisible = useLayoutStore((s) => s.terminalVisible);
   const theme = useLayoutStore((s) => s.theme);
   const toggleSidebar = useLayoutStore((s) => s.toggleSidebar);
-  const toggleChat = useLayoutStore((s) => s.toggleChat);
-  const toggleTerminal = useLayoutStore((s) => s.toggleTerminal);
   const toggleTheme = useLayoutStore((s) => s.toggleTheme);
   const setSidebarView = useLayoutStore((s) => s.setSidebarView);
 
@@ -22,6 +20,11 @@ export default function ActivityBar() {
     setSidebarView('search');
     if (!sidebarVisible) toggleSidebar();
   };
+  // VS Code behavior: the activity-bar icon OPENS its panel — it never hides
+  // it. Closing is done from the panel itself (the ✕ in the header), so a
+  // single click always reveals the panel instead of toggling it on/off.
+  const showChat = (): void => useLayoutStore.getState().setChatVisible(true);
+  const showTerminal = (): void => useLayoutStore.getState().setTerminalVisible(true);
 
   return (
     <nav className="activity-bar">
@@ -42,14 +45,14 @@ export default function ActivityBar() {
       <button
         className={`activity ${chatVisible ? 'active' : ''}`}
         title="Chat (Ctrl+Shift+`)"
-        onClick={toggleChat}
+        onClick={showChat}
       >
         <IconChat width={20} height={20} />
       </button>
       <button
         className={`activity ${terminalVisible ? 'active' : ''}`}
         title="Terminal (Ctrl+`)"
-        onClick={toggleTerminal}
+        onClick={showTerminal}
       >
         <IconTerminal width={20} height={20} />
       </button>

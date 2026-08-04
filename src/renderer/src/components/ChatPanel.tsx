@@ -8,7 +8,7 @@ import type { ChatImage } from '@shared/types';
 import ChatMessage from './ChatMessage';
 import ChatSettingsModal from './ChatSettingsModal';
 import Markdown from '../chat/markdown';
-import { IconChat, IconClose, IconSend, IconSettings, IconSparkles, IconStop } from './icons';
+import { IconChat, IconChevronLeft, IconChevronRight, IconClaude, IconClose, IconSend, IconSettings, IconSparkles, IconStop } from './icons';
 
 // Client-side commands handled here; every other `/cmd` is forwarded to the
 // claude CLI subprocess (slash commands / skills discovered via the init msg).
@@ -47,6 +47,8 @@ export default function ChatPanel({ style }: { style?: CSSProperties }) {
   const install = useFccStore((s) => s.install);
   const setSetupOpen = useFccStore((s) => s.setSetupOpen);
   const toggleTheme = useLayoutStore((s) => s.toggleTheme);
+  const chatPosition = useLayoutStore((s) => s.chatPosition);
+  const setChatPosition = useLayoutStore((s) => s.setChatPosition);
   const chatModel = useSettingsStore((s) => s.chatModel);
   const [input, setInput] = useState('');
   const [help, setHelp] = useState<string | null>(null);
@@ -90,12 +92,12 @@ export default function ChatPanel({ style }: { style?: CSSProperties }) {
     if (atBottom) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, help, atBottom]);
 
-  // Auto-grow the input with its content (1 line up to a ~6-line cap).
+  // Auto-grow the input with its content (1 line up to a ~5-line cap).
   useEffect(() => {
     const el = inputRef.current;
     if (!el) return;
     el.style.height = 'auto';
-    el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
+    el.style.height = `${Math.min(el.scrollHeight, 96)}px`;
   }, [input]);
 
   // Rough token estimate (chars / 4) for the input footer.
@@ -348,6 +350,21 @@ Type anything else to send it to Claude.`;
             Stop
           </button>
         )}
+        <button
+          className="icon-btn"
+          onClick={() => setChatPosition(chatPosition === 'right' ? 'center' : 'right')}
+          title={chatPosition === 'right' ? 'Move chat over the editor' : 'Move chat back to the side'}
+        >
+          {chatPosition === 'right' ? <IconChevronLeft width={12} height={12} /> : <IconChevronRight width={12} height={12} />}
+        </button>
+        <button
+          className="icon-btn chat-hide"
+          onClick={() => useLayoutStore.getState().toggleChat()}
+          title="Hide chat (Ctrl+Shift+`)"
+          aria-label="Hide chat"
+        >
+          <IconClose width={12} height={12} />
+        </button>
       </div>
 
       <div
@@ -375,7 +392,7 @@ Type anything else to send it to Claude.`;
         {messages.length === 0 && !running && !help ? (
           <div className="chat-empty">
             <div className="icon">
-              <IconSparkles width={20} height={20} />
+              <IconClaude width={24} height={24} />
             </div>
             <div className="title">Ask Claude to build, fix, or explain</div>
             <div className="hint">

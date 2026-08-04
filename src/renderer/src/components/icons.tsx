@@ -61,6 +61,14 @@ export function IconChevronRight(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconChevronLeft(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <path d="m15 18-6-6 6-6" />
+    </Svg>
+  );
+}
+
 export function IconChevronDown(props: SVGProps<SVGSVGElement>) {
   return (
     <Svg {...props}>
@@ -108,6 +116,28 @@ export function IconSparkles(props: SVGProps<SVGSVGElement>) {
       <path d="M12 3l1.9 5.8L19.7 10.7l-5.8 1.9L12 18.4l-1.9-5.8L4.3 10.7l5.8-1.9z" />
       <path d="M19 3v4M21 5h-4" />
     </Svg>
+  );
+}
+
+// The official Claude Code logo (the orange asterisk). It's a filled mark, not
+// a stroked glyph, so it can't use the shared Svg wrapper — and it takes its
+// color from currentColor, which the accent-tinted containers supply.
+export function IconClaude(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      width={16}
+      height={16}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+      {...props}
+    >
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M20.998 10.949H24v3.102h-3v3.028h-1.487V20H18v-2.921h-1.487V20H15v-2.921H9V20H7.488v-2.921H6V20H4.487v-2.921H3V14.05H0V10.95h3V5h17.998v5.949zM6 10.949h1.488V8.102H6v2.847zm10.51 0H18V8.102h-1.49v2.847z"
+      />
+    </svg>
   );
 }
 

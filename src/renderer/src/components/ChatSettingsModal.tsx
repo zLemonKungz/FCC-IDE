@@ -59,8 +59,6 @@ function SettingsTab() {
   const setChatModel = useSettingsStore((s) => s.setChatModel);
   const setChatMaxTurns = useSettingsStore((s) => s.setChatMaxTurns);
   const setAutoCompactWindow = useSettingsStore((s) => s.setAutoCompactWindow);
-  const planMode = useChatStore((s) => s.planMode);
-  const setPlanMode = useChatStore((s) => s.setPlanMode);
   const sessionUsage = useChatStore((s) => s.sessionUsage);
   // Models the connected FCC gateway serves — fetched from /v1/models, filtered
   // to claude-related entries and de-duplicated against the curated list.
@@ -155,12 +153,6 @@ function SettingsTab() {
           onChange={(e) => setAutoCompactWindow(Number(e.target.value) || 190)}
         />
       </label>
-      <div className="cs-toggle-row">
-        <span>Plan mode</span>
-        <button className={`ghost plan-toggle${planMode ? ' on' : ''}`} onClick={() => setPlanMode(!planMode)}>
-          {planMode ? 'Act' : 'Plan'}
-        </button>
-      </div>
       <div className="settings-note">Settings apply to the next conversation.</div>
     </>
   );

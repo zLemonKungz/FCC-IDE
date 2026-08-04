@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 export interface EditorTab {
   path: string;
@@ -53,7 +54,9 @@ interface EditorState {
   getTab: (path: string) => EditorTab | null;
 }
 
-export const useEditorStore = create<EditorState>((set, get) => ({
+export const useEditorStore = create<EditorState>()(
+  persist(
+    (set, get) => ({
   tabs: [],
   activePath: null,
   closingPath: null,
@@ -190,4 +193,23 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
   getBase: (path) => get().tabs.find((t) => t.path === path)?.baseContent ?? null,
   getTab: (path) => get().tabs.find((t) => t.path === path) ?? null
-}));
+    }),
+    {
+      // Reopen the tabs that were open when the app last closed. Only the paths
+      // are stored (file contents can be large); on startup the content is
+      // re-read from disk, like VS Code's workspace-restore.
+      name: 'fcc-tabs',
+      partialize: (s) => ({ tabs: s.tabs.map(({ path, name }) => ({ path, name })), activePath: s.activePath }),
+      onRehydrateStorage: () => (state) => {
+        const tabs = state?.tabs;
+        if (!tabs || tabs.length === 0) return;
+        const paths = tabs.map((t) => t.path);
+        const active = state?.activePath ?? null;
+        useEditorStore.setState({ tabs: [], activePath: null });
+        void Promise.all(paths.map((p) => useEditorStore.getState().open(p).catch(() => undefined))).then(() => {
+          if (active) useEditorStore.setState({ activePath: active });
+        });
+      }
+    }
+  )
+);

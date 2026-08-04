@@ -28,6 +28,10 @@ interface LayoutState {
   sidebarVisible: boolean;
   chatVisible: boolean;
   terminalVisible: boolean;
+  /** where the terminal pane is docked — bottom bar or inside the right column */
+  terminalPosition: 'bottom' | 'right';
+  /** where the chat pane sits — right column, or over the editor area */
+  chatPosition: 'right' | 'center';
   /** which view the sidebar shows — Explorer or Find-in-files */
   sidebarView: 'explorer' | 'search';
   sidebarWidth: number;
@@ -38,6 +42,11 @@ interface LayoutState {
   toggleSidebar: () => void;
   toggleChat: () => void;
   toggleTerminal: () => void;
+  /** activity-bar icons OPEN their panel — they never hide it */
+  setChatVisible: (v: boolean) => void;
+  setTerminalVisible: (v: boolean) => void;
+  setTerminalPosition: (p: 'bottom' | 'right') => void;
+  setChatPosition: (p: 'right' | 'center') => void;
   setSidebarView: (v: 'explorer' | 'search') => void;
   setSidebarWidth: (v: number) => void;
   setChatWidth: (v: number) => void;
@@ -53,6 +62,8 @@ export const useLayoutStore = create<LayoutState>()(
       sidebarVisible: true,
       chatVisible: true,
       terminalVisible: true,
+      terminalPosition: 'bottom',
+      chatPosition: 'right',
       sidebarView: 'explorer',
       sidebarWidth: SIDEBAR_DEFAULT,
       chatWidth: CHAT_DEFAULT,
@@ -62,6 +73,10 @@ export const useLayoutStore = create<LayoutState>()(
       toggleSidebar: () => set((s) => ({ sidebarVisible: !s.sidebarVisible })),
       toggleChat: () => set((s) => ({ chatVisible: !s.chatVisible })),
       toggleTerminal: () => set((s) => ({ terminalVisible: !s.terminalVisible })),
+      setChatVisible: (chatVisible) => set({ chatVisible }),
+      setTerminalVisible: (terminalVisible) => set({ terminalVisible }),
+      setTerminalPosition: (terminalPosition) => set({ terminalPosition }),
+      setChatPosition: (chatPosition) => set({ chatPosition }),
       setSidebarView: (sidebarView) => set({ sidebarView }),
       setSidebarWidth: (v) => set({ sidebarWidth: v }),
       setChatWidth: (v) => set({ chatWidth: v }),

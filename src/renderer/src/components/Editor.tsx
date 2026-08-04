@@ -8,7 +8,7 @@ import { useSettingsStore } from '../stores/settings-store';
 import DiffView from './DiffView';
 import FileIcon from './FileIcon';
 import Markdown from '../chat/markdown';
-import { IconChevronRight, IconClose, IconFile, IconSparkles } from './icons';
+import { IconChevronRight, IconClaude, IconClose, IconFile, IconSparkles } from './icons';
 
 loader.config({ monaco });
 
@@ -47,11 +47,19 @@ export default function EditorPane() {
   // editor for that file mounts (the <Editor> remounts per file via key).
   const pendingReveal = useRef<{ path: string; line: number } | null>(null);
 
+  // Opening a file means the user wants the editor — if the chat is covering
+  // the center, slide it back to the side first so the file is actually seen.
+  const openFile = (path: string): void => {
+    const layout = useLayoutStore.getState();
+    if (layout.chatPosition === 'center') layout.setChatPosition('right');
+    void open(path);
+  };
+
   useEffect(() => {
     const reveal = (e: Event) => {
       const d = (e as CustomEvent).detail as { path: string; line: number };
       pendingReveal.current = { path: d.path, line: d.line };
-      void open(d.path);
+      openFile(d.path);
     };
     window.addEventListener('fcc:reveal', reveal);
     return () => window.removeEventListener('fcc:reveal', reveal);
@@ -77,7 +85,7 @@ export default function EditorPane() {
   );
 
   useEffect(() => {
-    const handler = (e: Event) => open((e as CustomEvent).detail as string);
+    const handler = (e: Event) => openFile((e as CustomEvent).detail as string);
     window.addEventListener('fcc:open-file', handler);
     return () => window.removeEventListener('fcc:open-file', handler);
   }, [open]);
@@ -159,7 +167,7 @@ export default function EditorPane() {
       {active && active.agentModified && !diffPath && (
         <div className="agent-banner">
           <span className="msg">
-            <IconSparkles width={14} height={14} />
+            <IconClaude width={15} height={15} />
             Claude modified this file
           </span>
           <button onClick={() => setDiff(active.path)}>Review changes</button>
@@ -249,7 +257,7 @@ function ChangesStrip() {
   return (
     <div className="changes-strip">
       <span className="changes-label">
-        <IconSparkles width={12} height={12} />
+        <IconClaude width={13} height={13} />
         Changed
       </span>
       {modified.map((t) => (

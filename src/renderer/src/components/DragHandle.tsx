@@ -7,17 +7,24 @@ interface Props {
   max: number;
   defaultValue: number;
   onChange: (v: number) => void;
+  /**
+   * Panel is docked against the right/bottom window edge, so its free edge is
+   * on the inside. Dragging that edge toward the center must grow the panel —
+   * the opposite of a left/top-docked panel — which flips the drag delta.
+   * Left-docked (sidebar) and top-docked panels leave this unset.
+   */
+  invert?: boolean;
 }
 
 // Slim divider that doubles as a resize handle. Drag = resize, double-click = reset.
-export default function DragHandle({ orientation, value, min, max, defaultValue, onChange }: Props) {
+export default function DragHandle({ orientation, value, min, max, defaultValue, onChange, invert = false }: Props) {
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     const startPos = orientation === 'vertical' ? e.clientX : e.clientY;
     const startVal = value;
     const isVertical = orientation === 'vertical';
     const move = (ev: PointerEvent) => {
       const d = (isVertical ? ev.clientX : ev.clientY) - startPos;
-      onChange(Math.min(max, Math.max(min, startVal + d)));
+      onChange(Math.min(max, Math.max(min, startVal + (invert ? -d : d))));
     };
     const up = () => {
       window.removeEventListener('pointermove', move);
