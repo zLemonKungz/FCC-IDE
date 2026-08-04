@@ -29,6 +29,9 @@ function createWindow(): void {
 
   registerIpc(win);
   fcc.startPolling(win);
+  // Open the app chat-ready: if FCC is installed but its server is offline,
+  // spawn it in the background (the user shouldn't need the FCC tray app).
+  fcc.autoStartServer(win);
 
   const reveal = (): void => {
     closeSplash();
@@ -62,5 +65,8 @@ app.on('window-all-closed', () => {
 
 app.on('will-quit', () => {
   fcc.stopPolling();
+  // Stop the fcc-server we spawned (the kill is detached, so it completes
+  // even as the app exits). A tray-app server is left alone.
+  void fcc.stopServer();
   disposeChatHost();
 });

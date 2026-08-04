@@ -13,6 +13,7 @@ export const IPC = {
   termDispose: 'term:dispose',
   fccStatus: 'fcc:status',
   fccStart: 'fcc:start',
+  fccStop: 'fcc:stop',
   fccDetect: 'fcc:detect',
   chatStart: 'chat:start',
   chatSend: 'chat:send',

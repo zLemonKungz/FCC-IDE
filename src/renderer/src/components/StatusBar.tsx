@@ -14,6 +14,7 @@ export default function StatusBar() {
   const refresh = useFccStore((s) => s.refresh);
   const detect = useFccStore((s) => s.detect);
   const start = useFccStore((s) => s.start);
+  const stop = useFccStore((s) => s.stop);
   const root = useExplorerStore((s) => s.root);
   const activePath = useEditorStore((s) => s.activePath);
   const cursor = useEditorStore((s) => s.cursor);
@@ -53,10 +54,17 @@ export default function StatusBar() {
           </button>
         </>
       ) : status?.online ? (
-        <span className="fcc ok">
-          <span className="dot" />
-          FCC online
-        </span>
+        <>
+          <span className="fcc ok">
+            <span className="dot" />
+            FCC online
+          </span>
+          {status.managed && (
+            <button onClick={stop} className="ghost">
+              Stop server
+            </button>
+          )}
+        </>
       ) : (
         <>
           <span className="fcc down">

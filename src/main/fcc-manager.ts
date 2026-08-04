@@ -97,9 +97,12 @@ export async function detectInstall(): Promise<FccInstallStatus> {
 
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 let lastStatus: FccStatus = { online: false, port: FCC_PORT };
+/** PID of the fcc-server this app spawned (null when it's not ours, e.g. the
+ *  FCC tray app started it). Only our own server gets a Stop button. */
+let managedPid: number | null = null;
 
 export function buildStatus(ok: boolean, port: number): FccStatus {
-  return { online: ok, port };
+  return { online: ok, port, managed: managedPid !== null };
 }
 
 export async function checkHealth(): Promise<FccStatus> {
@@ -123,6 +126,8 @@ export async function checkHealth(): Promise<FccStatus> {
     });
     req.end();
   });
+  // If it's offline, the process we spawned is gone — stop claiming it.
+  if (!ok) managedPid = null;
   lastStatus = buildStatus(ok, FCC_PORT);
   return lastStatus;
 }
@@ -140,13 +145,44 @@ export async function startServer(): Promise<FccStatus> {
     // simply keeps reporting offline.
     child.on('error', () => {});
     child.unref();
+    const pid = child.pid ?? null;
     for (let i = 0; i < 10; i++) {
       await new Promise((r) => setTimeout(r, 500));
       const s = await checkHealth();
-      if (s.online) return s;
+      if (s.online) {
+        managedPid = pid;
+        // Rebuild so the just-set managed flag is reflected immediately.
+        return buildStatus(true, FCC_PORT);
+      }
     }
   }
   return lastStatus;
+}
+
+/** Stop the fcc-server this app spawned. A server the tray app started is not
+ *  ours to kill — managedPid is only ever set by startServer. */
+export async function stopServer(): Promise<FccStatus> {
+  const pid = managedPid;
+  managedPid = null;
+  if (pid !== null) {
+    if (process.platform === 'win32') {
+      // Detached so the kill survives an app quit mid-taskkill.
+      spawn('taskkill', ['/pid', String(pid), '/T', '/F'], {
+        detached: true,
+        stdio: 'ignore',
+        windowsHide: true
+      });
+    } else {
+      try { process.kill(pid, 'SIGTERM'); } catch { /* already gone */ }
+    }
+  }
+  return checkHealth();
+}
+
+/** One-shot on app launch: spawn fcc-server in the background when installed
+ *  and offline, so the app is chat-ready without the user starting anything. */
+export function autoStartServer(win: BrowserWindow): void {
+  void startServer().then((s) => win.webContents.send(IPC.evtFcc, s));
 }
 
 export function startPolling(win: BrowserWindow): void {

@@ -10,6 +10,7 @@ interface FccState {
   setSetupOpen: (v: boolean) => void;
   refresh: () => Promise<void>;
   start: () => Promise<void>;
+  stop: () => Promise<void>;
   detect: () => Promise<void>;
 }
 
@@ -23,6 +24,13 @@ export const useFccStore = create<FccState>((set) => ({
       set({ status: await window.fcc.fccStatus() });
     } catch {
       set({ status: null });
+    }
+  },
+  stop: async () => {
+    try {
+      set({ status: await window.fcc.fccStop() });
+    } catch {
+      /* keep prior status */
     }
   },
   start: async () => {

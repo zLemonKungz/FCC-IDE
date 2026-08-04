@@ -8,6 +8,8 @@ export interface FccStatus {
   online: boolean;
   port: number;
   version?: string;
+  /** true when the fcc-server was spawned by this app (eligible for Stop). */
+  managed?: boolean;
 }
 
 /** Result of probing whether free-claude-code (fcc-server) is usable on this machine. */

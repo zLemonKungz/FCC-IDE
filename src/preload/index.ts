@@ -17,6 +17,7 @@ const api = {
   termDispose: (id: number): Promise<void> => ipcRenderer.invoke(IPC.termDispose, id),
   fccStatus: (): Promise<FccStatus> => ipcRenderer.invoke(IPC.fccStatus),
   fccStart: (): Promise<FccStatus> => ipcRenderer.invoke(IPC.fccStart),
+  fccStop: (): Promise<FccStatus> => ipcRenderer.invoke(IPC.fccStop),
   fccDetect: (): Promise<FccInstallStatus> => ipcRenderer.invoke(IPC.fccDetect),
   chatStart: (sessionId: string, folder: string, prompt: string, resume?: string): Promise<void> =>
     ipcRenderer.invoke(IPC.chatStart, sessionId, folder, prompt, resume),
