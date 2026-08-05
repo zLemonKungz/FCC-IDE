@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useChatStore } from '../stores/chat-store';
+import { useActiveChat } from '../stores/chat-store';
 import type { ChatMessage, ToolCall } from '../chat/chat-reducer';
 import Markdown from '../chat/markdown';
 import ToolCallCard from './ToolCallCard';
@@ -29,9 +29,10 @@ function spawnLabel(messages: ChatMessage[], child: ChatMessage): string {
 }
 
 export default function SubagentPanel() {
-  const messages = useChatStore((s) => s.messages);
-  const activeSessionId = useChatStore((s) => s.activeSessionId);
-  const liveTasks = useChatStore((s) => s.liveTasks);
+  const active = useActiveChat();
+  const messages = active?.messages ?? [];
+  const activeSessionId = active?.id ?? null;
+  const liveTasks = active?.liveTasks ?? {};
   const [open, setOpen] = useState<Set<string>>(new Set());
 
   const groups = useMemo(() => {

@@ -98,8 +98,17 @@ function buildMenus(
     {
       label: 'Chat',
       items: [
-        { label: 'New Conversation', run: () => chat.reset() },
-        { label: 'Toggle Plan Mode', run: () => chat.setPlanMode(!chat.planMode) },
+        { label: 'New Conversation', run: () => chat.resetActive() },
+        {
+          label: 'Toggle Plan Mode',
+          run: () => {
+            const s = useChatStore.getState();
+            const id = s.activeId;
+            if (!id) return;
+            const cur = s.sessions.find((x) => x.id === id)?.planMode ?? false;
+            s.setPlanMode(id, !cur);
+          }
+        },
         { sep: true },
         { label: 'Chat Settings', run: openChatSettings }
       ]

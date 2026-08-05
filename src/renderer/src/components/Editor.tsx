@@ -79,7 +79,7 @@ ${sel}
 </${token}>
 
 Instruction: ${instruction}`;
-    useChatStore.getState().send(root, prompt);
+    useChatStore.getState().sendActive(root, prompt);
     setInlineEdit(null);
   };
 

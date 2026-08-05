@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useFccStore } from '../stores/fcc-store';
 import { useExplorerStore } from '../stores/explorer-store';
 import { useEditorStore } from '../stores/editor-store';
-import { useChatStore } from '../stores/chat-store';
+import { useActiveChat } from '../stores/chat-store';
 import { useSettingsStore, claudeLabel, effectiveEffort } from '../stores/settings-store';
 import FccSetupModal from './FccSetupModal';
 import { IconFolder } from './icons';
@@ -19,8 +19,9 @@ export default function StatusBar() {
   const root = useExplorerStore((s) => s.root);
   const activePath = useEditorStore((s) => s.activePath);
   const cursor = useEditorStore((s) => s.cursor);
-  const sessionId = useChatStore((s) => s.sessionId);
-  const liveStatus = useChatStore((s) => s.liveStatus);
+  const active = useActiveChat();
+  const sessionId = active?.sessionId ?? null;
+  const liveStatus = active?.liveStatus ?? {};
   const chatModel = useSettingsStore((s) => s.chatModel);
   const chatEffort = useSettingsStore((s) => s.chatEffort);
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSettingsStore, CURATED_CLAUDE_MODELS, claudeLabel, EFFORT_LEVELS, effortCapLabel, effectiveEffort, effortControlSettings } from '../stores/settings-store';
-import { useChatStore } from '../stores/chat-store';
+import { useChatStore, useActiveChat } from '../stores/chat-store';
 import { useExplorerStore } from '../stores/explorer-store';
 import { useModalFocus } from '../hooks/useModal';
 import ClaudeConfigTab from './ClaudeConfigTab';
@@ -99,8 +99,9 @@ function SettingsTab() {
   const setChatMaxTurns = useSettingsStore((s) => s.setChatMaxTurns);
   const setAutoCompactWindow = useSettingsStore((s) => s.setAutoCompactWindow);
   const setChatEffort = useSettingsStore((s) => s.setChatEffort);
-  const sessionUsage = useChatStore((s) => s.sessionUsage);
-  const lastUsage = useChatStore((s) => s.lastUsage);
+  const active = useActiveChat();
+  const sessionUsage = active?.sessionUsage ?? { input: 0, output: 0, cost: 0 };
+  const lastUsage = active?.lastUsage ?? null;
 
   // Keep the stored effort snapped to what the current model supports: if the
   // model's ceiling drops below the chosen level (e.g. Sonnet 5 can't do
@@ -111,7 +112,7 @@ function SettingsTab() {
     const eff = effectiveEffort(chatModel, chatEffort);
     if (eff !== chatEffort) {
       setChatEffort(eff);
-      const sid = useChatStore.getState().activeSessionId;
+      const sid = useChatStore.getState().activeId;
       if (sid) void window.fcc.chatControl(sid, 'apply_flag_settings', { settings: effortControlSettings(eff) });
     }
   }, [chatModel, chatEffort]);
@@ -181,7 +182,7 @@ function SettingsTab() {
               const m = e.target.value;
               setChatModel(m); // persisted — the next conversation spawns with it
               // Realtime: switch the live conversation's model on its next turn
-              const sid = useChatStore.getState().activeSessionId;
+              const sid = useChatStore.getState().activeId;
               if (sid) void window.fcc.chatControl(sid, 'set_model', { model: m });
             }}
             className="settings-select"
@@ -222,7 +223,7 @@ function SettingsTab() {
               const eff = effectiveEffort(chatModel, e.target.value);
               setChatEffort(eff);
               // Realtime: push to the live conversation's next turn too.
-              const sid = useChatStore.getState().activeSessionId;
+              const sid = useChatStore.getState().activeId;
               if (sid) void window.fcc.chatControl(sid, 'apply_flag_settings', { settings: effortControlSettings(eff) });
             }}
             className="settings-select"
@@ -313,7 +314,7 @@ function McpTab({ root }: { root: string | null }) {
   // Live enabled-state for the running session (absent = enabled by default).
   const [disabled, setDisabled] = useState<Record<string, boolean>>({});
 
-  const liveSessionId = (): string | null => useChatStore.getState().activeSessionId;
+  const liveSessionId = (): string | null => useChatStore.getState().activeId;
   const toggleServer = (n: string): void => {
     const next = !disabled[n];
     setDisabled((d) => ({ ...d, [n]: next }));

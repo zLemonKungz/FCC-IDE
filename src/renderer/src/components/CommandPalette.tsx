@@ -38,8 +38,18 @@ export default function CommandPalette({ onClose }: { onClose: () => void }) {
       { id: 'toggle-theme', label: 'Theme: Toggle Dark / Light', run: () => layout.toggleTheme() },
       { id: 'open-folder', label: 'File: Open Folder…', run: () => void useExplorerStore.getState().openRoot() },
       { id: 'save', label: 'File: Save', run: () => { const p = editor.activePath; if (p) void editor.save(p); } },
-      { id: 'new-chat', label: 'Chat: New Conversation', run: () => chat.reset() },
-      { id: 'plan', label: 'Chat: Toggle Plan Mode', run: () => chat.setPlanMode(!chat.planMode) },
+      { id: 'new-chat', label: 'Chat: New Conversation', run: () => chat.resetActive() },
+      {
+        id: 'plan',
+        label: 'Chat: Toggle Plan Mode',
+        run: () => {
+          const s = useChatStore.getState();
+          const id = s.activeId;
+          if (!id) return;
+          const cur = s.sessions.find((x) => x.id === id)?.planMode ?? false;
+          s.setPlanMode(id, !cur);
+        }
+      },
       { id: 'fast-mode', label: `Chat: ${chat.fastMode ? 'Disable' : 'Enable'} Fast Mode`, run: () => chat.toggleFastMode() },
       { id: 'thinking', label: `Chat: ${chat.thinking ? 'Disable' : 'Enable'} Thinking`, run: () => chat.toggleThinking() },
       { id: 'program-settings', label: 'Program Settings', run: () => window.dispatchEvent(new CustomEvent('fcc:open-settings')) },
@@ -49,7 +59,7 @@ export default function CommandPalette({ onClose }: { onClose: () => void }) {
       base.push({ id: `slash:${c}`, label: c, run: () => window.dispatchEvent(new CustomEvent('fcc:chat-input', { detail: `${c} ` })) });
     }
     if (root) {
-      for (const c of chat.slashCommands) {
+      for (const c of (useChatStore.getState().sessions.find((x) => x.id === useChatStore.getState().activeId)?.slashCommands ?? [])) {
         base.push({ id: `slash:${c}`, label: `/${c}`, run: () => window.dispatchEvent(new CustomEvent('fcc:chat-input', { detail: `/${c} ` })) });
       }
     }
