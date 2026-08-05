@@ -3367,3 +3367,21 @@ button.primary:focus-visible,
 .msg-who svg {
   color: var(--accent);
 }
+
+/* git branch + change count */
+.statusbar .git {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border: 1px solid var(--border-0);
+  border-radius: 999px;
+  background: var(--bg-2);
+  white-space: nowrap;
+}
+.statusbar .git:has(+ .spacer) {
+  margin-right: 2px;
+}

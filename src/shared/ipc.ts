@@ -17,6 +17,7 @@ export const IPC = {
   termDispose: 'term:dispose',
   termRecent: 'term:recent',
   gitDiff: 'git:diff',
+  gitInfo: 'git:info',
   fccStatus: 'fcc:status',
   fccStart: 'fcc:start',
   fccStop: 'fcc:stop',

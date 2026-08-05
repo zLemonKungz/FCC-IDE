@@ -41,6 +41,7 @@ const api = {
   termDispose: (id: number): Promise<void> => ipcRenderer.invoke(IPC.termDispose, id),
   termRecent: (id?: number): Promise<string> => ipcRenderer.invoke(IPC.termRecent, id),
   gitDiff: (): Promise<string | null> => ipcRenderer.invoke(IPC.gitDiff),
+  gitInfo: (): Promise<{ branch: string; changes: number } | null> => ipcRenderer.invoke(IPC.gitInfo),
   fccStatus: (): Promise<FccStatus> => ipcRenderer.invoke(IPC.fccStatus),
   fccStart: (): Promise<FccStatus> => ipcRenderer.invoke(IPC.fccStart),
   fccStop: (): Promise<FccStatus> => ipcRenderer.invoke(IPC.fccStop),

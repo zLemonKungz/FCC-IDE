@@ -24,3 +24,17 @@ export async function gitDiffText(): Promise<string | null> {
   if (!out) return null;
   return out.slice(0, MAX);
 }
+
+/** Current git branch + count of uncommitted changes (status bar). */
+export async function gitBranchInfo(): Promise<{ branch: string; changes: number } | null> {
+  const root = files.getRoot();
+  if (!root) return null;
+  const [branchOut, statusOut] = await Promise.all([
+    run(root, ['rev-parse', '--abbrev-ref', 'HEAD']),
+    run(root, ['status', '--porcelain'])
+  ]);
+  const branch = branchOut.trim();
+  if (!branch || branch === 'HEAD') return null; // not a git repo / detached HEAD
+  const changes = statusOut.trim() ? statusOut.trim().split('\n').length : 0;
+  return { branch, changes };
+}

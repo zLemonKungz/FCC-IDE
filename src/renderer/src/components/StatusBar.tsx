@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useFccStore } from '../stores/fcc-store';
 import { useExplorerStore } from '../stores/explorer-store';
 import { useEditorStore } from '../stores/editor-store';
@@ -32,6 +32,22 @@ export default function StatusBar() {
   const effortNow = effectiveEffort(liveModel, chatEffort);
   const effortLabel = effortNow !== 'auto' ? effortNow : null;
 
+  // Git branch + change count, refreshed on folder open and agent file edits.
+  const [git, setGit] = useState<{ branch: string; changes: number } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      void window.fcc.gitInfo().then((g) => { if (!cancelled) setGit(g); });
+    };
+    load();
+    const onMod = () => load();
+    window.addEventListener('fcc:file-modified', onMod);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('fcc:file-modified', onMod);
+    };
+  }, [root]);
+
   useEffect(() => {
     refresh();
     void detect();
@@ -46,6 +62,12 @@ export default function StatusBar() {
         <IconFolder width={12} height={12} />
         {root ?? 'No folder open'}
       </span>
+      {git && (
+        <span className="git" title={`${git.changes} uncommitted change${git.changes === 1 ? '' : 's'}`}>
+          ⎇ {git.branch}
+          {git.changes > 0 ? ` · ${git.changes}` : ''}
+        </span>
+      )}
       <span className="spacer" />
       {sessionId && (
         <span
