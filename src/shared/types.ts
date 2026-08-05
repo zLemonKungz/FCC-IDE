@@ -90,6 +90,29 @@ export interface McpConfig {
   mcpServers: Record<string, McpServerDef>;
 }
 
+/** Everything the MCP tab shows, per scope. The user/global + plugin scopes are
+ *  surfaced read-only (the app only edits the project scope and plugin enabled
+ *  state). */
+export interface McpOverview {
+  project: Record<string, McpServerDef>;
+  user: { claudeJson: Record<string, McpServerDef>; settingsJson: Record<string, McpServerDef> };
+  /** MCP servers contributed by ENABLED plugins (from each plugin manifest). */
+  plugins: Record<string, McpServerDef>;
+}
+
+/** A Claude Code plugin installed for the running environment. */
+export interface PluginInfo {
+  /** "name@marketplace" — the enabledPlugins key in ~/.claude/settings.json. */
+  id: string;
+  name: string;
+  marketplace: string;
+  enabled: boolean;
+  description?: string;
+  version?: string;
+  /** MCP servers this plugin declares (from its .claude-plugin/plugin.json). */
+  mcp: Record<string, McpServerDef>;
+}
+
 /** A model the FCC gateway can route (from GET /v1/models). */
 export interface GatewayModel {
   id: string;

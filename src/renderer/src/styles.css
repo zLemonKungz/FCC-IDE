@@ -3132,3 +3132,47 @@ button.primary:focus-visible,
 .fcc-md pre code .hljs-class { color: #d0b6ff; }
 .fcc-md pre code .hljs-meta,
 .fcc-md pre code .hljs-section { color: var(--text-3); }
+
+/* MCP tab scope labels (project vs global read-only) */
+.cs-scope-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-3);
+  margin-top: 6px;
+}
+.cs-scope-chip {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-3);
+  border: 1px solid var(--border-0);
+  border-radius: 999px;
+  padding: 1px 7px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Plugins tab */
+.cs-plugin-mcp {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+  border-radius: 999px;
+  padding: 1px 7px;
+  vertical-align: 1px;
+}
+.cs-plugin-toggle {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.cs-plugin-toggle.on {
+  color: var(--green);
+  border-color: rgba(76, 175, 125, 0.4);
+}
+.cs-plugin-toggle:not(.on) {
+  color: var(--text-3);
+}

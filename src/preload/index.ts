@@ -11,9 +11,10 @@ import type {
   ClaudeSettingsFile,
   HistoryRecord,
   HistorySummary,
-  McpConfig,
+  McpOverview,
   McpServerDef,
   PermissionMode,
+  PluginInfo,
   SearchHit
 } from '@shared/types';
 
@@ -54,8 +55,10 @@ const api = {
   historyList: (): Promise<HistorySummary[]> => ipcRenderer.invoke(IPC.historyList),
   historyOpen: (id: string): Promise<HistoryRecord | null> => ipcRenderer.invoke(IPC.historyOpen, id),
   historyDelete: (id: string): Promise<void> => ipcRenderer.invoke(IPC.historyDelete, id),
-  mcpGet: (): Promise<McpConfig> => ipcRenderer.invoke(IPC.mcpGet),
+  mcpGet: (): Promise<McpOverview> => ipcRenderer.invoke(IPC.mcpGet),
   mcpSet: (servers: Record<string, McpServerDef>): Promise<void> => ipcRenderer.invoke(IPC.mcpSet, servers),
+  pluginsList: (): Promise<PluginInfo[]> => ipcRenderer.invoke(IPC.pluginsList),
+  pluginsSet: (id: string, enabled: boolean): Promise<void> => ipcRenderer.invoke(IPC.pluginsSet, id, enabled),
   chatModels: (): Promise<GatewayModel[] | null> => ipcRenderer.invoke(IPC.chatModels),
   claudeSettingsGet: (): Promise<{ user: ClaudeSettingsFile; project: ClaudeSettingsFile | null }> =>
     ipcRenderer.invoke(IPC.claudeSettingsGet),

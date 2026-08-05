@@ -8,6 +8,7 @@ import * as history from './chat/history';
 import * as mcp from './mcp-service';
 import * as claudeSettings from './claude-settings';
 import * as agents from './claude-agents';
+import * as plugins from './claude-plugins';
 import { listModels } from './chat/models';
 import { ChatHost, type ChatStartOpts } from './chat/chat-host';
 import { setChatConfig } from './chat/config';
@@ -102,8 +103,10 @@ export function registerIpc(win: BrowserWindow): void {
   ipcMain.handle(IPC.historyList, () => history.list());
   ipcMain.handle(IPC.historyOpen, (_e, id: string) => history.read(id));
   ipcMain.handle(IPC.historyDelete, (_e, id: string) => history.remove(id));
-  ipcMain.handle(IPC.mcpGet, () => mcp.getMcpConfig());
+  ipcMain.handle(IPC.mcpGet, () => mcp.getMcpOverview());
   ipcMain.handle(IPC.mcpSet, (_e, servers: Record<string, McpServerDef>) => mcp.setMcpConfig(servers));
+  ipcMain.handle(IPC.pluginsList, () => plugins.listPlugins());
+  ipcMain.handle(IPC.pluginsSet, (_e, id: string, enabled: boolean) => plugins.setPluginEnabled(id, enabled));
   ipcMain.handle(IPC.chatModels, () => listModels());
   ipcMain.handle(IPC.claudeSettingsGet, () => claudeSettings.getSettings());
   ipcMain.handle(IPC.claudeSettingsSet, (_e, scope: 'user' | 'project', patch: ClaudeSettingsFile) =>

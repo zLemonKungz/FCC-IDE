@@ -4,10 +4,10 @@ import { useChatStore } from '../stores/chat-store';
 import { useExplorerStore } from '../stores/explorer-store';
 import { useModalFocus } from '../hooks/useModal';
 import ClaudeConfigTab from './ClaudeConfigTab';
-import type { AgentSummary, GatewayModel, HistorySummary, McpServerDef } from '@shared/types';
+import type { AgentSummary, GatewayModel, HistorySummary, McpOverview, McpServerDef, PluginInfo } from '@shared/types';
 import { IconTrash, IconPlus, IconClose } from './icons';
 
-type Tab = 'settings' | 'history' | 'mcp' | 'agents' | 'config';
+type Tab = 'settings' | 'history' | 'mcp' | 'agents' | 'plugins' | 'config';
 
 function fmtTime(ts: number): string {
   const d = new Date(ts);
@@ -71,7 +71,7 @@ export default function ChatSettingsModal({ onClose }: { onClose: () => void }) 
           </button>
         </div>
         <div className="cs-tabs">
-          {(['settings', 'history', 'mcp', 'agents', 'config'] as Tab[]).map((t) => (
+          {(['settings', 'history', 'mcp', 'agents', 'plugins', 'config'] as Tab[]).map((t) => (
             <button key={t} className={`cs-tab${tab === t ? ' active' : ''}`} onClick={() => setTab(t)}>
               {t[0].toUpperCase() + t.slice(1)}
             </button>
@@ -82,6 +82,7 @@ export default function ChatSettingsModal({ onClose }: { onClose: () => void }) 
           {tab === 'history' && <HistoryTab onClose={onClose} />}
           {tab === 'mcp' && <McpTab root={root} />}
           {tab === 'agents' && <AgentsTab root={root} />}
+          {tab === 'plugins' && <PluginsTab />}
           {tab === 'config' && <ClaudeConfigTab />}
         </div>
       </div>
@@ -305,7 +306,7 @@ function HistoryTab({ onClose }: { onClose: () => void }) {
 }
 
 function McpTab({ root }: { root: string | null }) {
-  const [servers, setServers] = useState<Record<string, McpServerDef> | null>(null);
+  const [overview, setOverview] = useState<McpOverview | null>(null);
   const [name, setName] = useState('');
   const [command, setCommand] = useState('');
   const [args, setArgs] = useState('');
@@ -325,46 +326,66 @@ function McpTab({ root }: { root: string | null }) {
   };
 
   const load = (): void => {
-    void window.fcc.mcpGet().then((c) => setServers(c.mcpServers)).catch(() => setServers({}));
+    void window.fcc.mcpGet().then(setOverview).catch(() => setOverview(null));
   };
   // Refresh on mount and whenever the open folder changes.
   useEffect(() => {
-    setServers(null);
+    setOverview(null);
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [root]);
 
+  const servers = overview?.project ?? {};
+
   const save = async (next: Record<string, McpServerDef>): Promise<void> => {
     await window.fcc.mcpSet(next).catch(() => undefined);
-    setServers(next);
+    setOverview((o) => (o ? { ...o, project: next } : o));
   };
   const add = async (): Promise<void> => {
     const n = name.trim();
     const c = command.trim();
     if (!n || !c) return;
     const parsedArgs = args.trim() ? args.trim().split(/\s+/) : undefined;
-    const next = { ...(servers ?? {}), [n]: { command: c, ...(parsedArgs ? { args: parsedArgs } : {}) } };
+    const next = { ...servers, [n]: { command: c, ...(parsedArgs ? { args: parsedArgs } : {}) } };
     await save(next);
     setName('');
     setCommand('');
     setArgs('');
   };
   const remove = async (n: string): Promise<void> => {
-    const next = { ...(servers ?? {}) };
+    const next = { ...servers };
     delete next[n];
     await save(next);
   };
 
-  if (servers === null)
+  if (overview === null)
     return (
       <div className="cs-empty">
         <span className="spinner" /> Loading…
       </div>
     );
 
+  // Read-only rows for the user/global scopes (the app never writes these).
+  const globalRows = (rows: Record<string, McpServerDef>) => (
+    <>
+      {Object.entries(rows).map(([n, def]) => (
+        <div key={n} className="cs-mcp-row">
+          <div className="cs-hist-main">
+            <div className="cs-hist-title">{n}</div>
+            <div className="cs-hist-meta">{(def as { url?: string }).url ?? def.command ?? '…'}</div>
+          </div>
+          <span className="cs-scope-chip">global</span>
+        </div>
+      ))}
+    </>
+  );
+  const hasGlobal =
+    Object.keys(overview.user.claudeJson).length > 0 || Object.keys(overview.user.settingsJson).length > 0;
+
   return (
     <>
-      {!root && <div className="cs-note">Open a folder to manage MCP servers (.mcp.json).</div>}
+      {!root && <div className="cs-note">Open a folder to manage the project’s MCP servers (.mcp.json).</div>}
+      <div className="settings-section">Project · .mcp.json</div>
       {Object.entries(servers).map(([n, def]) => (
         <div key={n} className="cs-mcp-row">
           <div className="cs-hist-main">
@@ -389,7 +410,7 @@ function McpTab({ root }: { root: string | null }) {
           </button>
         </div>
       ))}
-      {Object.keys(servers).length === 0 && root && <div className="cs-empty">No MCP servers configured.</div>}
+      {Object.keys(servers).length === 0 && root && <div className="cs-empty">No project servers — add one below.</div>}
       <div className="cs-mcp-add">
         <input placeholder="name" value={name} onChange={(e) => setName(e.target.value)} disabled={!root} />
         <input placeholder="command (e.g. npx)" value={command} onChange={(e) => setCommand(e.target.value)} disabled={!root} />
@@ -403,8 +424,41 @@ function McpTab({ root }: { root: string | null }) {
           <IconPlus width={13} height={13} />
         </button>
       </div>
+      <div className="settings-section">Global (read-only)</div>
+      {!hasGlobal && (
+        <div className="cs-note">
+          No global MCP servers — configure them with Claude Code /mcp (writes ~/.claude.json) or the Config tab
+          (settings.json).
+        </div>
+      )}
+      {Object.keys(overview.user.claudeJson).length > 0 && (
+        <>
+          <div className="cs-scope-label">~/.claude.json</div>
+          {globalRows(overview.user.claudeJson)}
+        </>
+      )}
+      {Object.keys(overview.user.settingsJson).length > 0 && (
+        <>
+          <div className="cs-scope-label">settings.json</div>
+          {globalRows(overview.user.settingsJson)}
+        </>
+      )}
+      {Object.keys(overview.plugins).length > 0 && (
+        <>
+          <div className="settings-section">From plugins (read-only)</div>
+          {Object.entries(overview.plugins).map(([n, def]) => (
+            <div key={n} className="cs-mcp-row">
+              <div className="cs-hist-main">
+                <div className="cs-hist-title">{n}</div>
+                <div className="cs-hist-meta">{(def as { url?: string }).url ?? def.command ?? '…'}</div>
+              </div>
+              <span className="cs-scope-chip">plugin</span>
+            </div>
+          ))}
+        </>
+      )}
       <div className="cs-note">
-        Edits apply to new conversations — On/Off &amp; ↻ apply live to the running one
+        Project edits apply to new conversations — On/Off &amp; ↻ apply live to the running one
         {liveSessionId() ? '' : ' (start a chat to use them)'}.
       </div>
     </>
@@ -526,6 +580,62 @@ function AgentsTab({ root }: { root: string | null }) {
           </div>
         </>
       )}
+    </>
+  );
+}
+
+// ---- Claude Code plugins ----
+// Lists installed plugins (name@marketplace) with their enabled state and the
+// MCP servers each declares; toggling enable edits ~/.claude/settings.json's
+// enabledPlugins map (preserving everything else). Reload after toggling.
+function PluginsTab() {
+  const [plugins, setPlugins] = useState<PluginInfo[] | null>(null);
+
+  const load = (): void => {
+    void window.fcc.pluginsList().then(setPlugins).catch(() => setPlugins([]));
+  };
+  useEffect(load, []);
+  const toggle = async (p: PluginInfo): Promise<void> => {
+    await window.fcc.pluginsSet(p.id, !p.enabled).catch(() => undefined);
+    load();
+  };
+
+  if (plugins === null)
+    return (
+      <div className="cs-empty">
+        <span className="spinner" /> Loading…
+      </div>
+    );
+  if (plugins.length === 0) return <div className="cs-empty">No plugins installed (~/.claude/plugins).</div>;
+
+  return (
+    <>
+      {plugins.map((p) => (
+        <div key={p.id} className="cs-mcp-row">
+          <div className="cs-hist-main">
+            <div className="cs-hist-title">
+              {p.name}
+              {Object.keys(p.mcp).length > 0 && (
+                <span className="cs-plugin-mcp" title={Object.keys(p.mcp).join(', ')}>
+                  MCP · {Object.keys(p.mcp).length}
+                </span>
+              )}
+            </div>
+            <div className="cs-hist-meta">
+              {p.description ?? p.id}
+              {p.version ? ` · v${p.version}` : ''}
+            </div>
+          </div>
+          <button
+            className={`cs-plugin-toggle${p.enabled ? ' on' : ''}`}
+            onClick={() => void toggle(p)}
+            title={p.enabled ? 'Disable plugin' : 'Enable plugin'}
+          >
+            {p.enabled ? 'On' : 'Off'}
+          </button>
+        </div>
+      ))}
+      <div className="cs-note">Enabling/disabling edits ~/.claude/settings.json (enabledPlugins). It applies to new sessions.</div>
     </>
   );
 }

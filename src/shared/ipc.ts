@@ -39,6 +39,8 @@ export const IPC = {
   historyDelete: 'history:delete',
   mcpGet: 'mcp:get',
   mcpSet: 'mcp:set',
+  pluginsList: 'plugins:list',
+  pluginsSet: 'plugins:set',
   setChatSettings: 'settings:set',
   setTitleBarOverlay: 'window:set-titlebar-overlay',
   openExternal: 'shell:open-external',
