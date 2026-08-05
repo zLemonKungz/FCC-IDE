@@ -3802,3 +3802,29 @@ button.primary:focus-visible,
   margin-left: 7px;
   align-self: center;
 }
+
+/* Diff highlights: removed = red, added = green (Monaco defaults). */
+
+/* Monaco scrollbar thumb — force gray (bypasses theme, guarantees no red) */
+.monaco-editor .scrollbar > .slider {
+  background: rgba(160, 168, 180, 0.35) !important;
+  border-radius: 4px;
+}
+.monaco-editor .scrollbar > .slider:hover {
+  background: rgba(160, 168, 180, 0.55) !important;
+}
+
+/* Hide any native webkit scrollbar inside Monaco so only its own gray one shows */
+.monaco-editor ::-webkit-scrollbar,
+.monaco-diff-editor ::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Editor text selection — force gray (matches the app, no red) */
+.monaco-editor ::selection {
+  background: rgba(160, 168, 180, 0.26) !important;
+}
+.monaco-editor .selected-text {
+  background: rgba(160, 168, 180, 0.26) !important;
+}

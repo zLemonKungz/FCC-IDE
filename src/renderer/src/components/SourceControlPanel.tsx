@@ -38,9 +38,10 @@ export default function SourceControlPanel() {
     };
   }, [load]);
 
-  const openFile = (rel: string): void => {
+  const openGitDiff = (rel: string): void => {
     if (!root) return;
-    window.dispatchEvent(new CustomEvent('fcc:open-file', { detail: `${root}\\${rel.replace(/\//g, '\\')}` }));
+    // Show the HEAD-vs-working diff for this file in the editor area.
+    window.dispatchEvent(new CustomEvent('fcc:git-diff', { detail: `${root}\\${rel.replace(/\//g, '\\')}` }));
   };
 
   const act = async (action: 'stage' | 'unstage' | 'discard', paths: string[]): Promise<void> => {
@@ -128,12 +129,12 @@ export default function SourceControlPanel() {
   const workingPaths = [...unstaged, ...untracked].map((c) => c.path);
 
   const renderRow = (c: { path: string; kind: string; conflict?: boolean; staged?: boolean }) => (
-    <div key={c.path} className="sc-row" onClick={() => openFile(c.path)} title={c.path}>
+    <div key={c.path} className="sc-row" onClick={() => openGitDiff(c.path)} title={c.path}>
       <span className={`sc-kind${c.conflict ? ' conflict' : ''}`}>{c.conflict ? '!' : c.kind}</span>
       <span className="sc-name">{c.path.split(/[\\/]/).pop()}</span>
       <span className="sc-actions" onClick={(e) => e.stopPropagation()}>
         {c.conflict ? (
-          <button className="icon-btn" onClick={() => void openFile(c.path)} title="Open conflict">
+          <button className="icon-btn" onClick={() => openGitDiff(c.path)} title="Open diff">
             <IconClose width={12} height={12} />
           </button>
         ) : (

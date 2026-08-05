@@ -50,8 +50,8 @@ monaco.editor.defineTheme('fcc-dark', {
     'editor.background': '#0e1013',
     'editor.foreground': '#e4e7ec',
     'editor.lineHighlightBackground': '#161a1f',
-    'editor.selectionBackground': 'rgba(108, 140, 255, 0.28)',
-    'editor.inactiveSelectionBackground': 'rgba(108, 140, 255, 0.12)',
+    'editor.selectionBackground': 'rgba(160, 168, 180, 0.26)',
+    'editor.inactiveSelectionBackground': 'rgba(160, 168, 180, 0.12)',
     'editorCursor.foreground': '#d97a55',
     'editorLineNumber.foreground': '#3d444f',
     'editorLineNumber.activeForeground': '#a0a8b4',
@@ -69,9 +69,12 @@ monaco.editor.defineTheme('fcc-dark', {
     'editorError.foreground': '#e06c5a',
     'editorWarning.foreground': '#d9a44e',
     'editorGutter.background': '#0e1013',
-    'scrollbarSlider.background': 'rgba(255, 255, 255, 0.10)',
-    'scrollbarSlider.hoverBackground': 'rgba(255, 255, 255, 0.18)',
-    'scrollbarSlider.activeBackground': 'rgba(255, 255, 255, 0.25)'
+    'scrollbarSlider.background': '#3a4048',
+    'scrollbarSlider.hoverBackground': '#4a5260',
+    'scrollbarSlider.activeBackground': '#2f353c',
+    // Diff overview ruler (the strip on the scrollbar) — gray, not red/green.
+    'diffEditorOverview.insertedForeground': 'rgba(160, 168, 180, 0.55)',
+    'diffEditorOverview.removedForeground': 'rgba(160, 168, 180, 0.55)'
   }
 });
 
@@ -95,8 +98,8 @@ monaco.editor.defineTheme('fcc-light', {
     'editor.background': '#faf8f6',
     'editor.foreground': '#2c2621',
     'editor.lineHighlightBackground': '#f4f0ec',
-    'editor.selectionBackground': 'rgba(79, 111, 221, 0.18)',
-    'editor.inactiveSelectionBackground': 'rgba(79, 111, 221, 0.08)',
+    'editor.selectionBackground': 'rgba(111, 102, 93, 0.24)',
+    'editor.inactiveSelectionBackground': 'rgba(111, 102, 93, 0.12)',
     'editorCursor.foreground': '#c9643c',
     'editorLineNumber.foreground': '#cfc6bb',
     'editorLineNumber.activeForeground': '#6f665d',
@@ -114,8 +117,11 @@ monaco.editor.defineTheme('fcc-light', {
     'editorError.foreground': '#d85c48',
     'editorWarning.foreground': '#b98a2e',
     'editorGutter.background': '#faf8f6',
-    'scrollbarSlider.background': 'rgba(60, 45, 30, 0.18)',
-    'scrollbarSlider.hoverBackground': 'rgba(60, 45, 30, 0.30)',
-    'scrollbarSlider.activeBackground': 'rgba(60, 45, 30, 0.42)'
+    'scrollbarSlider.background': '#c4bba9',
+    'scrollbarSlider.hoverBackground': '#a89e8c',
+    'scrollbarSlider.activeBackground': '#d0c8b8',
+    // Diff overview ruler — gray, not red/green.
+    'diffEditorOverview.insertedForeground': 'rgba(111, 102, 93, 0.55)',
+    'diffEditorOverview.removedForeground': 'rgba(111, 102, 93, 0.55)'
   }
 });

@@ -64,8 +64,10 @@ processes, or read env on its own.
   repo-relative paths only): `git:status` (`status --porcelain --branch` parsed by
   the pure `parseStatusPorcelain`, plus branch/ahead/behind/remote), `git:action`
   (stage/unstage/discard via add/restore), `git:commit`, `git:staged-diff`,
-  `git:branch` (list/switch/create), and `git:history` (`git log --graph` for the
-  commit-graph view). The **Source Control sidebar view**
+  `git:branch` (list/switch/create), `git:history` (`git log --graph` for the
+  commit-graph view), and `git:show` (HEAD blob for a changed file — the Source
+  Control rows dispatch `fcc:git-diff`, and `GitDiffView.tsx` renders a Monaco
+  HEAD-vs-working diff in the editor area). The **Source Control sidebar view**
   (`SourceControlPanel.tsx`, `sidebarView:'source'`, activity-bar git icon) shows
   staged/unstaged/untracked/conflicts with per-file actions, a commit box, branch
   switch/create, and an **✨ Message** button that fills the chat input with a

@@ -89,6 +89,7 @@ export function registerIpc(win: BrowserWindow): void {
     return git.gitBranchSwitch(name ?? '', action === 'create');
   });
   ipcMain.handle(IPC.gitHistory, () => git.gitHistory());
+  ipcMain.handle(IPC.gitShow, (_e, path: string) => git.gitShow(path));
 
   ipcMain.handle(IPC.fccStatus, () => fcc.checkHealth());
   ipcMain.handle(IPC.fccStart, () => fcc.startServer(win));

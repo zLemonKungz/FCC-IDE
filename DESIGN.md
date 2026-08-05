@@ -191,8 +191,9 @@ the window center grows the panel); the left sidebar is **not** inverted.
   `.subagent-card`s (card language, caret-expand; detail shows thinking + Markdown
   text + tool cards).
 - **Source control panel** (`sidebarView:'source'`, git activity-bar icon): file
-  rows `.sc-row` with a mono status letter (`.sc-kind`, yellow / red for conflicts),
-  per-file stage/unstage/discard revealed on hover (`.sc-actions`), section titles
+  rows `.sc-row` with a mono status letter (`.sc-kind`, yellow / red for conflicts); clicking a row
+  opens a **HEAD-vs-working diff** (`GitDiffView.tsx`, Monaco DiffEditor) in the editor
+  area via `fcc:git-diff`, per-file stage/unstage/discard revealed on hover (`.sc-actions`), section titles
   `.sc-section-title` (Staged / Changes / Untracked / Conflicts), a `.sc-commit`
   box with the ✨ commit-message helper, a `.sc-branch-bar` on top (switch/create +
   ahead/behind), and a bottom-pinned collapsible **History** (`CommitGraph.tsx`)
@@ -283,3 +284,12 @@ the window center grows the panel); the left sidebar is **not** inverted.
    color.
 8. If it's a new list in a settings modal, load via IPC into local state — never a
    fresh-array selector.
+## Monaco chrome
+- **Scrollbar & selection are gray** (not red): Monaco themes (`fcc-dark`/`fcc-light`)
+  set `scrollbarSlider`/`diffEditorOverview` to gray and `scrollbar` to 8px;
+  `styles.css` force-overrides them (`!important`) plus hides native webkit
+  scrollbars inside `.monaco-editor` so only one gray bar shows. The diff view
+  stays **side-by-side** with normal red-added/green-removed lines.
+- **Git diff per file**: clicking a changed row in Source Control dispatches
+  `fcc:git-diff` → `GitDiffView.tsx` (Monaco DiffEditor, original=`HEAD` blob
+  via `git:show` normalized to forward-slash pathspecs, modified=disk).

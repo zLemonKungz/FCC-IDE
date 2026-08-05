@@ -105,6 +105,16 @@ export async function gitCommit(message: string): Promise<{ ok: boolean; err?: s
   return r.code === 0 ? { ok: true } : { ok: false, err: r.err.trim().split('\n')[0] || 'commit failed' };
 }
 
+/** HEAD blob for one file (abs path → repo-relative), or null when untracked. */
+export async function gitShow(path: string): Promise<string | null> {
+  const root = gitRoot();
+  if (!root) return null;
+  let rel = path.startsWith(root) ? path.slice(root.length).replace(/^[\\/]/, '') : path;
+  rel = rel.replace(/\\/g, '/'); // git pathspecs use forward slashes
+  const r = await run(root, ['show', `HEAD:${rel}`]);
+  return r.code === 0 ? r.out : null;
+}
+
 /** Staged diff text (for the Claude commit-message helper). */
 export async function gitStagedDiff(): Promise<string | null> {
   const root = gitRoot();

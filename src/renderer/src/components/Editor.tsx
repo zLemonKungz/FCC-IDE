@@ -7,6 +7,7 @@ import { useLayoutStore } from '../stores/layout-store';
 import { useSettingsStore } from '../stores/settings-store';
 import { useChatStore } from '../stores/chat-store';
 import DiffView from './DiffView';
+import GitDiffView from './GitDiffView';
 import FileIcon from './FileIcon';
 import Markdown from '../chat/markdown';
 import { IconChevronRight, IconClaude, IconClose, IconFile } from './icons';
@@ -18,6 +19,7 @@ export default function EditorPane() {
   const activePath = useEditorStore((s) => s.activePath);
   const diffPath = useEditorStore((s) => s.diffPath);
   const setDiff = useEditorStore((s) => s.setDiff);
+  const [gitDiffPath, setGitDiffPath] = useState<string | null>(null);
   const setContent = useEditorStore((s) => s.setContent);
   const save = useEditorStore((s) => s.save);
   const close = useEditorStore((s) => s.close);
@@ -86,8 +88,16 @@ Instruction: ${instruction}`;
   const openFile = (path: string): void => {
     const layout = useLayoutStore.getState();
     if (layout.chatPosition === 'center') layout.setChatPosition('right');
+    setGitDiffPath(null);
     void open(path);
   };
+
+  // Source Control "show changed file" → render a HEAD-vs-working diff.
+  useEffect(() => {
+    const onShow = (e: Event) => setGitDiffPath((e as CustomEvent).detail as string);
+    window.addEventListener('fcc:git-diff', onShow);
+    return () => window.removeEventListener('fcc:git-diff', onShow);
+  }, []);
 
   useEffect(() => {
     const reveal = (e: Event) => {
@@ -213,6 +223,8 @@ Instruction: ${instruction}`;
       )}
       {diffPath ? (
         <DiffView path={diffPath} onClose={() => setDiff(null)} />
+      ) : gitDiffPath ? (
+        <GitDiffView path={gitDiffPath} onClose={() => setGitDiffPath(null)} />
       ) : active && mdPreview ? (
         <div className="md-preview">
           <div className="md-preview-inner">
@@ -258,6 +270,7 @@ Instruction: ${instruction}`;
             // JetBrains Mono is only loaded at 400/500; the page's 600 weight
             // would be synthesized extra-thick in the editor.
             fontWeight: '400',
+            scrollbar: { verticalScrollbarSize: 8, horizontalScrollbarSize: 8 },
             tabSize,
             wordWrap: wordWrap ? 'on' : 'off',
             lineNumbers: lineNumbers ? 'on' : 'off'
