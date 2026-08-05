@@ -2,12 +2,20 @@ import { BrowserWindow } from 'electron';
 
 let splash: BrowserWindow | null = null;
 
-// App mark — terminal-prompt chevron with a spark in the notch (see
-// resources/icon.svg). Kept inline so the splash HTML is fully
-// self-contained (no network, works in dev and packaged).
+// App mark — a solid rounded "F" (three bars + terminal cursor block) in a warm
+// terracotta→amber gradient (see resources/icon.svg). Kept inline so the splash
+// HTML is fully self-contained (no network, works in dev and packaged).
 const LOGO_SVG = `<svg viewBox="0 0 64 64" width="52" height="52" aria-hidden="true">
-  <path fill="#d97a55" d="M10 10L54 32L10 54L10 42L30 32L10 22Z"/>
-  <path fill="#d97a55" d="M16.5 25L18.5 28.5L22 30.5L18.5 32.5L16.5 36L14.5 32.5L11 30.5L14.5 28.5Z"/>
+  <defs>
+    <linearGradient id="lg" gradientUnits="userSpaceOnUse" x1="19" y1="12" x2="52" y2="48">
+      <stop offset="0" stop-color="#f7c27a"/>
+      <stop offset="1" stop-color="#d06f4a"/>
+    </linearGradient>
+  </defs>
+  <rect x="20" y="13.5" width="9" height="34.5" rx="4.5" fill="url(#lg)"/>
+  <rect x="20" y="13.5" width="29.5" height="8.5" rx="4.25" fill="url(#lg)"/>
+  <rect x="20" y="26.5" width="18" height="8.5" rx="4.25" fill="url(#lg)"/>
+  <rect x="51.5" y="14.5" width="3" height="7.5" rx="1.5" fill="url(#lg)"/>
 </svg>`;
 
 const SPLASH_HTML = `<!doctype html>

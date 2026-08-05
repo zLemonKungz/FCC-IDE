@@ -1,7 +1,7 @@
 import type { SVGProps } from 'react';
 
-// FCC Studio mark — terminal-prompt chevron with a spark in the notch.
-// Mirrored in src/main/splash.ts (LOGO_SVG) and resources/icon.svg.
+// FCC Studio mark — a solid rounded "F" (three bars + terminal cursor block).
+// Mirrored in src/main/splash.ts (LOGO_SVG, gradient) and resources/icon.svg.
 export default function Logo(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
@@ -12,8 +12,10 @@ export default function Logo(props: SVGProps<SVGSVGElement>) {
       aria-hidden="true"
       {...props}
     >
-      <path d="M10 10L54 32L10 54L10 42L30 32L10 22Z" />
-      <path d="M16.5 25L18.5 28.5L22 30.5L18.5 32.5L16.5 36L14.5 32.5L11 30.5L14.5 28.5Z" />
+      <rect x="20" y="13.5" width="9" height="34.5" rx="4.5" fill="currentColor" />
+      <rect x="20" y="13.5" width="29.5" height="8.5" rx="4.25" fill="currentColor" />
+      <rect x="20" y="26.5" width="18" height="8.5" rx="4.25" fill="currentColor" />
+      <rect x="51.5" y="14.5" width="3" height="7.5" rx="1.5" fill="currentColor" />
     </svg>
   );
 }

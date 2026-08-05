@@ -1,8 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-  <!-- FCC Studio mark — terminal-prompt chevron with a spark in the notch.
-       Transparent background; color matches the splash/in-app accent. -->
-  <g transform="scale(4)">
-    <path d="M10 10L54 32L10 54L10 42L30 32L10 22Z" fill="#d97a55"/>
-    <path d="M16.5 25L18.5 28.5L22 30.5L18.5 32.5L16.5 36L14.5 32.5L11 30.5L14.5 28.5Z" fill="#d97a55"/>
-  </g>
+  <!-- FCC Studio app icon — warm-gradient rounded-square badge, slimmer rounded
+       "F" (solid union, one smooth gradient) + a terminal cursor block. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#efb25f"/>
+      <stop offset="1" stop-color="#d97a55"/>
+    </linearGradient>
+    <linearGradient id="shd" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0.55" stop-color="rgba(60,28,0,0)"/>
+      <stop offset="1" stop-color="rgba(60,28,0,0.16)"/>
+    </linearGradient>
+    <linearGradient id="fg" gradientUnits="userSpaceOnUse" x1="70" y1="58" x2="200" y2="192">
+      <stop offset="0" stop-color="#fffdf8"/>
+      <stop offset="1" stop-color="#ffd9ba"/>
+    </linearGradient>
+  </defs>
+  <rect x="10" y="10" width="236" height="236" rx="56" fill="url(#bg)"/>
+  <rect x="12" y="10" width="232" height="118" rx="50" fill="rgba(255,255,255,0.12)"/>
+  <rect x="10" y="10" width="236" height="236" rx="56" fill="url(#shd)"/>
+  <rect x="74" y="64" width="34" height="124" rx="17" fill="url(#fg)"/>
+  <rect x="74" y="64" width="112" height="32" rx="16" fill="url(#fg)"/>
+  <rect x="74" y="112" width="68" height="32" rx="16" fill="url(#fg)"/>
+  <rect x="194" y="66" width="12" height="28" rx="6" fill="url(#fg)"/>
 </svg>

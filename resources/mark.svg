@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- FCC Studio mark — a solid rounded "F" with slimmer bars, one smooth
+       userSpaceOnUse gradient, plus a terminal cursor block. Organic, warm. -->
+  <defs>
+    <linearGradient id="g" gradientUnits="userSpaceOnUse" x1="76" y1="50" x2="210" y2="192">
+      <stop offset="0" stop-color="#f7c27a"/>
+      <stop offset="1" stop-color="#d06f4a"/>
+    </linearGradient>
+  </defs>
+  <rect x="80" y="54" width="36" height="138" rx="18" fill="url(#g)"/>
+  <rect x="80" y="54" width="118" height="34" rx="17" fill="url(#g)"/>
+  <rect x="80" y="106" width="72" height="34" rx="17" fill="url(#g)"/>
+  <rect x="206" y="58" width="12" height="30" rx="6" fill="url(#g)"/>
+</svg>

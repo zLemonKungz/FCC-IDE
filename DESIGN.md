@@ -253,10 +253,14 @@ the window center grows the panel); the left sidebar is **not** inverted.
 
 ## 11. Icons & branding
 
-- **`resources/icon.svg` is the single source**; `npm run icons` rasterizes it (in a
-  hidden Electron, transparent-background window) to `build/icon-*.png` + `icon.ico`
-  for the BrowserWindow and NSIS installer. Changing it needs a dev restart (HMR
-  won't pick icons up). The mark color `#d97a55` reads on both themes.
+- **Logo**: a solid rounded **"F"** (three bars + a terminal cursor block, one
+  smooth `userSpaceOnUse` terracotta→amber gradient, no overlapping elements).
+  Two sources: **`resources/icon.svg`** is the app-icon badge (warm-gradient
+  rounded square + cream F) rasterized by `npm run icons` to `build/icon-*.png` +
+  `icon.ico`; **`resources/mark.svg`** is the transparent gradient mark for
+  in-app uses. The in-app logomark (`Logo.tsx`, `currentColor`) and the splash
+  (`splash.ts` `LOGO_SVG`, gradient) mirror the same F. Changing icons needs a
+  dev restart (HMR won't pick them up).
 - **`IconClaude`** (`icons.tsx`) is the official filled Claude mark — it takes
   `currentColor` and renders orange in accent-tinted containers, so **don't** route
   it through the stroked `Svg` wrapper. Used in chat empty state, agent banner,
