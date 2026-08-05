@@ -178,6 +178,9 @@ the window center grows the panel); the left sidebar is **not** inverted.
   rehype-highlight's `languages` option **replaces** common rather than extending
   (spread `{...common, …}`); highlight.js ships **no batch or TOML grammar** (DOS is
   `dos`, and the grammar modules have no TS declarations — ambient `hljs-grammars.d.ts`).
+- **Inline edit** — select a block in Monaco, hit the ✨ chip (or Ctrl+K), describe
+  the change in the `.inline-edit` popover, and the chat rewrites it; the result
+  flows through the normal agent-modified diff review (accept/revert).
 - **Slash `/` picker** + **`@` file picker**: `--bg-2` floating card, `--shadow-3`,
   items are `mono command | flex:1 description | dim arg-hint(right)`, active row
   `--bg-3` + accent command.

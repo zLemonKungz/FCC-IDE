@@ -3259,3 +3259,69 @@ button.primary:focus-visible,
   gap: 6px;
   margin-top: 6px;
 }
+
+/* inline edit — select code, describe the change, Claude rewrites it */
+.editor-pane {
+  position: relative;
+}
+.inline-edit-btn {
+  position: absolute;
+  top: 34px;
+  right: 12px;
+  z-index: 5;
+  color: var(--accent);
+  border-color: var(--accent-border);
+  background: var(--accent-dim);
+  font-weight: 600;
+}
+.inline-edit-btn:hover {
+  color: var(--accent-hover);
+  background: var(--accent-dim);
+}
+.inline-edit {
+  position: absolute;
+  top: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 480px;
+  max-width: 92%;
+  z-index: 30;
+  background: var(--bg-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-3);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.inline-edit-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-2);
+}
+.inline-edit-head b {
+  color: var(--text-1);
+}
+.inline-edit-input {
+  min-height: 64px;
+  resize: vertical;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-1);
+  background: var(--bg-1);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  outline: none;
+}
+.inline-edit-input:focus {
+  border-color: var(--accent);
+}
+.inline-edit-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}

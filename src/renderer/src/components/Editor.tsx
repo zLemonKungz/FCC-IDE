@@ -5,6 +5,7 @@ import { useEditorStore } from '../stores/editor-store';
 import { useExplorerStore } from '../stores/explorer-store';
 import { useLayoutStore } from '../stores/layout-store';
 import { useSettingsStore } from '../stores/settings-store';
+import { useChatStore } from '../stores/chat-store';
 import DiffView from './DiffView';
 import FileIcon from './FileIcon';
 import Markdown from '../chat/markdown';
@@ -46,6 +47,21 @@ export default function EditorPane() {
   // Find-in-files "reveal line": set before open(), applied in onMount once the
   // editor for that file mounts (the <Editor> remounts per file via key).
   const pendingReveal = useRef<{ path: string; line: number } | null>(null);
+
+  // Inline edit: select a block, hit the chip / Ctrl+K, describe the change.
+  const [inlineEdit, setInlineEdit] = useState<{ text: string } | null>(null);
+  const [hasSelection, setHasSelection] = useState(false);
+  const selRef = useRef<{ text: string } | null>(null);
+  const ieInputRef = useRef<HTMLTextAreaElement>(null);
+
+  const applyInlineEdit = (): void => {
+    const instruction = ieInputRef.current?.value.trim();
+    const sel = inlineEdit?.text ?? '';
+    if (!instruction || !active || !root) return;
+    const prompt = `Modify the selected code in "${active.path}". Keep the rest of the file unchanged.\n\nSelected code:\n\`\`\`${langFor(active.path)}\n${sel}\n\`\`\`\n\nInstruction: ${instruction}`;
+    useChatStore.getState().send(root, prompt);
+    setInlineEdit(null);
+  };
 
   // Opening a file means the user wants the editor — if the chat is covering
   // the center, slide it back to the side first so the file is actually seen.
@@ -194,6 +210,17 @@ export default function EditorPane() {
           onChange={(v) => v !== undefined && onEdit(active.path, v)}
           theme={theme === 'dark' ? 'fcc-dark' : 'fcc-light'}
           onMount={(editor) => {
+            const trackSel = () => {
+              const sel = editor.getSelection();
+              const text =
+                sel && !sel.isEmpty() && editor.getModel() ? editor.getModel()!.getValueInRange(sel) : '';
+              selRef.current = text ? { text } : null;
+              setHasSelection(!!text);
+            };
+            editor.onDidChangeCursorSelection(trackSel);
+            editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyK, () => {
+              if (selRef.current) setInlineEdit(selRef.current);
+            });
             editor.onDidChangeCursorPosition((e) =>
               setCursor({ line: e.position.lineNumber, col: e.position.column })
             );
@@ -223,6 +250,39 @@ export default function EditorPane() {
           <IconFile />
           <div className="empty-title">No file open</div>
           <div className="empty-hint">Select a file from the explorer to start editing</div>
+        </div>
+      )}
+      {active && !diffPath && hasSelection && (
+        <button
+          className="inline-edit-btn"
+          onClick={() => selRef.current && setInlineEdit(selRef.current)}
+          title="Ask Claude to rewrite the selection (Ctrl+K)"
+        >
+          ✨ Edit selection
+        </button>
+      )}
+      {inlineEdit && (
+        <div className="inline-edit">
+          <div className="inline-edit-head">
+            <span>
+              Edit selection in <b>{active?.name}</b> · {inlineEdit.text.split('\n').length} lines
+            </span>
+            <button className="icon-btn" onClick={() => setInlineEdit(null)} title="Close">
+              <IconClose width={12} height={12} />
+            </button>
+          </div>
+          <textarea
+            ref={ieInputRef}
+            className="inline-edit-input"
+            placeholder="Describe the change… (e.g. handle empty input, rename to camelCase)"
+            autoFocus
+          />
+          <div className="inline-edit-actions">
+            <button className="primary" onClick={applyInlineEdit} disabled={!root}>
+              Apply to chat
+            </button>
+            <button onClick={() => setInlineEdit(null)}>Cancel</button>
+          </div>
         </div>
       )}
       {menu && (
