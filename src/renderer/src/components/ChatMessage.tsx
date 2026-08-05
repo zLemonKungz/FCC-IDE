@@ -6,11 +6,14 @@ import { IconCopy, IconCheck, IconPencil } from './icons';
 
 export default function ChatMessage({
   message,
-  onEdit
+  onEdit,
+  onRewind
 }: {
   message: Msg;
   /** for user bubbles — re-submits an edited prompt as a new turn */
   onEdit?: (text: string) => void;
+  /** for assistant bubbles — restores files to before this message (checkpoints) */
+  onRewind?: () => void;
 }) {
   const [copied, setCopied] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
@@ -77,6 +80,11 @@ export default function ChatMessage({
       <div className="msg-text">
         <Markdown text={message.text} />
       </div>
+      {onRewind && (
+        <button className="rewind-btn" onClick={onRewind} title="Rewind files to before this message">
+          ⟲
+        </button>
+      )}
       {message.text && (
         <button className="copy-btn" onClick={copy} title="Copy response">
           {copied ? <IconCheck width={12} height={12} /> : <IconCopy width={12} height={12} />}

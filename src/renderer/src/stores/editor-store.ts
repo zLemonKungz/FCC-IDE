@@ -45,6 +45,8 @@ interface EditorState {
   setDiff: (path: string | null) => void;
   setCursor: (c: CursorPos) => void;
   markAgentModified: (path: string) => void;
+  /** Write an explicit file state to disk + tab (used by chat rewind/checkpoints). */
+  restoreFile: (path: string, content: string) => Promise<void>;
   acceptAgentChange: (path: string) => Promise<void>;
   revertAgentChange: (path: string) => Promise<void>;
   revertAgentHunk: (path: string, hunk: HunkRange) => Promise<void>;
@@ -130,6 +132,15 @@ export const useEditorStore = create<EditorState>()(
   markAgentModified: (path) => {
     set({
       tabs: get().tabs.map((t) => (t.path === path ? { ...t, agentModified: true } : t))
+    });
+  },
+  restoreFile: async (path, content) => {
+    await window.fcc.fsWrite(path, content);
+    set({
+      tabs: get().tabs.map((t) =>
+        t.path === path ? { ...t, content, baseContent: content, dirty: false, agentModified: false } : t
+      ),
+      closingPath: null
     });
   },
   acceptAgentChange: async (path) => {

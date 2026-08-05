@@ -3325,3 +3325,22 @@ button.primary:focus-visible,
   gap: 6px;
   justify-content: flex-end;
 }
+
+/* rewind-to-before-this-message (checkpoints) */
+.rewind-btn {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  padding: 3px 6px;
+  font-size: 12px;
+  color: var(--text-3);
+  opacity: 0;
+  transition: opacity var(--transition), color var(--transition);
+}
+.msg.assistant:hover .rewind-btn,
+.rewind-btn:focus-visible {
+  opacity: 1;
+}
+.rewind-btn:hover {
+  color: var(--accent);
+}

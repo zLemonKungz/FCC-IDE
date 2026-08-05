@@ -160,6 +160,8 @@ the window center grows the panel); the left sidebar is **not** inverted.
   edited prompt as a new turn. Local commands `/review` (git diff) and
   `/terminal <q>` (recent terminal output) compose context; the terminal's red
   **⚡ Fix** chip (`term-fix`, appears on error output) opens the error in chat.
+  **Checkpoints**: hovering an assistant bubble shows a **⟲** (`rewind-btn`) that
+  restores the open files to their state just before that message.
 - **Markdown** renders through a single shared component (`src/renderer/src/chat/
   markdown.tsx`, react-markdown + GFM + math/katex + slug/autolink headings)
   wrapping its output in **`.fcc-md`** — style markdown via `.fcc-md` element

@@ -63,6 +63,7 @@ export default function ChatPanel({ style }: { style?: CSSProperties }) {
   const slashCommands = useChatStore((s) => s.slashCommands);
   const planMode = useChatStore((s) => s.planMode);
   const awaitingPlanApproval = useChatStore((s) => s.awaitingPlanApproval);
+  const checkpoints = useChatStore((s) => s.checkpoints);
   const handleEvent = useChatStore((s) => s.handleEvent);
   const send = useChatStore((s) => s.send);
   const stop = useChatStore((s) => s.stop);
@@ -493,7 +494,12 @@ Type anything else to send it to Claude.`;
         ) : (
           <>
             {messages.map((m) => (
-              <ChatMessage key={m.id} message={m} onEdit={m.role === 'user' ? (t) => root && send(root, t) : undefined} />
+              <ChatMessage
+                key={m.id}
+                message={m}
+                onEdit={m.role === 'user' ? (t) => root && send(root, t) : undefined}
+                onRewind={m.role === 'assistant' && checkpoints[m.id] ? () => useChatStore.getState().rewindTo(m.id) : undefined}
+              />
             ))}
             {running && (
               <div className="running-indicator">

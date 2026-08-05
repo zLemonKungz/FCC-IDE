@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { ChatImage, HistoryRecord, PermissionMode } from '@shared/types';
 import { emptyChatState, applyChatEvent, type ChatEvent, type ChatUiState, type FileEvent } from '../chat/chat-reducer';
+import { useEditorStore } from './editor-store';
 
 interface ChatStore extends ChatUiState {
   activeSessionId: string | null;
@@ -30,6 +31,10 @@ interface ChatStore extends ChatUiState {
   /** Restore a saved conversation: show its transcript and arm --resume. */
   openHistory: (rec: HistoryRecord) => void;
   handleEvent: (sessionId: string, message: unknown) => void;
+  /** Pre-turn file snapshots keyed by the assistant message id (rewind targets). */
+  checkpoints: Record<string, Record<string, string>>;
+  /** Restore the open files to how they were before the given assistant message. */
+  rewindTo: (msgId: string) => void;
 }
 
 export const useChatStore = create<ChatStore>((set, get) => ({
@@ -40,13 +45,40 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   pendingResume: null,
   fastMode: false,
   thinking: false,
+  checkpoints: {},
   handleEvent: (sessionId, message) => {
     if (sessionId !== get().activeSessionId) return;
+    const prevLastId = get().messages[get().messages.length - 1]?.id ?? null;
     const { state, fileEvents } = applyChatEvent(get(), message as ChatEvent);
     set(state);
     fileEvents.forEach((f: FileEvent) =>
       window.dispatchEvent(new CustomEvent('fcc:file-modified', { detail: f.path }))
     );
+    // New main assistant turn begins → snapshot the open files so the user can
+    // rewind the codebase to before this message (checkpoints/undo).
+    if ((message as ChatEvent).type === 'assistant') {
+      const last = get().messages[get().messages.length - 1];
+      if (last?.role === 'assistant' && !last.parentId && last.id !== prevLastId) {
+        const files: Record<string, string> = {};
+        for (const t of useEditorStore.getState().tabs) files[t.path] = t.content;
+        set((s) => ({ checkpoints: { ...s.checkpoints, [last.id]: files } }));
+      }
+    }
+  },
+  rewindTo: (msgId) => {
+    const cp = get().checkpoints[msgId];
+    if (!cp) return;
+    const es = useEditorStore.getState();
+    for (const [path, content] of Object.entries(cp)) {
+      void (async () => {
+        try {
+          await es.open(path);
+          await es.restoreFile(path, content);
+        } catch {
+          /* file/cwd gone — skip this one */
+        }
+      })();
+    }
   },
   send: (folder, prompt, images) => {
     const { activeSessionId, messages, running, planMode, pendingResume } = get();
@@ -137,6 +169,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     // until the next chatStart kills it.
     const sid = get().activeSessionId;
     if (sid) void window.fcc.chatStop(sid);
-    set({ ...emptyChatState(), activeSessionId: null, pendingResume: null });
+    set({ ...emptyChatState(), activeSessionId: null, pendingResume: null, checkpoints: {} });
   }
 }));
