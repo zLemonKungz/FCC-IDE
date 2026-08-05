@@ -190,9 +190,21 @@ envelopes to the CLI's stdin — the same mechanism as the SDK's `setPermissionM
   `pendingResume` to the saved CLI `session_id`, and the next `send()` spawns with
   `--resume`. Reliability through the FCC proxy is unverified — if resume fails the
   restored transcript still displays and the CLI error surfaces in chat.
-- **MCP** is managed via `.mcp.json` in the open folder (`mcp-service.ts` over the
-  sandboxed file-service; `mcp:get`/`mcp:set`). The CLI discovers MCP from its cwd
-  at spawn, so edits apply to the next conversation.
+- **MCP** — `mcp-service.ts` surfaces servers **per scope** via `mcp:get`
+  (`getMcpOverview`): `project` (`.mcp.json` in the open folder — the only
+  **editable** scope, `mcp:set`, over the sandboxed file-service), `user`
+  (`~/.claude.json` + `~/.claude/settings.json`, read-only — never write
+  `~/.claude.json`), and `plugins` (merged from **enabled** plugins' manifests,
+  read-only). The CLI discovers MCP from its cwd + user configs at spawn, so
+  project edits apply to the next conversation; live On/Off / ↻ go through the
+  `chat:control` `mcp_toggle`/`mcp_reconnect`.
+- **Plugins** — `claude-plugins.ts` lists installed plugins from
+  `~/.claude/plugins/installed_plugins.json` + the `enabledPlugins` map in
+  `~/.claude/settings.json` (`name@marketplace` → bool), reading each manifest's
+  `.claude-plugin/plugin.json` for its declared MCP servers. `plugins:set` toggles
+  enabled by editing `settings.json` `enabledPlugins` (preserves every other key).
+  A chat-settings **Plugins** tab shows the list with enable/disable + an "MCP · n"
+  badge; the MCP tab folds enabled plugins' servers in as a "From plugins" section.
 - **Custom subagents** — chat-settings **Agents** tab lists/edits/creates
   `.claude/agents/*.md` (`claude-agents.ts` mirrors mcp-service; `agents:*` IPC).
   Saving locks the frontmatter `name:` to the filename. With no folder open this is

@@ -74,12 +74,17 @@ Same *roles* as dark; only the accent is tuned for the warm paper bg.
 
 | Token | Size | Typical |
 |---|---|---|
-| `--fs-xs` | `12px` | list rows, buttons, inputs |
-| `--fs-sm` | `13px` | default body |
-| `--fs-md` | `14px` | emphasised text |
-| `--fs-lg` | `15px` | <body emphasis> |
+| `--fs-xs` | `13px` | list rows, buttons, inputs |
+| `--fs-sm` | `14px` | default body |
+| `--fs-md` | `15px` | emphasised text |
+| `--fs-lg` | `16px` | <body emphasis> |
 
-- Micro **labels** (panel headers, "Running", "Thinking") are uppercase, `10–11px`,
+- **Readability baseline**: body runs `15px / 600`. Comic Neue ships only the 400/700
+  weights, so mid weights (500/600) are browser-synthesized — the UI uses **600** for
+  body/secondary and the size floor is **11px** (the smallest metadata/carets), up
+  from 9–10px. The whole `styles.css` was bumped a step (11→12, 12→13, 13→14, 14→15,
+  weights 500→600) so no text reads thin or cramped.
+- Micro **labels** (panel headers, "Running", "Thinking") are uppercase, `11–12px`,
   `600`, `.06em` letter-spacing, `--text-3` (or `--accent` for live).
 - Use `font-family: var(--font-mono)` deliberately — mono is a *visual* signal for
   "machine/technical" content, not the default.
@@ -176,19 +181,23 @@ the window center grows the panel); the left sidebar is **not** inverted.
   fill + accent title with the pulsing accent dot) above grouped per-subagent
   `.subagent-card`s (card language, caret-expand; detail shows thinking + Markdown
   text + tool cards).
-- **Settings modal** (`ChatSettingsModal`): tab bar `.cs-tabs` (accent underline on
-  active), body load via IPC into **local state** (never a zustand selector that
-  returns a fresh array), rows `.settings-row`, notes `.cs-note`, empty `.cs-empty`.
-  Editors reuse the app input style: `--bg-1` + 1px `--border-1` + `--radius-sm`,
-  focus → `--accent`.
+- **Settings modal** (`ChatSettingsModal`): tab bar `.cs-tabs` (accent underline +
+  accent-dim pill on active), body load via IPC into **local state** (never a
+  zustand selector that returns a fresh array), rows `.settings-row` in a 2-column
+  `.cs-settings-grid`, notes `.cs-note`, section headers `.settings-section`, empty
+  `.cs-empty`. Tabs: Settings / History / MCP / Agents / Plugins / Config. The MCP
+  tab groups servers by scope with `.settings-section` + `.cs-scope-label`/`.cs-scope-chip`
+  ("global"/"plugin" read-only chips); the Plugins tab uses `.cs-plugin-toggle` +
+  an accent `.cs-plugin-mcp` badge. Editors reuse the app input style: `--bg-1` +
+  1px `--border-1` + `--radius-sm`, focus → `--accent`.
 - **Inputs**: `background: var(--bg-1); border: 1px solid var(--border-1);
-  border-radius: var(--radius-sm); color: var(--text-1); font-size: 12px;`
+  border-radius: var(--radius-sm); color: var(--text-1); font-size: 13px;`
   focus → `border-color: var(--accent)`.
-- **Status bar**: 11px `--text-3`; mode label is accent-600, model `--text-2`,
+- **Status bar**: 12px `--text-3`; mode label is accent-600, model `--text-2`,
   effort a rounded pill (`--bg-2` chip). FCC online/offline dots use
   `--green`/`--red` with a soft glow.
 - **Empty states** (`.empty-state`): centered column, an icon, `.empty-title`
-  (`--text-2`), `.empty-hint` (12px `--text-3`).
+  (`--text-2`), `.empty-hint` (13px `--text-3`).
 
 ## 8. Motion
 
@@ -241,7 +250,7 @@ the window center grows the panel); the left sidebar is **not** inverted.
 2. Cards: `--bg-0` + `--border-1`, **no shadow**. Floating: `--shadow-3`.
 3. Mono only for technical/mechanical content; body stays `--font-ui`.
 4. Hover = `--bg-2` on rows/cards, `--bg-4` on buttons; active panel = `--accent`.
-5. Micro labels uppercase 10–11px `600` `.06em`.
+5. Micro labels uppercase 11–12px `600` `.06em`.
 6. Use `--space-*` for rhythm; `--radius-sm/md/lg` for corners.
 7. Respect `@media (prefers-reduced-motion: reduce)`; gate color/status not only on
    color.
