@@ -901,16 +901,16 @@ button.icon-btn:hover {
   flex-shrink: 0;
 }
 .chat-settings-modal {
-  width: 520px;
+  width: 640px;
   max-width: calc(100vw - 40px);
-  max-height: 72vh;
+  max-height: 82vh;
   display: flex;
   flex-direction: column;
   background: var(--bg-2);
   border: 1px solid var(--border-1);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-3);
-  padding: 16px;
+  padding: 20px 22px;
   animation: modal-in 180ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 .chat-settings-modal .settings-title {
@@ -918,10 +918,34 @@ button.icon-btn:hover {
   align-items: center;
   justify-content: space-between;
 }
+.chat-settings-modal .st-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.chat-settings-modal .st-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.chat-settings-modal .st-sub {
+  font-size: 11px;
+  color: var(--text-3);
+}
+/* settings tab — two-column layout now that the modal is wider */
+.cs-settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 24px;
+  align-items: start;
+}
+.cs-settings-grid .settings-row {
+  margin-bottom: 6px;
+}
 .cs-tabs {
   display: flex;
   gap: 4px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   border-bottom: 1px solid var(--border-0);
 }
 .cs-tab {
@@ -929,10 +953,12 @@ button.icon-btn:hover {
   border: none;
   color: var(--text-2);
   font-size: 12px;
-  padding: 6px 10px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  padding: 8px 14px;
   border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   cursor: pointer;
-  transition: color var(--transition), border-color var(--transition);
+  transition: color var(--transition), border-color var(--transition), background var(--transition);
 }
 .cs-tab:hover {
   color: var(--text-1);
@@ -940,24 +966,33 @@ button.icon-btn:hover {
 .cs-tab.active {
   color: var(--accent);
   border-bottom: 2px solid var(--accent);
+  background: var(--accent-dim);
 }
 .cs-body {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+  padding-right: 2px;
 }
 .cs-usage {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--bg-1);
+  border: 1px solid var(--border-0);
+  margin-bottom: 4px;
+}
+.cs-usage-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 8px 10px;
-  border-radius: var(--radius-sm);
-  background: var(--bg-1);
-  border: 1px solid var(--border-0);
   font-size: 12px;
-  margin-bottom: 8px;
 }
 .cs-usage-label {
   color: var(--text-2);

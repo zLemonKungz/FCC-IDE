@@ -62,7 +62,10 @@ export default function ChatSettingsModal({ onClose }: { onClose: () => void }) 
     <div className="modal-backdrop" onPointerDown={onClose}>
       <div ref={modalRef} tabIndex={-1} className="chat-settings-modal" onPointerDown={(e) => e.stopPropagation()}>
         <div className="settings-title">
-          <span>Chat settings</span>
+          <div className="st-left">
+            <span className="st-title">Chat settings</span>
+            <span className="st-sub">Model · effort · turns · tooling for the Claude conversation</span>
+          </div>
           <button className="icon-btn" onClick={onClose} title="Close">
             <IconClose width={13} height={13} />
           </button>
@@ -150,104 +153,103 @@ function SettingsTab() {
     ).values()
   ).sort((a, b) => claudeLabel(a.id).localeCompare(claudeLabel(b.id)));
 
+  const effNow = effectiveEffort(chatModel, chatEffort);
+  const effSnapped = chatEffort !== 'auto' && effNow !== chatEffort;
+
   return (
     <>
       <div className="cs-usage">
-        <span className="cs-usage-label">Context usage (this session)</span>
-        <span className="cs-usage-nums">
-          {sessionUsage.input.toLocaleString()} in · {sessionUsage.output.toLocaleString()} out · $
-          {sessionUsage.cost.toFixed(4)}
-        </span>
+        <div className="cs-usage-row">
+          <span className="cs-usage-label">Context usage (this session)</span>
+          <span className="cs-usage-nums">
+            {sessionUsage.input.toLocaleString()} in · {sessionUsage.output.toLocaleString()} out · $
+            {sessionUsage.cost.toFixed(4)}
+          </span>
+        </div>
+        {lastUsage && <UsageBar usage={lastUsage} />}
       </div>
-      {lastUsage && (
-        <UsageBar usage={lastUsage} />
-      )}
-      <label className="settings-row">
-        <span>Model</span>
-        <select
-          value={chatModel}
-          onChange={(e) => {
-            const m = e.target.value;
-            setChatModel(m); // persisted — the next conversation spawns with it
-            // Realtime: switch the live conversation's model on its next turn
-            // (a mid-turn switch applies to the next model call of that turn).
-            const sid = useChatStore.getState().activeSessionId;
-            if (sid) void window.fcc.chatControl(sid, 'set_model', { model: m });
-          }}
-          className="settings-select"
-        >
-          <optgroup label="Claude">
-            {CURATED_CLAUDE_MODELS.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label}
-              </option>
-            ))}
-          </optgroup>
-          {available.length > 0 && (
-            <optgroup label="Available on gateway">
-              {available.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {claudeLabel(m.id)}
-                </option>
-              ))}
-            </optgroup>
-          )}
-        </select>
-      </label>
       {discovered === null && (
         <div className="cs-note">Couldn’t reach the gateway — showing the main Claude models.</div>
       )}
-      <label className="settings-row">
-        <span>Max turns</span>
-        <input
-          type="number"
-          min={1}
-          max={500}
-          value={chatMaxTurns}
-          onChange={(e) => setChatMaxTurns(Number(e.target.value) || 50)}
-        />
-      </label>
-      <label className="settings-row">
-        <span>Auto-compact (k tokens)</span>
-        <input
-          type="number"
-          min={10}
-          max={1000}
-          step={10}
-          value={autoCompactWindow}
-          onChange={(e) => setAutoCompactWindow(Number(e.target.value) || 190)}
-        />
-      </label>
-      <label className="settings-row">
-        <span>Effort</span>
-        <select
-          value={effectiveEffort(chatModel, chatEffort)}
-          onChange={(e) => {
-            const eff = effectiveEffort(chatModel, e.target.value);
-            setChatEffort(eff);
-            // Realtime: push to the live conversation's next turn too, so the
-            // current chat picks it up without waiting for a new conversation.
-            const sid = useChatStore.getState().activeSessionId;
-            if (sid) void window.fcc.chatControl(sid, 'apply_flag_settings', { settings: effortControlSettings(eff) });
-          }}
-          className="settings-select"
-        >
-          <option value="auto">Auto (model default)</option>
-          {EFFORT_LEVELS.map((l) => (
-            <option key={l.value} value={l.value}>
-              {l.label}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div className="cs-note">
-        {claudeLabel(chatModel)} {effortCapLabel(chatModel)}.
+      <div className="cs-settings-grid">
+        <label className="settings-row">
+          <span>Model</span>
+          <select
+            value={chatModel}
+            onChange={(e) => {
+              const m = e.target.value;
+              setChatModel(m); // persisted — the next conversation spawns with it
+              // Realtime: switch the live conversation's model on its next turn
+              const sid = useChatStore.getState().activeSessionId;
+              if (sid) void window.fcc.chatControl(sid, 'set_model', { model: m });
+            }}
+            className="settings-select"
+          >
+            <optgroup label="Claude">
+              {CURATED_CLAUDE_MODELS.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.label}
+                </option>
+              ))}
+            </optgroup>
+            {available.length > 0 && (
+              <optgroup label="Available on gateway">
+                {available.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {claudeLabel(m.id)}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+          </select>
+        </label>
+        <label className="settings-row">
+          <span>Max turns</span>
+          <input
+            type="number"
+            min={1}
+            max={500}
+            value={chatMaxTurns}
+            onChange={(e) => setChatMaxTurns(Number(e.target.value) || 50)}
+          />
+        </label>
+        <label className="settings-row">
+          <span>Effort</span>
+          <select
+            value={effNow}
+            onChange={(e) => {
+              const eff = effectiveEffort(chatModel, e.target.value);
+              setChatEffort(eff);
+              // Realtime: push to the live conversation's next turn too.
+              const sid = useChatStore.getState().activeSessionId;
+              if (sid) void window.fcc.chatControl(sid, 'apply_flag_settings', { settings: effortControlSettings(eff) });
+            }}
+            className="settings-select"
+          >
+            <option value="auto">Auto (model default)</option>
+            {EFFORT_LEVELS.map((l) => (
+              <option key={l.value} value={l.value}>
+                {l.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="settings-row">
+          <span>Auto-compact (k tokens)</span>
+          <input
+            type="number"
+            min={10}
+            max={1000}
+            step={10}
+            value={autoCompactWindow}
+            onChange={(e) => setAutoCompactWindow(Number(e.target.value) || 190)}
+          />
+        </label>
       </div>
-      {chatEffort !== 'auto' && effectiveEffort(chatModel, chatEffort) !== chatEffort && (
-        <div className="cs-note">
-          {chatEffort} isn’t supported here — set to {effectiveEffort(chatModel, chatEffort)} instead.
-        </div>
-      )}
+      <div className="cs-note">
+        {claudeLabel(chatModel)} {effortCapLabel(chatModel)}
+        {effSnapped && <> · {chatEffort} adjusted to {effNow}</>}.
+      </div>
       <div className="settings-note">Model &amp; Effort apply to the current chat’s next turn — Max turns &amp; auto-compact apply to the next conversation.</div>
     </>
   );
@@ -401,9 +403,9 @@ function McpTab({ root }: { root: string | null }) {
           <IconPlus width={13} height={13} />
         </button>
       </div>
-      <div className="cs-note">MCP changes apply to new conversations.</div>
       <div className="cs-note">
-        On/Off and ↻ apply live to the running conversation{liveSessionId() ? '' : ' (start one to use them)'}.
+        Edits apply to new conversations — On/Off &amp; ↻ apply live to the running one
+        {liveSessionId() ? '' : ' (start a chat to use them)'}.
       </div>
     </>
   );
