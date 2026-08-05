@@ -107,6 +107,13 @@ extension parity (skills, plugins, hooks, MCP, slash commands).
   deadlocks. The process stays alive across turns: one conversation = one process
   + one `session_id`; later turns are written via a separate `chat:send` IPC to
   the live process (multi-turn keeps context).
+- **Multiple conversations coexist.** `ChatHost.start()` no longer kills prior
+  sessions — each `sessionId` is an independent `CliSession` subprocess, so the
+  multi-chat panel runs several conversations in parallel. Renderer `chat-store`
+  is keyed by session (`sessions: ChatSession[]` + `activeId`); out-of-panel
+  consumers (status bar, settings, menu, palette, SubagentPanel) target the
+  active column via `sendActive`/`stopActive`/`resetActive`/… aliases. Chat
+  columns are **not persisted** across restarts.
 - **`Stop`** kills the subprocess and emits `stopped`. The `{"type":"interrupt"}`
   control message is **not reliable** through the FCC proxy — the app uses
   kill + respawn under the same `sessionId` instead. After a stop the same
@@ -350,8 +357,9 @@ so interactive per-tool approval is not reachable. Local hooks
   (dev-only)** — run locally, not shipped or committed.
 - Coverage is heaviest on the risky logic: CliSession (taskkill / EPIPE / stderr
   tail / windowsHide+env), chat-reducer running-state transitions (the "no wedge"
-  invariant), chat-store send continue-vs-start heuristic + stale-session filtering,
-  and fcc-manager `classifyInstall`.
+  invariant), chat-store per-column routing (event → its column, unknown/closed
+  column dropped, per-column running guard, active aliases), and fcc-manager
+  `classifyInstall`.
 - `npm run smoke` is the only test needing a live FCC server; everything else is
   offline.
 

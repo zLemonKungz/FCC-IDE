@@ -130,6 +130,12 @@ cols: auto  auto  auto  minmax(0,1fr)
 - **Center**: the editor (`<Editor />` stays mounted so Monaco buffers survive).
   A centered chat overlays it `position:absolute; inset:0`.
 - **Right column** (`.right-col`): chat + optional right-docked terminal.
+- **Chat panel = a column strip**: the header (`.chat-header`) holds the title,
+  an **Add** button, and move/hide; below it `.chat-col-strip` (horizontal
+  scroll, mirrors the terminal-tabs pattern) renders one `.chat-column` per
+  conversation. Each column has its own `.chat-col-header` (label, Plan/Act,
+  Stop, New, ✕ close), its own message scroll + input, equal `flex:1` widths
+  with `min-width:300px` and a `--border-0` divider. Column resize deferred.
 - **Terminal** (bottom or right): hides via `display:none` but stays mounted.
 - **Statusbar**: 28px, folder | spacer | chat-status | cursor | FCC server.
 
