@@ -52,6 +52,7 @@ export const IPC = {
   pluginsSet: 'plugins:set',
   setChatSettings: 'settings:set',
   setTitleBarOverlay: 'window:set-titlebar-overlay',
+  appInfo: 'app:info',
   openExternal: 'shell:open-external',
   readAsset: 'fs:read-asset',
   // events main -> renderer

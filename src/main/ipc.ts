@@ -1,4 +1,4 @@
-import { ipcMain, dialog, clipboard, shell, type BrowserWindow } from 'electron';
+import { ipcMain, dialog, clipboard, shell, app, type BrowserWindow } from 'electron';
 import { IPC } from '@shared/ipc';
 import type { ChatImage, ClaudeSettingsFile, McpServerDef } from '@shared/types';
 import * as files from './file-service';
@@ -51,6 +51,7 @@ export function registerIpc(win: BrowserWindow): void {
   ipcMain.handle(IPC.readAsset, (_e, p: string) => files.readAsset(p));
   // Markdown preview opens http/https/mailto links in the system browser — never
   // arbitrary schemes (a crafted href must not launch a local executable).
+  ipcMain.handle(IPC.appInfo, () => ({ name: app.getName(), version: app.getVersion() }));
   ipcMain.handle(IPC.openExternal, (_e, url: string) => {
     let u: URL;
     try {

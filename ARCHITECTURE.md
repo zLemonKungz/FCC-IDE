@@ -54,7 +54,9 @@ processes, or read env on its own.
 - **Chat quick-access context** adds two more channels: `term:recent` (the last
   ~8 KB of a terminal's output — `terminal-service` keeps a per-terminal scrollback
   and `lastActiveId`) and `git:diff` (`git-diff.ts` reads the open folder's
-  uncommitted diff vs HEAD, capped at 30 KB). The chat drives them via the local
+  uncommitted diff vs HEAD, capped at 30 KB). `app:info` returns
+  `{ name, version }` from `app.getName()`/`app.getVersion()` for the titlebar
+  version and the About popover. The chat drives them via the local
   slash commands `/review` (feed the diff) and `/terminal <q>` (feed recent
   output), and the terminal's error-detected **⚡ Fix** button dispatches
   `fcc:ai-fix` with the captured output for the chat to fix.

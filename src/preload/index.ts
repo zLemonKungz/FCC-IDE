@@ -84,6 +84,7 @@ const api = {
   agentsDelete: (name: string): Promise<void> => ipcRenderer.invoke(IPC.agentsDelete, name),
   setChatSettings: (s: ChatSettings): Promise<void> =>
     ipcRenderer.invoke(IPC.setChatSettings, s),
+  appInfo: (): Promise<{ name: string; version: string }> => ipcRenderer.invoke(IPC.appInfo),
   setTitleBarOverlay: (color: string, symbolColor: string): Promise<void> =>
     ipcRenderer.invoke(IPC.setTitleBarOverlay, color, symbolColor),
   onChatEvent: (cb: (payload: { sessionId: string; message: unknown }) => void): void => {
