@@ -3351,3 +3351,19 @@ button.primary:focus-visible,
 .rewind-btn:hover {
   color: var(--accent);
 }
+
+/* Claude identity mark on main assistant turns */
+.msg-who {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--text-3);
+  margin-bottom: 6px;
+  user-select: none;
+}
+.msg-who svg {
+  color: var(--accent);
+}

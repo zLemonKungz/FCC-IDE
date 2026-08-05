@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { ChatMessage as Msg } from '../chat/chat-reducer';
 import Markdown from '../chat/markdown';
 import ToolCallCard from './ToolCallCard';
-import { IconCopy, IconCheck, IconPencil } from './icons';
+import { IconCopy, IconCheck, IconClaude, IconPencil } from './icons';
 
 export default function ChatMessage({
   message,
@@ -71,6 +71,12 @@ export default function ChatMessage({
 
   return (
     <div className="msg assistant">
+      {!message.parentId && (
+        <div className="msg-who">
+          <IconClaude width={13} height={13} />
+          <span>Claude</span>
+        </div>
+      )}
       {message.thinking && (
         <details className="msg-thinking" open={false}>
           <summary>Thinking</summary>
