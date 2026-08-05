@@ -442,6 +442,7 @@ Type anything else to send it to Claude.`;
         )}
         <button
           className="icon-btn"
+          aria-label="Move chat"
           onClick={() => setChatPosition(chatPosition === 'right' ? 'center' : 'right')}
           title={chatPosition === 'right' ? 'Move chat over the editor' : 'Move chat back to the side'}
         >
@@ -544,6 +545,7 @@ Type anything else to send it to Claude.`;
                 className="icon-btn"
                 onClick={() => setImages(images.filter((_, j) => j !== i))}
                 title="Remove image"
+                aria-label="Remove image"
               >
                 <IconClose width={11} height={11} />
               </button>

@@ -31,7 +31,7 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
       <div ref={modalRef} tabIndex={-1} className="settings-modal" onPointerDown={(e) => e.stopPropagation()}>
         <div className="settings-title">
           <span>Program settings</span>
-          <button className="icon-btn" onClick={onClose} title="Close">
+          <button className="icon-btn" onClick={onClose} title="Close" aria-label="Close">
             <IconClose width={13} height={13} />
           </button>
         </div>

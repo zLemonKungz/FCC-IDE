@@ -40,7 +40,7 @@ export default function FccSetupModal({ onClose }: { onClose: () => void }) {
       <div ref={modalRef} tabIndex={-1} className="fcc-setup-modal" onPointerDown={(e) => e.stopPropagation()}>
         <div className="settings-title">
           <span>Free Claude Code setup</span>
-          <button className="icon-btn" onClick={onClose} title="Close">
+          <button className="icon-btn" onClick={onClose} title="Close" aria-label="Close">
             <IconClose width={13} height={13} />
           </button>
         </div>
@@ -71,7 +71,7 @@ export default function FccSetupModal({ onClose }: { onClose: () => void }) {
             </p>
             <div className="setup-cmd">
               <code>{INSTALL_CMD}</code>
-              <button className="icon-btn" onClick={copy} title="Copy install command">
+              <button className="icon-btn" onClick={copy} title="Copy install command" aria-label="Copy install command">
                 {copied ? <IconCheck width={13} height={13} /> : <IconCopy width={13} height={13} />}
               </button>
             </div>

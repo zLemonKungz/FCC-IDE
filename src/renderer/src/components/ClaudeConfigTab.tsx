@@ -20,7 +20,7 @@ function RuleList({ label, rules, onChange }: { label: string; rules: string[]; 
         {rules.map((r, i) => (
           <span key={`${i}-${r}`} className="cs-rule" title={r}>
             {r}
-            <button className="icon-btn" onClick={() => onChange(rules.filter((_, j) => j !== i))} title="Remove">
+            <button className="icon-btn" onClick={() => onChange(rules.filter((_, j) => j !== i))} title="Remove" aria-label="Remove">
               ✕
             </button>
           </span>

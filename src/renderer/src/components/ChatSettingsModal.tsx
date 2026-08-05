@@ -66,7 +66,7 @@ export default function ChatSettingsModal({ onClose }: { onClose: () => void }) 
             <span className="st-title">Chat settings</span>
             <span className="st-sub">Model · effort · turns · tooling for the Claude conversation</span>
           </div>
-          <button className="icon-btn" onClick={onClose} title="Close">
+          <button className="icon-btn" onClick={onClose} title="Close" aria-label="Close">
             <IconClose width={13} height={13} />
           </button>
         </div>
@@ -296,7 +296,7 @@ function HistoryTab({ onClose }: { onClose: () => void }) {
           <button className="ghost" onClick={() => void open(h.id)}>
             Open
           </button>
-          <button className="icon-btn" onClick={() => void del(h.id)} title="Delete">
+          <button className="icon-btn" onClick={() => void del(h.id)} title="Delete" aria-label="Delete">
             <IconTrash width={13} height={13} />
           </button>
         </div>
@@ -405,7 +405,7 @@ function McpTab({ root }: { root: string | null }) {
           <button className="ghost" disabled={!liveSessionId()} onClick={() => reconnect(n)} title="Reconnect now">
             ↻
           </button>
-          <button className="icon-btn" onClick={() => void remove(n)} title="Remove">
+          <button className="icon-btn" onClick={() => void remove(n)} title="Remove" aria-label="Remove">
             <IconTrash width={13} height={13} />
           </button>
         </div>
@@ -562,7 +562,7 @@ function AgentsTab({ root }: { root: string | null }) {
               <button className="ghost" onClick={() => void open(a.name)}>
                 Edit
               </button>
-              <button className="icon-btn" onClick={() => void remove(a.name)} title="Delete">
+              <button className="icon-btn" onClick={() => void remove(a.name)} title="Delete" aria-label="Delete">
                 <IconTrash width={13} height={13} />
               </button>
             </div>

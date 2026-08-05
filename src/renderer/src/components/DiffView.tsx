@@ -66,7 +66,7 @@ export default function DiffView({ path, onClose }: { path: string; onClose: () 
           Accept
         </button>
         <button onClick={() => void apply(revert)}>Revert all</button>
-        <button className="icon-btn" onClick={onClose} title="Close diff">
+        <button className="icon-btn" onClick={onClose} title="Close diff" aria-label="Close diff">
           <IconClose width={14} height={14} />
         </button>
       </div>
