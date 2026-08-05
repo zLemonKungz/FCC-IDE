@@ -10,6 +10,7 @@ import * as claudeSettings from './claude-settings';
 import * as agents from './claude-agents';
 import * as plugins from './claude-plugins';
 import { gitDiffText, gitBranchInfo } from './git-diff';
+import * as git from './git-service';
 import { listModels } from './chat/models';
 import { ChatHost, type ChatStartOpts } from './chat/chat-host';
 import { setChatConfig } from './chat/config';
@@ -76,6 +77,16 @@ export function registerIpc(win: BrowserWindow): void {
   ipcMain.handle(IPC.termRecent, (_e, id?: number) => terminal.recentOutput(id));
   ipcMain.handle(IPC.gitDiff, () => gitDiffText());
   ipcMain.handle(IPC.gitInfo, () => gitBranchInfo());
+  ipcMain.handle(IPC.gitStatus, () => git.gitStatus());
+  ipcMain.handle(IPC.gitAction, (_e, action: 'stage' | 'unstage' | 'discard', paths: string[]) =>
+    git.gitChangeAction(action, paths)
+  );
+  ipcMain.handle(IPC.gitCommit, (_e, message: string) => git.gitCommit(message));
+  ipcMain.handle(IPC.gitStagedDiff, () => git.gitStagedDiff());
+  ipcMain.handle(IPC.gitBranch, (_e, action: 'list' | 'switch' | 'create', name?: string) => {
+    if (action === 'list') return git.gitBranchList();
+    return git.gitBranchSwitch(name ?? '', action === 'create');
+  });
 
   ipcMain.handle(IPC.fccStatus, () => fcc.checkHealth());
   ipcMain.handle(IPC.fccStart, () => fcc.startServer(win));

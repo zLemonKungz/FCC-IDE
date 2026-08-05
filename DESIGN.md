@@ -190,6 +190,12 @@ the window center grows the panel); the left sidebar is **not** inverted.
   fill + accent title with the pulsing accent dot) above grouped per-subagent
   `.subagent-card`s (card language, caret-expand; detail shows thinking + Markdown
   text + tool cards).
+- **Source control panel** (`sidebarView:'source'`, git activity-bar icon): file
+  rows `.sc-row` with a mono status letter (`.sc-kind`, yellow / red for conflicts),
+  per-file stage/unstage/discard revealed on hover (`.sc-actions`), section titles
+  `.sc-section-title` (Staged / Changes / Untracked / Conflicts), a `.sc-commit`
+  box with the ✨ commit-message helper, and a branch switch/create row. Empty
+  states: "Not a git repository" / "No changes".
 - **Settings modal** (`ChatSettingsModal`): tab bar `.cs-tabs` (accent underline +
   accent-dim pill on active), body load via IPC into **local state** (never a
   zustand selector that returns a fresh array), rows `.settings-row` in a 2-column

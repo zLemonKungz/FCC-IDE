@@ -58,6 +58,16 @@ processes, or read env on its own.
   slash commands `/review` (feed the diff) and `/terminal <q>` (feed recent
   output), and the terminal's error-detected **⚡ Fix** button dispatches
   `fcc:ai-fix` with the captured output for the chat to fix.
+- **Git / Source Control** — `git-service.ts` runs git in the open folder (cwd,
+  repo-relative paths only): `git:status` (`status --porcelain --branch` parsed by
+  the pure `parseStatusPorcelain`, plus branch/ahead/behind/remote), `git:action`
+  (stage/unstage/discard via add/restore), `git:commit`, `git:staged-diff`, and
+  `git:branch` (list/switch/create). The **Source Control sidebar view**
+  (`SourceControlPanel.tsx`, `sidebarView:'source'`, activity-bar git icon) shows
+  staged/unstaged/untracked/conflicts with per-file actions, a commit box, branch
+  switch/create, and an **✨ Message** button that fills the chat input with a
+  "write a commit message for this staged diff" prompt (`fcc:chat-input`). It
+  refreshes on folder open, `fcc:file-modified`, and an 8s poll.
 
 ---
 

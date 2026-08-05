@@ -1,5 +1,5 @@
 import { useLayoutStore } from '../stores/layout-store';
-import { IconChat, IconFolder, IconMoon, IconSearch, IconSparkles, IconSun, IconTerminal } from './icons';
+import { IconChat, IconFolder, IconGitBranch, IconMoon, IconSearch, IconSparkles, IconSun, IconTerminal } from './icons';
 
 // Leftmost icon rail — each icon toggles its panel open/closed; the active
 // highlight shows which panels are currently open.
@@ -27,6 +27,10 @@ export default function ActivityBar() {
     setSidebarView('subagents');
     if (!sidebarVisible) toggleSidebar();
   };
+  const showSource = (): void => {
+    setSidebarView('source');
+    if (!sidebarVisible) toggleSidebar();
+  };
 
   return (
     <nav className="activity-bar">
@@ -50,6 +54,13 @@ export default function ActivityBar() {
         onClick={showSubagents}
       >
         <IconSparkles width={20} height={20} />
+      </button>
+      <button
+        className={`activity ${sidebarVisible && sidebarView === 'source' ? 'active' : ''}`}
+        title="Source control"
+        onClick={showSource}
+      >
+        <IconGitBranch width={20} height={20} />
       </button>
       <button
         className={`activity ${chatVisible ? 'active' : ''}`}

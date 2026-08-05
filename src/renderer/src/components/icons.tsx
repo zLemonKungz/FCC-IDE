@@ -224,3 +224,20 @@ export function IconSettings(props: SVGProps<SVGSVGElement>) {
     </Svg>
   );
 }
+
+export function IconGitBranch({ width = 20, height = 20 }: { width?: number; height?: number }) {
+  return (
+    <svg width={width} height={height} viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M4 3v7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="4" cy="12.5" r="1.5" fill="currentColor" />
+      <circle cx="4" cy="3" r="1.5" fill="currentColor" />
+      <circle cx="12" cy="6" r="1.5" fill="currentColor" />
+      <path
+        d="M4 4.5c0 2.5 2 3.5 4 4 1.5.4 2.5 1 2.5 2.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}

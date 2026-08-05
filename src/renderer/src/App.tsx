@@ -10,6 +10,7 @@ import DragHandle from './components/DragHandle';
 import CommandPalette from './components/CommandPalette';
 import SearchPanel from './components/SearchPanel';
 import SubagentPanel from './components/SubagentPanel';
+import SourceControlPanel from './components/SourceControlPanel';
 import { useLayoutStore, LAYOUT } from './stores/layout-store';
 import { useSettingsStore, effectiveEffort } from './stores/settings-store';
 import { useExplorerStore } from './stores/explorer-store';
@@ -162,6 +163,8 @@ export default function App() {
           <SearchPanel />
         ) : sidebarView === 'subagents' ? (
           <SubagentPanel />
+        ) : sidebarView === 'source' ? (
+          <SourceControlPanel />
         ) : (
           <Explorer />
         )}

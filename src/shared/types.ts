@@ -129,6 +129,28 @@ export interface AgentSummary {
   path: string;
 }
 
+/** One changed file from `git status --porcelain`. */
+export interface GitChange {
+  path: string;
+  staged: boolean;
+  kind: string;
+  untracked: boolean;
+  conflict: boolean;
+}
+
+export interface GitStatus {
+  branch: string;
+  remote: string | null;
+  changes: GitChange[];
+  ahead: number;
+  behind: number;
+}
+
+export interface GitBranch {
+  name: string;
+  current: boolean;
+}
+
 /** The editable subset of Claude Code's settings.json (user + project). The
  *  main process preserves any fields the UI doesn't render (hooks, statusLine,
  *  …) when saving. */

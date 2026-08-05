@@ -9,6 +9,8 @@ import type {
   FccStatus,
   GatewayModel,
   ClaudeSettingsFile,
+  GitBranch,
+  GitStatus,
   HistoryRecord,
   HistorySummary,
   McpOverview,
@@ -42,6 +44,13 @@ const api = {
   termRecent: (id?: number): Promise<string> => ipcRenderer.invoke(IPC.termRecent, id),
   gitDiff: (): Promise<string | null> => ipcRenderer.invoke(IPC.gitDiff),
   gitInfo: (): Promise<{ branch: string; changes: number } | null> => ipcRenderer.invoke(IPC.gitInfo),
+  gitStatus: (): Promise<GitStatus | null> => ipcRenderer.invoke(IPC.gitStatus),
+  gitAction: (action: 'stage' | 'unstage' | 'discard', paths: string[]): Promise<boolean> =>
+    ipcRenderer.invoke(IPC.gitAction, action, paths),
+  gitCommit: (message: string): Promise<{ ok: boolean; err?: string }> => ipcRenderer.invoke(IPC.gitCommit, message),
+  gitStagedDiff: (): Promise<string | null> => ipcRenderer.invoke(IPC.gitStagedDiff),
+  gitBranch: (action: 'list' | 'switch' | 'create', name?: string): Promise<GitBranch[] | { ok: boolean; err?: string } | null> =>
+    ipcRenderer.invoke(IPC.gitBranch, action, name),
   fccStatus: (): Promise<FccStatus> => ipcRenderer.invoke(IPC.fccStatus),
   fccStart: (): Promise<FccStatus> => ipcRenderer.invoke(IPC.fccStart),
   fccStop: (): Promise<FccStatus> => ipcRenderer.invoke(IPC.fccStop),
