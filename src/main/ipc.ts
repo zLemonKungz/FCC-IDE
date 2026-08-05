@@ -9,6 +9,7 @@ import * as mcp from './mcp-service';
 import * as claudeSettings from './claude-settings';
 import * as agents from './claude-agents';
 import * as plugins from './claude-plugins';
+import { gitDiffText } from './git-diff';
 import { listModels } from './chat/models';
 import { ChatHost, type ChatStartOpts } from './chat/chat-host';
 import { setChatConfig } from './chat/config';
@@ -72,6 +73,8 @@ export function registerIpc(win: BrowserWindow): void {
     terminal.resizeTerminal(id, cols, rows)
   );
   ipcMain.handle(IPC.termDispose, (_e, id: number) => terminal.disposeTerminal(id));
+  ipcMain.handle(IPC.termRecent, (_e, id?: number) => terminal.recentOutput(id));
+  ipcMain.handle(IPC.gitDiff, () => gitDiffText());
 
   ipcMain.handle(IPC.fccStatus, () => fcc.checkHealth());
   ipcMain.handle(IPC.fccStart, () => fcc.startServer(win));

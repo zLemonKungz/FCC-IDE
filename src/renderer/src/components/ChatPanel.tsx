@@ -15,7 +15,9 @@ import { IconChat, IconChevronLeft, IconChevronRight, IconClaude, IconClose, Ico
 const LOCAL_COMMANDS: { name: string; desc: string }[] = [
   { name: '/help', desc: 'Show this help' },
   { name: '/theme', desc: 'Toggle dark / light theme' },
-  { name: '/new', desc: 'Start a new chat' }
+  { name: '/new', desc: 'Start a new chat' },
+  { name: '/review', desc: 'Review the uncommitted git diff' },
+  { name: '/terminal', desc: 'Send the recent terminal output as context' }
 ];
 
 const KNOWN_COMMANDS: Record<string, string> = {
@@ -47,7 +49,9 @@ const COMMAND_ARGS: Record<string, string> = {
   '/memory': '[topic]',
   '/code-review': '[level] [--fix]',
   '/deep-research': '<question>',
-  '/simplify': '[file]'
+  '/simplify': '[file]',
+  '/review': '[note]',
+  '/terminal': '<question>'
 };
 
 export default function ChatPanel({ style }: { style?: CSSProperties }) {
@@ -107,6 +111,18 @@ export default function ChatPanel({ style }: { style?: CSSProperties }) {
       window.removeEventListener('fcc:open-chat-settings', openSettings);
     };
   }, []);
+
+  // Terminal "Fix" button → review the captured error output in chat.
+  useEffect(() => {
+    const onFix = (e: Event): void => {
+      if (!root) return;
+      const out = (e as CustomEvent).detail?.output ?? '';
+      const content = `Fix this terminal error:\n\n\`\`\`\n${(out || 'no output captured').slice(0, 4000)}\n\`\`\`\n\nDiagnose the failure and suggest or apply a fix.`;
+      send(root, content);
+    };
+    window.addEventListener('fcc:ai-fix', onFix);
+    return () => window.removeEventListener('fcc:ai-fix', onFix);
+  }, [send, root]);
 
   useEffect(() => {
     // Follow new content only while the user is at the bottom — otherwise they
@@ -342,6 +358,16 @@ Type anything else to send it to Claude.`;
         useChatStore.getState().reset();
         return;
       }
+      if (cmd === '/review') {
+        setHelp(null);
+        void composeReview(text.replace(/^\/review\s*/, '').trim());
+        return;
+      }
+      if (cmd === '/terminal') {
+        setHelp(null);
+        void composeTerminal(text.replace(/^\/terminal\s*/, '').trim());
+        return;
+      }
       // Everything else — /clear, /compact, skills, ... — goes to Claude.
       setHelp(null);
       send(root, text);
@@ -349,6 +375,30 @@ Type anything else to send it to Claude.`;
     }
     setHelp(null);
     send(root, text, images.length > 0 ? images : undefined);
+  };
+
+  // /review — feed the open folder's uncommitted git diff to the model.
+  const composeReview = async (note: string): Promise<void> => {
+    if (!root) return;
+    const diff = await window.fcc.gitDiff().catch(() => null);
+    if (!diff) {
+      send(root, note ? `${note} — there are no uncommitted changes.` : 'There are no uncommitted changes to review.');
+      return;
+    }
+    send(
+      root,
+      `Review these uncommitted changes:\n\n${note ? note + '\n' : ''}\`\`\`diff\n${diff}\n\`\`\`\n\nPoint out any bugs, issues, or suggested improvements.`
+    );
+  };
+  // /terminal — pull the last ~8KB of terminal output as context.
+  const composeTerminal = async (q: string): Promise<void> => {
+    if (!root) return;
+    const out = await window.fcc.termRecent().catch(() => '');
+    if (!out) {
+      send(root, q || 'Explain the terminal output.');
+      return;
+    }
+    send(root, `${q || 'Explain this terminal output'}\n\n\`\`\`\n${out.slice(0, 4000)}\n\`\`\``);
   };
 
   // Plan/Act toggle (header button + Shift+Tab). It flips the *next-conversation*
@@ -442,7 +492,9 @@ Type anything else to send it to Claude.`;
           </div>
         ) : (
           <>
-            {messages.map((m) => <ChatMessage key={m.id} message={m} />)}
+            {messages.map((m) => (
+              <ChatMessage key={m.id} message={m} onEdit={m.role === 'user' ? (t) => root && send(root, t) : undefined} />
+            ))}
             {running && (
               <div className="running-indicator">
                 <span className="dots"><span /><span /><span /></span>

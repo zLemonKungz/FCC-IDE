@@ -51,6 +51,13 @@ processes, or read env on its own.
   (`shell.openExternal` guarded to http:/https:/mailto: only) and `fs:read-asset`
   (`file-service.readAsset` — image → base64 data URI, ≤ 4 MB, MIME by extension,
   `assertInside`-gated) for rendering external links + relative images.
+- **Chat quick-access context** adds two more channels: `term:recent` (the last
+  ~8 KB of a terminal's output — `terminal-service` keeps a per-terminal scrollback
+  and `lastActiveId`) and `git:diff` (`git-diff.ts` reads the open folder's
+  uncommitted diff vs HEAD, capped at 30 KB). The chat drives them via the local
+  slash commands `/review` (feed the diff) and `/terminal <q>` (feed recent
+  output), and the terminal's error-detected **⚡ Fix** button dispatches
+  `fcc:ai-fix` with the captured output for the chat to fix.
 
 ---
 

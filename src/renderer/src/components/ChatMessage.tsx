@@ -2,15 +2,51 @@ import { useState } from 'react';
 import type { ChatMessage as Msg } from '../chat/chat-reducer';
 import Markdown from '../chat/markdown';
 import ToolCallCard from './ToolCallCard';
-import { IconCopy, IconCheck } from './icons';
+import { IconCopy, IconCheck, IconPencil } from './icons';
 
-export default function ChatMessage({ message }: { message: Msg }) {
+export default function ChatMessage({
+  message,
+  onEdit
+}: {
+  message: Msg;
+  /** for user bubbles — re-submits an edited prompt as a new turn */
+  onEdit?: (text: string) => void;
+}) {
   const [copied, setCopied] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
 
   if (message.role === 'user') {
+    if (editing !== null) {
+      return (
+        <div className="msg user edit">
+          <textarea
+            className="msg-edit"
+            value={editing}
+            onChange={(e) => setEditing(e.target.value)}
+            autoFocus
+          />
+          <div className="msg-edit-actions">
+            <button className="primary" disabled={!editing.trim()} onClick={() => onEdit?.(editing)}>
+              Re-send
+            </button>
+            <button onClick={() => setEditing(null)}>Cancel</button>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="msg user">
         {message.text}
+        {onEdit && (
+          <button
+            className="msg-edit-btn"
+            onClick={() => setEditing(message.text)}
+            title="Edit and re-send"
+            aria-label="Edit message"
+          >
+            <IconPencil width={11} height={11} />
+          </button>
+        )}
         {message.imageCount ? (
           <span className="msg-images">
             🖼 {message.imageCount} image{message.imageCount > 1 ? 's' : ''}

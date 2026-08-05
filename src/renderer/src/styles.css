@@ -3187,3 +3187,75 @@ button.primary:focus-visible,
 .cs-plugin-toggle:not(.on) {
   color: var(--text-3);
 }
+
+/* terminal error "Fix" chip (wraps .term-body so the button can overlay it) */
+.term-slot {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+.term-slot .term-body {
+  flex: 1;
+  height: 100%;
+}
+.term-fix {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  z-index: 5;
+  color: #fff;
+  background: var(--red);
+  border: none;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-weight: 600;
+  box-shadow: var(--shadow-2);
+}
+.term-fix:hover {
+  background: #e87a68;
+  color: #fff;
+  transform: none;
+}
+
+/* user-message edit / re-send */
+.msg.user {
+  position: relative;
+}
+.msg-edit-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 3px;
+  color: var(--text-3);
+  opacity: 0;
+  transition: opacity var(--transition), color var(--transition);
+}
+.msg.user:hover .msg-edit-btn,
+.msg-edit-btn:focus-visible {
+  opacity: 1;
+}
+.msg-edit-btn:hover {
+  color: var(--accent);
+}
+.msg-edit {
+  width: 100%;
+  min-height: 60px;
+  resize: vertical;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-1);
+  background: var(--bg-1);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  outline: none;
+}
+.msg-edit:focus {
+  border-color: var(--accent);
+}
+.msg-edit-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}

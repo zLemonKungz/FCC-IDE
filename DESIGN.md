@@ -155,7 +155,11 @@ the window center grows the panel); the left sidebar is **not** inverted.
 - **Chat message** (`.msg`): user/assistant bubbles in the chat stream; tool calls
   render as `.tool-card` (status-colored border: running=blue, success=green,
   error=red). Extended thinking folds as `.msg-thinking` (accent left rail + mono
-  pre, `<details>` collapsed by default).
+  pre, `<details>` collapsed by default). **User bubbles are editable**: a hover
+  pencil opens `.msg-edit` (mono textarea) + Re-send/Cancel, re-submitting the
+  edited prompt as a new turn. Local commands `/review` (git diff) and
+  `/terminal <q>` (recent terminal output) compose context; the terminal's red
+  **⚡ Fix** chip (`term-fix`, appears on error output) opens the error in chat.
 - **Markdown** renders through a single shared component (`src/renderer/src/chat/
   markdown.tsx`, react-markdown + GFM + math/katex + slug/autolink headings)
   wrapping its output in **`.fcc-md`** — style markdown via `.fcc-md` element

@@ -9,6 +9,10 @@ import { IconChevronDown, IconChevronRight, IconClose, IconPlay, IconTrash } fro
 
 type TermPalette = NonNullable<ConstructorParameters<typeof XTerm>[0]>['theme'];
 
+// Rough error indicators — when the recent output matches, the tab offers a
+// "Fix" button that sends the captured output to the chat.
+const ERROR_RE = /\b(error|failed|failure|exception|Traceback|fatal|SyntaxError|TypeError|ReferenceError|command not found)\b/i;
+
 const TERM_COLORS: Record<'dark' | 'light', TermPalette> = {
   dark: {
     background: '#0e1013',
@@ -86,6 +90,9 @@ function TerminalTab({
   const fitRef = useRef<FitAddon | null>(null);
   const ptyRef = useRef<number | null>(null);
   const offRef = useRef<() => void>(() => {});
+  const [errorDetected, setErrorDetected] = useState(false);
+  const errorShownRef = useRef(false);
+  const tailRef = useRef('');
 
   useEffect(() => {
     if (!ref.current) return;
@@ -113,7 +120,14 @@ function TerminalTab({
       .termCreate(cwd)
       .then((tid) => {
         ptyRef.current = tid;
-        offRef.current = window.fcc.onTermData(tid, (data) => term.write(data));
+        offRef.current = window.fcc.onTermData(tid, (data) => {
+          term.write(data);
+          tailRef.current = (tailRef.current + data).slice(-2000);
+          if (!errorShownRef.current && ERROR_RE.test(tailRef.current)) {
+            errorShownRef.current = true;
+            setErrorDetected(true);
+          }
+        });
       })
       .catch((err: Error) => {
         term.write(`\r\n[terminal error] ${err.message}\r\n`);
@@ -168,7 +182,23 @@ function TerminalTab({
     });
   }, [active, visible]);
 
-  return <div ref={ref} className={`term-body${active ? '' : ' tab-inactive'}`} />;
+  const onFix = async (): Promise<void> => {
+    errorShownRef.current = false;
+    setErrorDetected(false);
+    const out = await window.fcc.termRecent(id).catch(() => '');
+    window.dispatchEvent(new CustomEvent('fcc:ai-fix', { detail: { output: out } }));
+  };
+
+  return (
+    <div className="term-slot">
+      <div ref={ref} className={`term-body${active ? '' : ' tab-inactive'}`} />
+      {errorDetected && (
+        <button className="term-fix" onClick={() => void onFix()} title="Review this error in chat">
+          ⚡ Fix
+        </button>
+      )}
+    </div>
+  );
 }
 
 export default function TerminalPane({ position }: { position: 'bottom' | 'right' }) {
