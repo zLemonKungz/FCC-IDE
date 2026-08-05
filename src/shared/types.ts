@@ -151,6 +151,14 @@ export interface GitBranch {
   current: boolean;
 }
 
+/** One commit for the history graph (short 7-char hash, parents likewise). */
+export interface GitCommit {
+  hash: string;
+  parents: string[];
+  refs: string;
+  subject: string;
+}
+
 /** The editable subset of Claude Code's settings.json (user + project). The
  *  main process preserves any fields the UI doesn't render (hooks, statusLine,
  *  …) when saving. */

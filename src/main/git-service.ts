@@ -33,6 +33,13 @@ export interface GitStatus {
   behind: number;
 }
 
+export interface GitCommit {
+  hash: string;
+  parents: string[];
+  refs: string;
+  subject: string;
+}
+
 /** Current branch + full change list from `status --porcelain`. */
 export async function gitStatus(): Promise<GitStatus | null> {
   const root = gitRoot();
@@ -110,6 +117,34 @@ export async function gitStagedDiff(): Promise<string | null> {
 export interface GitBranch {
   name: string;
   current: boolean;
+}
+
+/** Structured commit list for the graph view. Hashes are shortened to 7 chars
+ *  (parents too, so lane matching stays consistent). */
+export async function gitHistory(limit = 40): Promise<GitCommit[] | null> {
+  const root = gitRoot();
+  if (!root) return null;
+  const r = await run(root, [
+    'log',
+    '--all',
+    '--topo-order',
+    '--pretty=format:%H%x09%P%x09%d%x09%s',
+    '-n',
+    String(limit)
+  ]);
+  if (r.code !== 0 || !r.out.trim()) return null;
+  return r.out
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => {
+      const [hash = '', parents = '', refs = '', subject = ''] = line.split('\t');
+      return {
+        hash: hash.slice(0, 7),
+        parents: parents ? parents.split(' ').map((p) => p.slice(0, 7)) : [],
+        refs: refs.trim(),
+        subject: subject.trim()
+      };
+    });
 }
 
 /** Local branches with the current one flagged. */

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useExplorerStore } from '../stores/explorer-store';
-import type { GitBranch, GitStatus } from '@shared/types';
+import type { GitBranch, GitCommit, GitStatus } from '@shared/types';
+import CommitGraph from './CommitGraph';
 import { IconCheck, IconClose, IconPlus } from './icons';
 
 // Source Control sidebar: git status (staged / unstaged / untracked), per-file
@@ -14,6 +15,7 @@ export default function SourceControlPanel() {
   const [newBranch, setNewBranch] = useState('');
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [history, setHistory] = useState<GitCommit[] | null>(null);
 
   const load = useCallback(() => {
     if (!root) {
@@ -22,6 +24,7 @@ export default function SourceControlPanel() {
     }
     void window.fcc.gitStatus().then(setStatus).catch(() => setStatus(null));
     void window.fcc.gitBranch('list').then((b) => setBranches(Array.isArray(b) ? b : [])).catch(() => setBranches([]));
+    void window.fcc.gitHistory().then(setHistory).catch(() => setHistory(null));
   }, [root]);
 
   useEffect(() => {
@@ -247,6 +250,14 @@ export default function SourceControlPanel() {
         )}
         {feedback && <div className="sc-feedback">{feedback}</div>}
       </div>
+      <details className="sc-history" open={false}>
+        <summary>History · commit graph</summary>
+        {history && history.length > 0 ? (
+          <CommitGraph commits={history} />
+        ) : (
+          <div className="sc-graph-empty">No commits yet.</div>
+        )}
+      </details>
     </div>
   );
 }

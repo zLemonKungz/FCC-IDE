@@ -3626,3 +3626,105 @@ button.primary:focus-visible,
   color: var(--green);
   padding: 4px 6px 0;
 }
+
+/* commit graph (git log --graph) — bottom-pinned, collapsible */
+.sc-history {
+  flex-shrink: 0;
+  margin: 8px 10px;
+  border: 1px solid var(--border-0);
+  border-radius: var(--radius-sm);
+  background: var(--bg-1);
+  overflow: hidden;
+}
+.sc-history summary {
+  list-style: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-2);
+  padding: 7px 10px;
+  user-select: none;
+  transition: color var(--transition);
+}
+.sc-history summary::before {
+  content: '▸ ';
+  font-size: 10px;
+}
+.sc-history[open] summary::before {
+  content: '▾ ';
+}
+.sc-history summary:hover {
+  color: var(--accent);
+}
+.scg {
+  max-height: 260px;
+  overflow: auto;
+  border-top: 1px solid var(--border-0);
+  padding: 8px 10px;
+  display: flex;
+  gap: 10px;
+}
+.scg-svg {
+  flex-shrink: 0;
+}
+.scg-line {
+  stroke: var(--text-4);
+  stroke-width: 1.5;
+}
+.scg-dot {
+  fill: var(--bg-0);
+  stroke: var(--text-3);
+  stroke-width: 1.5;
+}
+.scg-dot.head {
+  fill: var(--accent);
+  stroke: var(--accent);
+}
+.scg-labels {
+  flex: 1;
+  min-width: 0;
+}
+.scg-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.scg-refs {
+  display: inline-flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.scg-ref {
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--text-2);
+  background: var(--bg-2);
+  border: 1px solid var(--border-1);
+  border-radius: 999px;
+  padding: 0 6px;
+  white-space: nowrap;
+}
+.scg-ref.head {
+  color: var(--accent);
+  border-color: var(--accent-border);
+}
+.scg-ref.tag {
+  color: var(--yellow);
+}
+.scg-subj {
+  font-size: 12.5px;
+  color: var(--text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sc-graph-empty {
+  padding: 8px 10px;
+  border-top: 1px solid var(--border-0);
+  font-size: 12px;
+  color: var(--text-3);
+}

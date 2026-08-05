@@ -23,6 +23,7 @@ export const IPC = {
   gitCommit: 'git:commit',
   gitStagedDiff: 'git:staged-diff',
   gitBranch: 'git:branch',
+  gitHistory: 'git:history',
   fccStatus: 'fcc:status',
   fccStart: 'fcc:start',
   fccStop: 'fcc:stop',

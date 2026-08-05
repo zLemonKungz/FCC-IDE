@@ -10,6 +10,7 @@ import type {
   GatewayModel,
   ClaudeSettingsFile,
   GitBranch,
+  GitCommit,
   GitStatus,
   HistoryRecord,
   HistorySummary,
@@ -51,6 +52,7 @@ const api = {
   gitStagedDiff: (): Promise<string | null> => ipcRenderer.invoke(IPC.gitStagedDiff),
   gitBranch: (action: 'list' | 'switch' | 'create', name?: string): Promise<GitBranch[] | { ok: boolean; err?: string } | null> =>
     ipcRenderer.invoke(IPC.gitBranch, action, name),
+  gitHistory: (): Promise<GitCommit[] | null> => ipcRenderer.invoke(IPC.gitHistory),
   fccStatus: (): Promise<FccStatus> => ipcRenderer.invoke(IPC.fccStatus),
   fccStart: (): Promise<FccStatus> => ipcRenderer.invoke(IPC.fccStart),
   fccStop: (): Promise<FccStatus> => ipcRenderer.invoke(IPC.fccStop),

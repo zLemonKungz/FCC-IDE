@@ -61,8 +61,9 @@ processes, or read env on its own.
 - **Git / Source Control** — `git-service.ts` runs git in the open folder (cwd,
   repo-relative paths only): `git:status` (`status --porcelain --branch` parsed by
   the pure `parseStatusPorcelain`, plus branch/ahead/behind/remote), `git:action`
-  (stage/unstage/discard via add/restore), `git:commit`, `git:staged-diff`, and
-  `git:branch` (list/switch/create). The **Source Control sidebar view**
+  (stage/unstage/discard via add/restore), `git:commit`, `git:staged-diff`,
+  `git:branch` (list/switch/create), and `git:history` (`git log --graph` for the
+  commit-graph view). The **Source Control sidebar view**
   (`SourceControlPanel.tsx`, `sidebarView:'source'`, activity-bar git icon) shows
   staged/unstaged/untracked/conflicts with per-file actions, a commit box, branch
   switch/create, and an **✨ Message** button that fills the chat input with a

@@ -194,8 +194,11 @@ the window center grows the panel); the left sidebar is **not** inverted.
   rows `.sc-row` with a mono status letter (`.sc-kind`, yellow / red for conflicts),
   per-file stage/unstage/discard revealed on hover (`.sc-actions`), section titles
   `.sc-section-title` (Staged / Changes / Untracked / Conflicts), a `.sc-commit`
-  box with the ✨ commit-message helper, and a branch switch/create row. Empty
-  states: "Not a git repository" / "No changes".
+  box with the ✨ commit-message helper, a `.sc-branch-bar` on top (switch/create +
+  ahead/behind), and a bottom-pinned collapsible **History** (`CommitGraph.tsx`)
+  that draws a real SVG commit graph (`.scg`): vertical backbones down first-parent
+  chains and horizontal merge joins to branch lanes, dots (HEAD accent), ref chips,
+  and the subject — no raw hash. Empty states: "Not a git repository" / "No changes".
 - **Settings modal** (`ChatSettingsModal`): tab bar `.cs-tabs` (accent underline +
   accent-dim pill on active), body load via IPC into **local state** (never a
   zustand selector that returns a fresh array), rows `.settings-row` in a 2-column
