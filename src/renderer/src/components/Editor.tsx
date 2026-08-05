@@ -285,7 +285,12 @@ Instruction: ${instruction}`;
             <span>
               Edit selection in <b>{active?.name}</b> · {inlineEdit.text.split('\n').length} lines
             </span>
-            <button className="icon-btn" onClick={() => setInlineEdit(null)} title="Close">
+            <button
+              className="icon-btn"
+              onClick={() => setInlineEdit(null)}
+              title="Close"
+              aria-label="Close inline edit"
+            >
               <IconClose width={12} height={12} />
             </button>
           </div>

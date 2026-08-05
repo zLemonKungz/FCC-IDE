@@ -81,7 +81,12 @@ export default function ChatMessage({
         <Markdown text={message.text} />
       </div>
       {onRewind && (
-        <button className="rewind-btn" onClick={onRewind} title="Rewind files to before this message">
+        <button
+          className="rewind-btn"
+          onClick={onRewind}
+          title="Rewind files to before this message"
+          aria-label="Rewind files to before this message"
+        >
           ⟲
         </button>
       )}

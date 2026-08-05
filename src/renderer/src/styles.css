@@ -2115,6 +2115,7 @@ button.icon-btn:hover {
   line-height: 1.6;
   max-width: 100%;
   animation: msg-in 180ms cubic-bezier(0.4, 0, 0.2, 1) both;
+  box-shadow: var(--surface-highlight);
 }
 @keyframes msg-in {
   from { opacity: 0; transform: translateY(5px); }
@@ -2136,11 +2137,12 @@ button.icon-btn:hover {
 }
 .msg.user {
   background: var(--accent-dim);
-  border-left: 2px solid var(--accent);
+  border-left: 3px solid var(--accent);
   color: var(--text-1);
   align-self: flex-end;
   max-width: 92%;
   white-space: pre-wrap;
+  border-radius: var(--radius-md) var(--radius-md) var(--radius-md) var(--radius-sm);
 }
 .msg.user .msg-images {
   display: inline-block;
@@ -2154,12 +2156,16 @@ button.icon-btn:hover {
 }
 .msg.assistant {
   background: var(--bg-2);
-  border: 1px solid var(--border-0);
+  border: 1px solid var(--border-1);
   color: var(--text-1);
   align-self: stretch;
   white-space: normal;
   word-break: break-word;
   position: relative;
+  transition: border-color var(--transition), background var(--transition);
+}
+.msg.assistant:hover {
+  border-color: var(--accent-border);
 }
 .msg.assistant .msg-text {
   font-size: 14px;
@@ -2533,10 +2539,11 @@ button.plan-toggle.on {
   gap: 3px;
 }
 .running-indicator .dots span {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
   animation: pulse 1.2s infinite ease-in-out;
 }
 .running-indicator .dots span:nth-child(2) {

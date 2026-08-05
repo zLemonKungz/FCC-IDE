@@ -193,7 +193,12 @@ function TerminalTab({
     <div className="term-slot">
       <div ref={ref} className={`term-body${active ? '' : ' tab-inactive'}`} />
       {errorDetected && (
-        <button className="term-fix" onClick={() => void onFix()} title="Review this error in chat">
+        <button
+          className="term-fix"
+          onClick={() => void onFix()}
+          title="Review this error in chat"
+          aria-label="Review this error in chat"
+        >
           ⚡ Fix
         </button>
       )}
