@@ -96,6 +96,14 @@ export interface GatewayModel {
   display_name?: string;
 }
 
+/** A custom subagent definition in .claude/agents/<name>.md. */
+export interface AgentSummary {
+  /** filename stem, e.g. "code-reviewer" (the frontmatter name field). */
+  name: string;
+  /** absolute path inside the open folder. */
+  path: string;
+}
+
 /** The editable subset of Claude Code's settings.json (user + project). The
  *  main process preserves any fields the UI doesn't render (hooks, statusLine,
  *  …) when saving. */

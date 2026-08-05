@@ -22,8 +22,10 @@ export interface ChatUiState {
   running: boolean;
   error: string | null;
   sessionId: string | null;
-  /** usage of the last completed turn, from the SDK result message */
-  lastUsage: { input: number; output: number; cost?: number } | null;
+  /** usage of the last completed turn, from the SDK result message. `input` is
+   *  the total input tokens (fresh + cache write + cache read); cacheRead /
+   *  cacheWrite break that total out for the context-usage bar. */
+  lastUsage: { input: number; output: number; cost?: number; cacheRead?: number; cacheWrite?: number } | null;
   /** cumulative tokens/cost across all completed turns of this conversation */
   sessionUsage: { input: number; output: number; cost: number };
   /** slash commands / skills discovered from the CLI init message (no leading '/') */
@@ -216,6 +218,8 @@ export function applyChatEvent(
         ? {
             input: (ev.usage.input_tokens ?? 0) + (ev.usage.cache_creation_input_tokens ?? 0) + (ev.usage.cache_read_input_tokens ?? 0),
             output: ev.usage.output_tokens ?? 0,
+            cacheRead: ev.usage.cache_read_input_tokens ?? 0,
+            cacheWrite: ev.usage.cache_creation_input_tokens ?? 0,
             // JSON null bypasses TS — never store null for a number field.
             cost: ev.total_cost_usd ?? undefined
           }

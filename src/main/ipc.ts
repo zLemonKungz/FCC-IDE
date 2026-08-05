@@ -7,6 +7,7 @@ import * as fcc from './fcc-manager';
 import * as history from './chat/history';
 import * as mcp from './mcp-service';
 import * as claudeSettings from './claude-settings';
+import * as agents from './claude-agents';
 import { listModels } from './chat/models';
 import { ChatHost, type ChatStartOpts } from './chat/chat-host';
 import { setChatConfig } from './chat/config';
@@ -94,4 +95,8 @@ export function registerIpc(win: BrowserWindow): void {
   ipcMain.handle(IPC.claudeSettingsSet, (_e, scope: 'user' | 'project', patch: ClaudeSettingsFile) =>
     claudeSettings.setSettings(scope, patch)
   );
+  ipcMain.handle(IPC.agentsList, () => agents.listAgents());
+  ipcMain.handle(IPC.agentsRead, (_e, name: string) => agents.readAgent(name));
+  ipcMain.handle(IPC.agentsSave, (_e, name: string, content: string) => agents.saveAgent(name, content));
+  ipcMain.handle(IPC.agentsDelete, (_e, name: string) => agents.deleteAgent(name));
 }

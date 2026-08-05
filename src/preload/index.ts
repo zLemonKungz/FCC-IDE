@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { IPC } from '@shared/ipc';
 import type {
+  AgentSummary,
   ChatImage,
   ChatSettings,
   FileEntry,
@@ -58,6 +59,10 @@ const api = {
     ipcRenderer.invoke(IPC.claudeSettingsGet),
   claudeSettingsSet: (scope: 'user' | 'project', patch: ClaudeSettingsFile): Promise<void> =>
     ipcRenderer.invoke(IPC.claudeSettingsSet, scope, patch),
+  agentsList: (): Promise<AgentSummary[]> => ipcRenderer.invoke(IPC.agentsList),
+  agentsRead: (name: string): Promise<string> => ipcRenderer.invoke(IPC.agentsRead, name),
+  agentsSave: (name: string, content: string): Promise<void> => ipcRenderer.invoke(IPC.agentsSave, name, content),
+  agentsDelete: (name: string): Promise<void> => ipcRenderer.invoke(IPC.agentsDelete, name),
   setChatSettings: (s: ChatSettings): Promise<void> =>
     ipcRenderer.invoke(IPC.setChatSettings, s),
   setTitleBarOverlay: (color: string, symbolColor: string): Promise<void> =>

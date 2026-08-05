@@ -680,10 +680,10 @@ button.icon-btn:hover {
   font-family: var(--font-mono);
   font-size: 10.5px;
   text-transform: uppercase;
-  color: var(--text-4);
-  padding: 1px 5px;
-  border: 1px solid var(--border-0);
-  border-radius: var(--radius-sm);
+  color: var(--text-3);
+  padding: 1px 6px;
+  background: var(--bg-2);
+  border-radius: 999px;
 }
 
 /* ---------- Tab context menu ---------- */
@@ -2255,6 +2255,8 @@ button.plan-toggle.on {
 .slash-picker .sp-item .sp-desc {
   color: var(--text-3);
   font-size: 11px;
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2761,11 +2763,14 @@ button.primary:focus-visible,
 /* ---------- Subagents view ---------- */
 .subagent-card {
   margin: 6px 8px;
-  border: 1px solid var(--border-0);
+  border: 1px solid var(--border-1);
   border-radius: var(--radius-md);
-  background: var(--bg-2);
+  background: var(--bg-0);
   overflow: hidden;
-  box-shadow: var(--shadow-1);
+  transition: border-color var(--transition);
+}
+.subagent-card:hover {
+  border-color: var(--accent-border);
 }
 .subagent-head {
   display: flex;
@@ -2782,14 +2787,18 @@ button.primary:focus-visible,
   transition: background-color var(--transition), color var(--transition);
 }
 .subagent-head:hover {
-  background: var(--bg-3);
+  background: var(--bg-2);
   color: var(--text-1);
+}
+.subagent-head:hover .subagent-caret {
+  color: var(--accent);
 }
 .subagent-caret {
   font-size: 10px;
   width: 12px;
   color: var(--text-4);
   flex-shrink: 0;
+  transition: color var(--transition);
 }
 .subagent-label {
   flex: 1;
@@ -2800,7 +2809,7 @@ button.primary:focus-visible,
 }
 .subagent-meta {
   font-size: 11px;
-  color: var(--text-4);
+  color: var(--text-3);
   white-space: nowrap;
 }
 .subagent-detail {
@@ -2809,6 +2818,7 @@ button.primary:focus-visible,
   display: flex;
   flex-direction: column;
   gap: 8px;
+  background: var(--bg-0);
 }
 .subagent-thinking {
   margin: 0;
@@ -2844,6 +2854,10 @@ button.primary:focus-visible,
   text-transform: uppercase;
   color: var(--text-3);
   user-select: none;
+  transition: color var(--transition);
+}
+.msg-thinking summary:hover {
+  color: var(--accent);
 }
 .msg-thinking summary::before {
   content: '▸ ';
@@ -2866,17 +2880,18 @@ button.primary:focus-visible,
 /* live running-task progress (system:task_started/task_progress) */
 .subagent-running {
   margin: 8px;
-  padding: 8px;
-  border: 1px solid var(--border-0);
+  padding: 8px 10px 6px;
+  border: 1px solid var(--accent-border);
   border-radius: var(--radius-md);
-  background: var(--bg-2);
+  background: var(--accent-dim);
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 .subagent-running-title {
   font-size: 10.5px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--text-3);
+  color: var(--accent);
   margin-bottom: 6px;
 }
 .subagent-running-item {
@@ -2907,3 +2922,97 @@ button.primary:focus-visible,
   color: var(--text-4);
   white-space: nowrap;
 }
+
+/* slash-command argument placeholder */
+.sp-args {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-4);
+  white-space: nowrap;
+  text-align: right;
+  padding-left: 10px;
+}
+
+/* custom-subagent editor (.claude/agents) */
+.cs-agent-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cs-agent-name {
+  width: 100%;
+  background: var(--bg-1);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-sm);
+  color: var(--text-1);
+  font-size: 12px;
+  padding: 5px 8px;
+  outline: none;
+}
+.cs-agent-name:focus {
+  border-color: var(--accent);
+}
+.cs-agent-name:disabled {
+  opacity: 0.55;
+  color: var(--text-3);
+}
+.cs-agent-body {
+  min-height: 220px;
+  resize: vertical;
+  font: 12px/1.55 var(--font-mono);
+  color: var(--text-2);
+  background: var(--bg-1);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  outline: none;
+}
+.cs-agent-body:focus {
+  border-color: var(--accent);
+}
+
+/* context-usage segmented bar */
+.cs-usagebar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+.cs-usagebar-track {
+  display: flex;
+  height: 7px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--bg-3);
+}
+.cs-usagebar-seg {
+  height: 100%;
+  transition: width var(--transition);
+}
+.seg-write { background: var(--accent); }
+.seg-read { background: var(--blue); }
+.seg-fresh { background: var(--text-4); }
+.seg-out { background: var(--yellow); }
+.cs-usagebar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 10.5px;
+  color: var(--text-3);
+}
+.cs-usagebar-lg {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+}
+.cs-usagebar-lg i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  display: inline-block;
+}
+.cs-usagebar-lg.lg-write i { background: var(--accent); }
+.cs-usagebar-lg.lg-read i { background: var(--blue); }
+.cs-usagebar-lg.lg-fresh i { background: var(--text-4); }
+.cs-usagebar-lg.lg-out i { background: var(--yellow); }

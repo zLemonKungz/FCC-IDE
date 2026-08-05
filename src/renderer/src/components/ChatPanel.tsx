@@ -25,7 +25,29 @@ const KNOWN_COMMANDS: Record<string, string> = {
   '/memory': 'Manage memory',
   '/model': 'Switch the active model',
   '/statusline': 'Configure the status line',
-  '/mcp': 'Manage MCP servers'
+  '/mcp': 'Manage MCP servers',
+  '/effort': 'Set the model effort',
+  '/plan': 'Plan before acting (this conversation)',
+  '/agents': 'Create / edit custom subagents',
+  '/workflows': 'List running and completed workflows',
+  '/tasks': 'List running background tasks',
+  '/config': 'Open interactive configuration',
+  '/init': 'Scaffold a CLAUDE.md',
+  '/login': 'Manage account sign-in',
+  '/deep-research': 'Orchestrate a research workflow',
+  '/code-review': 'Review the current diff',
+  '/simplify': 'Simplify recently changed code',
+  '/new': 'Start a new chat'
+};
+
+// Argument placeholders shown dimmed next to a command's description.
+const COMMAND_ARGS: Record<string, string> = {
+  '/effort': '<low|medium|high|xhigh|max|ultracode>',
+  '/model': '<model>',
+  '/memory': '[topic]',
+  '/code-review': '[level] [--fix]',
+  '/deep-research': '<question>',
+  '/simplify': '[file]'
 };
 
 export default function ChatPanel({ style }: { style?: CSSProperties }) {
@@ -485,6 +507,7 @@ Type anything else to send it to Claude.`;
               >
                 <span className="sp-cmd">{c}</span>
                 <span className="sp-desc">{KNOWN_COMMANDS[c] ?? LOCAL_COMMANDS.find((l) => l.name === c)?.desc ?? 'Send to Claude'}</span>
+                {COMMAND_ARGS[c] && <span className="sp-args">{COMMAND_ARGS[c]}</span>}
               </div>
             ))}
           </div>

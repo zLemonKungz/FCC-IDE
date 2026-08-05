@@ -4,14 +4,47 @@ import { useChatStore } from '../stores/chat-store';
 import { useExplorerStore } from '../stores/explorer-store';
 import { useModalFocus } from '../hooks/useModal';
 import ClaudeConfigTab from './ClaudeConfigTab';
-import type { GatewayModel, HistorySummary, McpServerDef } from '@shared/types';
+import type { AgentSummary, GatewayModel, HistorySummary, McpServerDef } from '@shared/types';
 import { IconTrash, IconPlus, IconClose } from './icons';
 
-type Tab = 'settings' | 'history' | 'mcp' | 'config';
+type Tab = 'settings' | 'history' | 'mcp' | 'agents' | 'config';
 
 function fmtTime(ts: number): string {
   const d = new Date(ts);
   return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+// Last-turn token mix as a segmented bar (cache-write / cache-read / fresh
+// input / output) so a huge cache-write or a cheap cache-read is visible.
+function UsageBar({ usage }: { usage: { input: number; output: number; cacheRead?: number; cacheWrite?: number } }) {
+  const cacheRead = usage.cacheRead ?? 0;
+  const cacheWrite = usage.cacheWrite ?? 0;
+  const fresh = Math.max(0, usage.input - cacheRead - cacheWrite);
+  const total = usage.input + usage.output;
+  const pct = (n: number): string => `${total > 0 ? Math.round((n / total) * 100) : 0}%`;
+  const segs = [
+    { label: 'write', value: cacheWrite, cls: 'write' },
+    { label: 'cache-read', value: cacheRead, cls: 'read' },
+    { label: 'input', value: fresh, cls: 'fresh' },
+    { label: 'output', value: usage.output, cls: 'out' }
+  ].filter((s) => s.value > 0);
+  if (segs.length === 0) return null;
+  return (
+    <div className="cs-usagebar">
+      <div className="cs-usagebar-track">
+        {segs.map((s) => (
+          <span key={s.cls} className={`cs-usagebar-seg seg-${s.cls}`} style={{ width: pct(s.value) }} />
+        ))}
+      </div>
+      <div className="cs-usagebar-legend">
+        {segs.map((s) => (
+          <span key={s.cls} className={`cs-usagebar-lg lg-${s.cls}`}>
+            <i /> {s.label} {s.value.toLocaleString()}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 // The chat settings plus the not-yet-surfaced features: session history
@@ -35,7 +68,7 @@ export default function ChatSettingsModal({ onClose }: { onClose: () => void }) 
           </button>
         </div>
         <div className="cs-tabs">
-          {(['settings', 'history', 'mcp', 'config'] as Tab[]).map((t) => (
+          {(['settings', 'history', 'mcp', 'agents', 'config'] as Tab[]).map((t) => (
             <button key={t} className={`cs-tab${tab === t ? ' active' : ''}`} onClick={() => setTab(t)}>
               {t[0].toUpperCase() + t.slice(1)}
             </button>
@@ -45,6 +78,7 @@ export default function ChatSettingsModal({ onClose }: { onClose: () => void }) 
           {tab === 'settings' && <SettingsTab />}
           {tab === 'history' && <HistoryTab onClose={onClose} />}
           {tab === 'mcp' && <McpTab root={root} />}
+          {tab === 'agents' && <AgentsTab root={root} />}
           {tab === 'config' && <ClaudeConfigTab />}
         </div>
       </div>
@@ -62,6 +96,7 @@ function SettingsTab() {
   const setAutoCompactWindow = useSettingsStore((s) => s.setAutoCompactWindow);
   const setChatEffort = useSettingsStore((s) => s.setChatEffort);
   const sessionUsage = useChatStore((s) => s.sessionUsage);
+  const lastUsage = useChatStore((s) => s.lastUsage);
 
   // Keep the stored effort snapped to what the current model supports: if the
   // model's ceiling drops below the chosen level (e.g. Sonnet 5 can't do
@@ -124,6 +159,9 @@ function SettingsTab() {
           {sessionUsage.cost.toFixed(4)}
         </span>
       </div>
+      {lastUsage && (
+        <UsageBar usage={lastUsage} />
+      )}
       <label className="settings-row">
         <span>Model</span>
         <select
@@ -367,6 +405,125 @@ function McpTab({ root }: { root: string | null }) {
       <div className="cs-note">
         On/Off and ↻ apply live to the running conversation{liveSessionId() ? '' : ' (start one to use them)'}.
       </div>
+    </>
+  );
+}
+
+// ---- Custom subagents (.claude/agents/*.md) ----
+// Lists the project's custom-agent files, with a plain-text frontmatter editor
+// (the Claude Code MD format). Mirrors the MCP tab's list / add interactivity.
+const AGENT_TEMPLATE = `---
+name: my-agent
+description: What this agent does
+model: inherit
+tools: Read, Grep, Bash
+---
+You are a focused assistant. Describe the task, style, and any constraints here.
+`;
+
+function AgentsTab({ root }: { root: string | null }) {
+  const [agents, setAgents] = useState<AgentSummary[] | null>(null);
+  const [editing, setEditing] = useState<{ name: string; content: string; isNew: boolean } | null>(null);
+  const [newName, setNewName] = useState('');
+
+  const load = (): void => {
+    void window.fcc.agentsList().then(setAgents).catch(() => setAgents([]));
+  };
+  useEffect(() => {
+    setAgents(null);
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [root]);
+
+  const open = async (name: string): Promise<void> => {
+    const content = await window.fcc.agentsRead(name).catch(() => '');
+    setEditing({ name, content, isNew: false });
+  };
+  const startNew = (): void => {
+    const stem = newName.trim() || 'my-agent';
+    setNewName('');
+    setEditing({ name: stem, content: AGENT_TEMPLATE.replace('name: my-agent', `name: ${stem}`), isNew: true });
+  };
+  const save = async (): Promise<void> => {
+    if (!editing) return;
+    const nm = editing.name.trim();
+    if (!nm) return;
+    // Keep the frontmatter `name:` in lockstep with the filename (Claude Code
+    // keys agents by filename; the field is a fallback).
+    const content = editing.content.replace(/^name:\s*[^\n]*/m, `name: ${nm}`);
+    await window.fcc.agentsSave(nm, content).catch(() => undefined);
+    setEditing(null);
+    load();
+  };
+  const remove = async (name: string): Promise<void> => {
+    await window.fcc.agentsDelete(name).catch(() => undefined);
+    load();
+  };
+
+  if (agents === null)
+    return (
+      <div className="cs-empty">
+        <span className="spinner" /> Loading…
+      </div>
+    );
+
+  return (
+    <>
+      {!root && <div className="cs-note">Open a folder to manage custom subagents (.claude/agents).</div>}
+      {editing ? (
+        <div className="cs-agent-editor">
+          <input
+            className="cs-agent-name"
+            value={editing.name}
+            disabled={!editing.isNew}
+            onChange={(e) => setEditing({ ...editing, name: e.target.value })}
+            placeholder="agent name"
+            spellCheck={false}
+          />
+          <textarea
+            className="cs-agent-body"
+            value={editing.content}
+            onChange={(e) => setEditing({ ...editing, content: e.target.value })}
+            spellCheck={false}
+          />
+          <div className="cs-mcp-add">
+            <button className="primary" onClick={() => void save()} disabled={!editing.name.trim()}>
+              Save
+            </button>
+            <button onClick={() => setEditing(null)}>Cancel</button>
+          </div>
+          <div className="cs-note">Agents live in .claude/agents/&lt;name&gt;.md and apply to new conversations.</div>
+        </div>
+      ) : (
+        <>
+          {agents.length === 0 && root && <div className="cs-empty">No custom subagents yet.</div>}
+          {agents.map((a) => (
+            <div key={a.name} className="cs-mcp-row">
+              <div className="cs-hist-main">
+                <div className="cs-hist-title">{a.name}</div>
+                <div className="cs-hist-meta">.claude/agents/{a.name}.md</div>
+              </div>
+              <button className="ghost" onClick={() => void open(a.name)}>
+                Edit
+              </button>
+              <button className="icon-btn" onClick={() => void remove(a.name)} title="Delete">
+                <IconTrash width={13} height={13} />
+              </button>
+            </div>
+          ))}
+          <div className="cs-mcp-add">
+            <input
+              placeholder="new agent name"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              disabled={!root}
+            />
+            <button disabled={!root} onClick={startNew} title="Create a custom agent">
+              <IconPlus width={13} height={13} />
+            </button>
+          </div>
+        </>
+      )}
     </>
   );
 }
