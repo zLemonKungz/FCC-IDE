@@ -2650,10 +2650,9 @@ button.plan-toggle.on {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  /* In a narrow right-docked column the actions would otherwise crush the
-     tabs to nothing — let them wrap onto a second row instead. */
-  flex-wrap: wrap;
-  row-gap: 4px;
+  /* Tabs scroll horizontally; actions stay on the same row. */
+  flex-wrap: nowrap;
+  gap: 6px;
   padding: 6px 12px;
   background: var(--bg-1);
   border-bottom: 1px solid var(--border-0);
@@ -2680,10 +2679,14 @@ button.plan-toggle.on {
   display: flex;
   align-items: center;
   gap: 2px;
-  /* Never let the actions squeeze the tabs out of view (min-width:0 lets
-     overflow:auto collapse them). Enough for the first tab + the + button. */
-  min-width: 88px;
+  /* Take the free header width; when the tabs overflow, scroll horizontally
+     instead of wrapping (min-width:0 lets overflow:auto collapse them). */
+  flex: 1;
+  min-width: 0;
   overflow-x: auto;
+}
+.term-tabs::-webkit-scrollbar {
+  height: 3px;
 }
 .term-tab {
   display: inline-flex;
