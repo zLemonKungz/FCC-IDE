@@ -3385,3 +3385,41 @@ button.primary:focus-visible,
 .statusbar .git:has(+ .spacer) {
   margin-right: 2px;
 }
+
+/* breadcrumbs — current file reads as the target */
+.breadcrumbs .bc-seg {
+  padding: 1px 4px;
+}
+.breadcrumbs .bc-file {
+  color: var(--text-1);
+  font-weight: 600;
+  transition: color var(--transition), background var(--transition);
+}
+.breadcrumbs .bc-file:hover {
+  color: var(--accent);
+  background: var(--bg-2);
+}
+
+/* diff view — per-hunk affordance + destructive revert + "diff" prefix */
+.diff-hunk:hover {
+  background: var(--bg-0);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.diff-hunk button:hover {
+  color: var(--red);
+  border-color: rgba(224, 108, 90, 0.4);
+}
+.diff-header .diff-path::before {
+  content: 'diff';
+  color: var(--text-4);
+  margin-right: 8px;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+}
+
+/* config tab — active scope reads as a pill */
+.cs-config-scope .cs-tab.active {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
