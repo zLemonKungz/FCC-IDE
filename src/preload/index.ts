@@ -45,6 +45,8 @@ const api = {
     ipcRenderer.invoke(IPC.chatSend, sessionId, prompt, images),
   chatStop: (sessionId: string): Promise<void> => ipcRenderer.invoke(IPC.chatStop, sessionId),
   chatApprove: (sessionId: string, plan: string): Promise<void> => ipcRenderer.invoke(IPC.chatApprove, sessionId, plan),
+  chatControl: (sessionId: string, subtype: string, request: Record<string, unknown>): Promise<void> =>
+    ipcRenderer.invoke(IPC.chatControl, sessionId, subtype, request),
   clipboardReadImage: (): Promise<string | null> => ipcRenderer.invoke(IPC.clipboardReadImage),
   historyList: (): Promise<HistorySummary[]> => ipcRenderer.invoke(IPC.historyList),
   historyOpen: (id: string): Promise<HistoryRecord | null> => ipcRenderer.invoke(IPC.historyOpen, id),

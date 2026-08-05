@@ -23,6 +23,9 @@ export const IPC = {
   chatSend: 'chat:send',
   chatStop: 'chat:stop',
   chatApprove: 'chat:approve',
+  /** send a live control_request to the running CLI (set_permission_mode,
+   *  apply_flag_settings, …) — realtime change without restarting the chat */
+  chatControl: 'chat:control',
   chatModels: 'chat:models',
   claudeSettingsGet: 'claude-settings:get',
   claudeSettingsSet: 'claude-settings:set',

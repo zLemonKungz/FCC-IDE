@@ -32,8 +32,8 @@ interface LayoutState {
   terminalPosition: 'bottom' | 'right';
   /** where the chat pane sits — right column, or over the editor area */
   chatPosition: 'right' | 'center';
-  /** which view the sidebar shows — Explorer or Find-in-files */
-  sidebarView: 'explorer' | 'search';
+  /** which view the sidebar shows — Explorer, Find-in-files, or Subagents */
+  sidebarView: 'explorer' | 'search' | 'subagents';
   sidebarWidth: number;
   chatWidth: number;
   terminalHeight: number;
@@ -47,7 +47,7 @@ interface LayoutState {
   setTerminalVisible: (v: boolean) => void;
   setTerminalPosition: (p: 'bottom' | 'right') => void;
   setChatPosition: (p: 'right' | 'center') => void;
-  setSidebarView: (v: 'explorer' | 'search') => void;
+  setSidebarView: (v: 'explorer' | 'search' | 'subagents') => void;
   setSidebarWidth: (v: number) => void;
   setChatWidth: (v: number) => void;
   setTerminalHeight: (v: number) => void;

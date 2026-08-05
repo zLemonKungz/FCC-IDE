@@ -9,8 +9,9 @@ import ActivityBar from './components/ActivityBar';
 import DragHandle from './components/DragHandle';
 import CommandPalette from './components/CommandPalette';
 import SearchPanel from './components/SearchPanel';
+import SubagentPanel from './components/SubagentPanel';
 import { useLayoutStore, LAYOUT } from './stores/layout-store';
-import { useSettingsStore } from './stores/settings-store';
+import { useSettingsStore, effectiveEffort } from './stores/settings-store';
 import { useExplorerStore } from './stores/explorer-store';
 import { useEditorStore } from './stores/editor-store';
 
@@ -35,9 +36,18 @@ export default function App() {
   const chatModel = useSettingsStore((s) => s.chatModel);
   const chatMaxTurns = useSettingsStore((s) => s.chatMaxTurns);
   const autoCompactWindow = useSettingsStore((s) => s.autoCompactWindow);
+  const chatEffort = useSettingsStore((s) => s.chatEffort);
 
   const pendingChord = useRef<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
+
+  // The menu bar opens the command palette through this event (the palette is
+  // App-level state, not a store).
+  useEffect(() => {
+    const open = () => setPaletteOpen(true);
+    window.addEventListener('fcc:open-palette', open);
+    return () => window.removeEventListener('fcc:open-palette', open);
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -95,8 +105,15 @@ export default function App() {
   // Persisted chat settings override the main process env defaults. Push on
   // mount (so a restart re-applies them) and on every change.
   useEffect(() => {
-    void window.fcc.setChatSettings({ model: chatModel, maxTurns: chatMaxTurns, autoCompactWindow });
-  }, [chatModel, chatMaxTurns, autoCompactWindow]);
+    // Push the effective (model-snapped) effort so the CLI never receives a
+    // level the current model can't honor.
+    void window.fcc.setChatSettings({
+      model: chatModel,
+      maxTurns: chatMaxTurns,
+      autoCompactWindow,
+      effort: effectiveEffort(chatModel, chatEffort)
+    });
+  }, [chatModel, chatMaxTurns, autoCompactWindow, chatEffort]);
 
   // Workspace restore. The persisted stores hold the folder path and tab paths
   // only; contents are re-read from disk. Order matters: the folder must be
@@ -141,7 +158,13 @@ export default function App() {
       <Titlebar />
       <ActivityBar />
       <aside className="sidebar" style={{ width: sidebarVisible ? sidebarWidth : 0 }}>
-        {sidebarView === 'search' ? <SearchPanel /> : <Explorer />}
+        {sidebarView === 'search' ? (
+          <SearchPanel />
+        ) : sidebarView === 'subagents' ? (
+          <SubagentPanel />
+        ) : (
+          <Explorer />
+        )}
       </aside>
       {sidebarVisible && (
         <DragHandle

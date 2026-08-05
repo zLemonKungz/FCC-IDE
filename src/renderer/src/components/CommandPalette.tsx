@@ -40,6 +40,8 @@ export default function CommandPalette({ onClose }: { onClose: () => void }) {
       { id: 'save', label: 'File: Save', run: () => { const p = editor.activePath; if (p) void editor.save(p); } },
       { id: 'new-chat', label: 'Chat: New Conversation', run: () => chat.reset() },
       { id: 'plan', label: 'Chat: Toggle Plan Mode', run: () => chat.setPlanMode(!chat.planMode) },
+      { id: 'fast-mode', label: `Chat: ${chat.fastMode ? 'Disable' : 'Enable'} Fast Mode`, run: () => chat.toggleFastMode() },
+      { id: 'thinking', label: `Chat: ${chat.thinking ? 'Disable' : 'Enable'} Thinking`, run: () => chat.toggleThinking() },
       { id: 'program-settings', label: 'Program Settings', run: () => window.dispatchEvent(new CustomEvent('fcc:open-settings')) },
       { id: 'chat-settings', label: 'Chat Settings', run: () => window.dispatchEvent(new CustomEvent('fcc:open-chat-settings')) }
     ];

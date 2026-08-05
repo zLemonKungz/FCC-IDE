@@ -251,6 +251,14 @@ Type anything else to send it to Claude.`;
         return;
       }
     }
+    // Shift+Tab toggles Plan mode (mirrors the header Plan/Act button). The
+    // live process keeps its spawn-time permission mode, so it takes effect on
+    // the next conversation — same semantics as the button.
+    if (e.key === 'Tab' && e.shiftKey) {
+      e.preventDefault();
+      toggleMode();
+      return;
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       submit();
@@ -321,6 +329,15 @@ Type anything else to send it to Claude.`;
     send(root, text, images.length > 0 ? images : undefined);
   };
 
+  // Plan/Act toggle (header button + Shift+Tab). It flips the *next-conversation*
+  // flag AND sends a live set_permission_mode control so an already-open chat
+  // switches mode immediately instead of waiting for a new conversation.
+  const toggleMode = (): void => {
+    const next = !useChatStore.getState().planMode;
+    setPlanMode(next);
+    useChatStore.getState().control('set_permission_mode', { mode: next ? 'plan' : 'acceptEdits' });
+  };
+
   return (
     <div className="chat-pane" style={style}>
       <div className="chat-header">
@@ -335,7 +352,7 @@ Type anything else to send it to Claude.`;
         )}
         <button
           className={`ghost plan-toggle${planMode ? ' on' : ''}`}
-          onClick={() => setPlanMode(!planMode)}
+          onClick={toggleMode}
           title={
             planMode
               ? 'Plan mode is on — the next chat proposes a plan before acting. Click to switch back to Act.'

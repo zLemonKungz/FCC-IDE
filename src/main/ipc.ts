@@ -29,7 +29,7 @@ export function registerIpc(win: BrowserWindow): void {
     if (win.setTitleBarOverlay) win.setTitleBarOverlay({ color, symbolColor });
   });
 
-  ipcMain.handle(IPC.setChatSettings, (_e, s: { model: string; maxTurns: number }) => {
+  ipcMain.handle(IPC.setChatSettings, (_e, s: { model: string; maxTurns: number; effort?: string }) => {
     setChatConfig(s);
   });
 
@@ -71,6 +71,9 @@ export function registerIpc(win: BrowserWindow): void {
   );
   ipcMain.handle(IPC.chatStop, (_e, sessionId: string) => chatHost!.stop(sessionId));
   ipcMain.handle(IPC.chatApprove, (_e, sessionId: string, plan: string) => chatHost!.approve(sessionId, plan));
+  ipcMain.handle(IPC.chatControl, (_e, sessionId: string, subtype: string, request: Record<string, unknown>) =>
+    chatHost!.control(sessionId, subtype, request)
+  );
 
   // A bitmap on the system clipboard (e.g. a Win+Shift+S screenshot) can't be
   // read by the sandboxed renderer's Clipboard API under file:// — read it in

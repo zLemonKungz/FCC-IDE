@@ -163,6 +163,8 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  /* 1px lit top edge — reads as a raised control instead of a flat slab */
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   transition: background var(--transition), color var(--transition), border-color var(--transition), transform var(--transition);
 }
 button:hover {
@@ -180,9 +182,17 @@ button:disabled {
 button.primary {
   border-color: var(--accent);
   color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 1px 2px rgba(0, 0, 0, 0.25);
 }
 button.primary:hover {
   background: var(--accent-hover);
+  /* a warm accent glow lifts the primary action out of the surface */
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09), 0 3px 10px rgba(217, 122, 85, 0.22);
+}
+/* Keep the keyboard focus ring visible — the base inset highlight would
+   otherwise override the global :focus-visible ring (both use box-shadow). */
+button:focus-visible {
+  box-shadow: 0 0 0 3px var(--accent-dim);
 }
 button.ghost {
   background: transparent;
@@ -346,12 +356,88 @@ button.icon-btn:hover {
   color: var(--text-3);
 }
 
+/* ---------- Titlebar menu bar (VS Code-style dropdowns) ---------- */
+.menubar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 10px;
+  -webkit-app-region: no-drag; /* clickable over the frameless drag region */
+}
+.menubar .menu-label {
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color var(--transition), color var(--transition);
+}
+.menubar .menu-label:hover,
+.menubar .menu-label.open {
+  background: var(--bg-3);
+  color: var(--text-1);
+}
+.menu-dropdown {
+  /* fixed + above the ctx-backdrop (1000), both inside the titlebar's
+     stacking context so clicks outside close the menu */
+  position: fixed;
+  z-index: 1001;
+  min-width: 230px;
+  padding: 4px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-3);
+  animation: modal-in 120ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text-1);
+  font-size: 12.5px;
+  text-align: left;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition);
+}
+.menu-item:hover {
+  background: var(--bg-3);
+}
+.menu-item.disabled {
+  color: var(--text-4);
+  cursor: default;
+}
+.menu-item.disabled:hover {
+  background: transparent;
+}
+.menu-item .shortcut {
+  color: var(--text-3);
+  font-size: 11px;
+}
+.menu-sep {
+  height: 1px;
+  background: var(--border-0);
+  margin: 4px 6px;
+}
+
 /* ---------- Activity bar ---------- */
 .activity-bar {
   grid-row: 2 / 4;
   grid-column: 1;
   width: 46px;
-  background: var(--bg-0);
+  /* faint vertical gradient — the rail recedes toward the bottom */
+  background: linear-gradient(180deg, var(--bg-1), var(--bg-0));
   border-right: 1px solid var(--border-0);
   display: flex;
   flex-direction: column;
@@ -521,6 +607,7 @@ button.icon-btn:hover {
   border-top: 1px solid var(--border-0);
   color: var(--text-3);
   flex-shrink: 0;
+  box-shadow: var(--surface-highlight);
 }
 .statusbar .spacer {
   flex: 1;
@@ -575,6 +662,28 @@ button.icon-btn:hover {
   font-size: 11px;
   color: var(--text-2);
   white-space: nowrap;
+}
+.statusbar .status-chat {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.statusbar .status-chat .sc-mode {
+  color: var(--accent);
+  font-weight: 600;
+}
+.statusbar .status-chat .sc-model {
+  color: var(--text-2);
+}
+.statusbar .status-chat .sc-effort {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  color: var(--text-4);
+  padding: 1px 5px;
+  border: 1px solid var(--border-0);
+  border-radius: var(--radius-sm);
 }
 
 /* ---------- Tab context menu ---------- */
@@ -698,6 +807,7 @@ button.icon-btn:hover {
 }
 .settings-row input:focus {
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
 }
 .settings-row select.settings-select {
   width: 190px;
@@ -712,6 +822,7 @@ button.icon-btn:hover {
 }
 .settings-row select.settings-select:focus {
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
 }
 .settings-select optgroup {
   background: var(--bg-2);
@@ -1060,6 +1171,7 @@ button.icon-btn:hover {
 }
 .search-input-row input:focus {
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
 }
 .search-hint {
   color: var(--text-3);
@@ -1347,6 +1459,7 @@ button.icon-btn:hover {
   width: 28px;
   height: 28px;
   color: var(--text-4);
+  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.35));
 }
 .empty-state .empty-title {
   color: var(--text-2);
@@ -1375,6 +1488,8 @@ button.icon-btn:hover {
   text-transform: uppercase;
   color: var(--text-3);
   flex-shrink: 0;
+  border-bottom: 1px solid var(--border-0);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
 }
 .explorer-header .title {
   display: flex;
@@ -1496,6 +1611,8 @@ button.icon-btn:hover {
   overflow-x: auto;
   flex-shrink: 0;
   padding: 0 4px;
+  /* lit top edge — the tab row reads as a layer above the editor surface */
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 .tab {
   display: flex;
@@ -1594,6 +1711,15 @@ button.icon-btn:hover {
   align-items: center;
   gap: 3px;
   color: var(--text-3);
+  border-radius: 3px;
+  padding: 1px 3px;
+  margin-left: -3px;
+  cursor: default;
+  transition: color var(--transition), background var(--transition);
+}
+.breadcrumbs .bc-seg:hover {
+  color: var(--text-1);
+  background: var(--bg-2);
 }
 .breadcrumbs svg {
   color: var(--text-4);
@@ -2413,6 +2539,10 @@ button.plan-toggle.on {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  /* In a narrow right-docked column the actions would otherwise crush the
+     tabs to nothing — let them wrap onto a second row instead. */
+  flex-wrap: wrap;
+  row-gap: 4px;
   padding: 6px 12px;
   background: var(--bg-1);
   border-bottom: 1px solid var(--border-0);
@@ -2439,7 +2569,9 @@ button.plan-toggle.on {
   display: flex;
   align-items: center;
   gap: 2px;
-  min-width: 0;
+  /* Never let the actions squeeze the tabs out of view (min-width:0 lets
+     overflow:auto collapse them). Enough for the first tab + the + button. */
+  min-width: 88px;
   overflow-x: auto;
 }
 .term-tab {
@@ -2624,4 +2756,109 @@ button.primary:focus-visible,
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ---------- Subagents view ---------- */
+.subagent-card {
+  margin: 6px 8px;
+  border: 1px solid var(--border-0);
+  border-radius: var(--radius-md);
+  background: var(--bg-2);
+  overflow: hidden;
+  box-shadow: var(--shadow-1);
+}
+.subagent-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 8px;
+  background: none;
+  border: none;
+  color: var(--text-2);
+  font-size: 12.5px;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color var(--transition), color var(--transition);
+}
+.subagent-head:hover {
+  background: var(--bg-3);
+  color: var(--text-1);
+}
+.subagent-caret {
+  font-size: 10px;
+  width: 12px;
+  color: var(--text-4);
+  flex-shrink: 0;
+}
+.subagent-label {
+  flex: 1;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.subagent-meta {
+  font-size: 11px;
+  color: var(--text-4);
+  white-space: nowrap;
+}
+.subagent-detail {
+  border-top: 1px solid var(--border-0);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.subagent-thinking {
+  margin: 0;
+  padding: 6px 8px;
+  border-left: 2px solid var(--accent);
+  background: var(--bg-1);
+  border-radius: var(--radius-sm);
+  font: 11px/1.5 var(--font-mono);
+  color: var(--text-3);
+  white-space: pre-wrap;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.subagent-text {
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+
+/* main-turn extended-thinking fold (like the subagent thinking block) */
+.msg-thinking {
+  margin: 0 0 6px;
+  border-left: 2px solid var(--accent);
+  background: var(--bg-1);
+  border-radius: var(--radius-sm);
+  padding: 2px 8px;
+}
+.msg-thinking summary {
+  list-style: none;
+  cursor: pointer;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  user-select: none;
+}
+.msg-thinking summary::before {
+  content: '▸ ';
+  font-size: 9px;
+}
+.msg-thinking[open] summary::before {
+  content: '▾ ';
+}
+.msg-thinking-body {
+  margin: 4px 0 0;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-0);
+  font: 11px/1.5 var(--font-mono);
+  color: var(--text-3);
+  white-space: pre-wrap;
+  max-height: 180px;
+  overflow-y: auto;
 }

@@ -25,6 +25,8 @@ export interface CliSessionOptions {
   permissionMode?: PermissionMode;
   /** auto-compact threshold in thousands of tokens (0 = leave unset). */
   autoCompactWindow?: number;
+  /** model effort level (low|medium|high|xhigh|max) — omitted when 'auto'/'unset. */
+  effort?: string;
   onEvent: (msg: unknown) => void;
   onExit: (code: number | null) => void;
   onError: (err: Error) => void;
@@ -57,6 +59,9 @@ function cliBinaryRelPath(): string | null {
   if (process.platform === 'linux') return 'node_modules/@anthropic-ai/claude-agent-sdk-linux-x64/claude';
   return null;
 }
+
+/** Model effort levels accepted by the CLI's --effort flag. */
+const EFFORT_LEVELS_ARG = new Set(['low', 'medium', 'high', 'xhigh', 'max', 'ultracode']);
 
 /**
  * Pure JSONL line splitter. Consumes a chunk plus any buffered partial line,
@@ -98,6 +103,15 @@ export class CliSession {
       '--permission-mode', this.opts.permissionMode ?? 'acceptEdits'
     ];
     if (this.opts.resume) args.push('--resume', this.opts.resume);
+    // Model effort level. 'auto' (or any falsy) leaves it to the model default;
+    // only effort-capable models honor the flag, so it's harmless on the rest.
+    // The renderer snaps the level to the model's ceiling; this guard is a
+    // backstop so an invalid/legacy value never reaches the CLI.
+    if (this.opts.effort && EFFORT_LEVELS_ARG.has(this.opts.effort)) args.push('--effort', this.opts.effort);
+    // Surface subagent text/thinking as assistant/user events tagged with
+    // parent_tool_use_id so the renderer can show what subagents are doing
+    // (otherwise subagent output is invisible over stream-json).
+    args.push('--forward-subagent-text');
 
     const child = spawn(this.opts.binary, args, {
       cwd: this.opts.cwd,
@@ -130,6 +144,22 @@ export class CliSession {
     // Swallow stdin EPIPE — writing to a child that just died must not crash
     // the main process (an unhandled 'error' on the stream does).
     child.stdin.on('error', () => {});
+  }
+
+  /** Send a live SDK control_request over stdin (e.g. subtype 'set_permission_mode'
+   *  for an immediate mode switch, or 'apply_flag_settings' for next-turn effort).
+   *  These are handled locally by the CLI and never reach the model/proxy. */
+  sendControl(subtype: string, request: Record<string, unknown>): void {
+    if (!this.child || this.stopped) return;
+    const stdin = this.child.stdin;
+    if (stdin.destroyed || stdin.writableEnded) return;
+    stdin.write(
+      JSON.stringify({
+        type: 'control_request',
+        request_id: `ctl-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        request: { subtype, ...request }
+      }) + '\n'
+    );
   }
 
   /** Send a user turn over stdin. Safe to call repeatedly on one process.

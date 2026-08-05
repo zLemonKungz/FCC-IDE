@@ -200,6 +200,24 @@ export default function TerminalPane({ position }: { position: 'bottom' | 'right
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // The titlebar menu bar's Terminal menu drives these (New/Clear/Run).
+  useEffect(() => {
+    const onNew = () => addTerminal();
+    const onClear = () => termMap.current.get(activeId ?? -1)?.clear();
+    const onRun = () => {
+      if (activeId !== null) window.fcc.termData(activeId, 'fcc-claude\r');
+    };
+    window.addEventListener('fcc:term-new', onNew);
+    window.addEventListener('fcc:term-clear', onClear);
+    window.addEventListener('fcc:term-run', onRun);
+    return () => {
+      window.removeEventListener('fcc:term-new', onNew);
+      window.removeEventListener('fcc:term-clear', onClear);
+      window.removeEventListener('fcc:term-run', onRun);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId]);
+
   const closeTab = (id: number): void => {
     setTabs((t) => {
       if (t.length === 1) return t; // never close the last terminal

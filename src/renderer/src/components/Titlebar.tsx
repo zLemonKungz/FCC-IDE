@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Logo from './Logo';
+import MenuBar from './MenuBar';
 import SettingsModal from './SettingsModal';
 import { IconSettings } from './icons';
 
@@ -18,11 +19,17 @@ export default function Titlebar() {
   const [open, setOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  // Command palette "Program Settings" opens this modal.
+  // Command palette "Program Settings" opens this modal; the menu bar's
+  // Help -> Keyboard Shortcuts opens the same popover as the ? button.
   useEffect(() => {
     const openSettings = () => setSettingsOpen(true);
+    const openShortcuts = () => setOpen(true);
     window.addEventListener('fcc:open-settings', openSettings);
-    return () => window.removeEventListener('fcc:open-settings', openSettings);
+    window.addEventListener('fcc:open-shortcuts', openShortcuts);
+    return () => {
+      window.removeEventListener('fcc:open-settings', openSettings);
+      window.removeEventListener('fcc:open-shortcuts', openShortcuts);
+    };
   }, []);
 
   return (
@@ -31,6 +38,7 @@ export default function Titlebar() {
         <Logo width={13} height={13} style={{ color: 'var(--accent)' }} />
         FCC Studio
       </span>
+      <MenuBar />
       <span className="titlebar-right">
         <button
           className={`titlebar-icon${settingsOpen ? ' active' : ''}`}

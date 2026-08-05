@@ -1,7 +1,8 @@
 import { useLayoutStore } from '../stores/layout-store';
-import { IconChat, IconFolder, IconMoon, IconSearch, IconSun, IconTerminal } from './icons';
+import { IconChat, IconFolder, IconMoon, IconSearch, IconSparkles, IconSun, IconTerminal } from './icons';
 
-// Leftmost icon rail — toggles each panel on/off (VS Code-style activity bar).
+// Leftmost icon rail — each icon toggles its panel open/closed; the active
+// highlight shows which panels are currently open.
 export default function ActivityBar() {
   const sidebarVisible = useLayoutStore((s) => s.sidebarVisible);
   const sidebarView = useLayoutStore((s) => s.sidebarView);
@@ -9,6 +10,8 @@ export default function ActivityBar() {
   const terminalVisible = useLayoutStore((s) => s.terminalVisible);
   const theme = useLayoutStore((s) => s.theme);
   const toggleSidebar = useLayoutStore((s) => s.toggleSidebar);
+  const toggleChat = useLayoutStore((s) => s.toggleChat);
+  const toggleTerminal = useLayoutStore((s) => s.toggleTerminal);
   const toggleTheme = useLayoutStore((s) => s.toggleTheme);
   const setSidebarView = useLayoutStore((s) => s.setSidebarView);
 
@@ -20,11 +23,10 @@ export default function ActivityBar() {
     setSidebarView('search');
     if (!sidebarVisible) toggleSidebar();
   };
-  // VS Code behavior: the activity-bar icon OPENS its panel — it never hides
-  // it. Closing is done from the panel itself (the ✕ in the header), so a
-  // single click always reveals the panel instead of toggling it on/off.
-  const showChat = (): void => useLayoutStore.getState().setChatVisible(true);
-  const showTerminal = (): void => useLayoutStore.getState().setTerminalVisible(true);
+  const showSubagents = (): void => {
+    setSidebarView('subagents');
+    if (!sidebarVisible) toggleSidebar();
+  };
 
   return (
     <nav className="activity-bar">
@@ -43,16 +45,23 @@ export default function ActivityBar() {
         <IconSearch width={20} height={20} />
       </button>
       <button
+        className={`activity ${sidebarVisible && sidebarView === 'subagents' ? 'active' : ''}`}
+        title="Subagents"
+        onClick={showSubagents}
+      >
+        <IconSparkles width={20} height={20} />
+      </button>
+      <button
         className={`activity ${chatVisible ? 'active' : ''}`}
         title="Chat (Ctrl+Shift+`)"
-        onClick={showChat}
+        onClick={toggleChat}
       >
         <IconChat width={20} height={20} />
       </button>
       <button
         className={`activity ${terminalVisible ? 'active' : ''}`}
         title="Terminal (Ctrl+`)"
-        onClick={showTerminal}
+        onClick={toggleTerminal}
       >
         <IconTerminal width={20} height={20} />
       </button>

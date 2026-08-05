@@ -14,6 +14,14 @@ interface ChatStore extends ChatUiState {
   send: (folder: string, prompt: string, images?: ChatImage[]) => void;
   stop: () => void;
   reset: () => void;
+  /** Send a live SDK control_request to the active CLI process (immediate mode
+   *  switch, next-turn effort). No-op when no conversation is live. */
+  control: (subtype: string, request: Record<string, unknown>) => void;
+  /** Realtime fast-mode / extended-thinking toggles (apply_flag_settings). */
+  fastMode: boolean;
+  thinking: boolean;
+  toggleFastMode: () => void;
+  toggleThinking: () => void;
   /** Approve the proposed plan — main respawns the session in act mode. */
   approve: (plan: string) => void;
   /** Reject the proposed plan — stop the session, back to planning. */
@@ -30,6 +38,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   folder: null,
   planMode: false,
   pendingResume: null,
+  fastMode: false,
+  thinking: false,
   handleEvent: (sessionId, message) => {
     if (sessionId !== get().activeSessionId) return;
     const { state, fileEvents } = applyChatEvent(get(), message as ChatEvent);
@@ -87,6 +97,20 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({ awaitingPlanApproval: false, planMode: false, running: false });
   },
   setPlanMode: (v) => set({ planMode: v }),
+  control: (subtype, request) => {
+    const sid = get().activeSessionId;
+    if (sid) void window.fcc.chatControl(sid, subtype, request);
+  },
+  toggleFastMode: () => {
+    const next = !get().fastMode;
+    set({ fastMode: next });
+    get().control('apply_flag_settings', { settings: { fastMode: next } });
+  },
+  toggleThinking: () => {
+    const next = !get().thinking;
+    set({ thinking: next });
+    get().control('apply_flag_settings', { settings: { alwaysThinkingEnabled: next } });
+  },
   openHistory: (rec) => {
     // Abandon the live conversation (already persisted by main on each result).
     const cur = get().activeSessionId;

@@ -32,6 +32,12 @@ export default function ChatMessage({ message }: { message: Msg }) {
 
   return (
     <div className="msg assistant">
+      {message.thinking && (
+        <details className="msg-thinking" open={false}>
+          <summary>Thinking</summary>
+          <pre className="msg-thinking-body">{message.thinking}</pre>
+        </details>
+      )}
       <div className="msg-text">
         <Markdown text={message.text} />
       </div>

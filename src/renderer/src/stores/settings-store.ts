@@ -27,6 +27,78 @@ export const CURATED_CLAUDE_MODELS: CuratedModel[] = [
   { id: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5' }
 ];
 
+/** Model effort levels mapped to --effort, ascending. 'auto' (not listed here)
+ *  leaves the model default. Which levels a model actually supports varies —
+ *  see effortCap()/effectiveEffort() below. */
+export const EFFORT_LEVELS: { value: string; label: string }[] = [
+  { value: 'low', label: 'Low — faster, cheaper' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' },
+  { value: 'xhigh', label: 'XHigh — deep coding/agentic work' },
+  { value: 'max', label: 'Max — max capability, unrestricted tokens' },
+  { value: 'ultracode', label: 'UltraCode — max orchestration' }
+];
+
+/** Ascending rank per effort level, used to snap a choice to a model's ceiling. */
+const EFFORT_RANK: Record<string, number> = { low: 0, medium: 1, high: 2, xhigh: 3, max: 4, ultracode: 5 };
+
+/** Highest level each curated model supports (lower levels are implied). From
+ *  the effort docs: Opus 5 / Fable 5 take the full range (incl. ultracode);
+ *  Sonnet 5 tops out at xhigh; Haiku 4.5 is excluded from effort entirely. */
+const EFFORT_CAPS: Record<string, string> = {
+  'claude-opus-5': 'ultracode',
+  'claude-fable-5': 'ultracode',
+  'claude-sonnet-5': 'xhigh',
+  'claude-haiku-4-5-20251001': '' // no effort support
+};
+
+/** Resolve a (possibly gateway-aliased / version-embedded) model id down to its
+ *  family stem so effort caps apply to aliases too. */
+function effortFamily(model: string): string {
+  return (model.split('/').pop() ?? model).toLowerCase().replace(/^claude-/, '').replace(/-\d{6,8}$/, '');
+}
+
+/** The highest effort level a model supports ('' = supports none).
+ *  Unknown models default to everything short of the session-only ultracode. */
+export function effortCap(model: string): string {
+  const direct = EFFORT_CAPS[model];
+  if (direct !== undefined) return direct;
+  const fam = effortFamily(model);
+  if (fam.startsWith('haiku-4-5')) return '';
+  if (fam.startsWith('haiku')) return 'high';
+  if (fam.startsWith('sonnet')) return 'xhigh';
+  if (fam.startsWith('opus') || fam.startsWith('fable') || fam.startsWith('mythos')) return 'ultracode';
+  return 'xhigh';
+}
+
+/** Snap a chosen effort level to what the model actually supports: a choice
+ *  above the model's ceiling (or any choice on a non-effort model) falls back
+ *  to the highest supported level; 'auto' stays the model default. */
+export function effectiveEffort(model: string, chosen: string): string {
+  if (chosen === 'auto') return 'auto';
+  const cap = effortCap(model);
+  if (!cap) return 'auto';
+  const capRank = EFFORT_RANK[cap];
+  const chosenRank = EFFORT_RANK[chosen] ?? -1;
+  return chosenRank <= capRank ? chosen : cap;
+}
+
+/** The apply_flag_settings payload for a (already-snapped) effort value, sent
+ *  live to a running session so it takes effect on the next turn. */
+export function effortControlSettings(effort: string): Record<string, unknown> {
+  if (effort === 'auto') return { effortLevel: null }; // reset to the model default
+  if (effort === 'ultracode') return { ultracode: true };
+  return { effortLevel: effort };
+}
+
+/** Short human label of a model's effort ceiling for the settings note. */
+export function effortCapLabel(model: string): string {
+  const cap = effortCap(model);
+  if (!cap) return 'doesn’t support effort levels';
+  const name: Record<string, string> = { low: 'Low', medium: 'Medium', high: 'High', xhigh: 'XHigh', max: 'Max', ultracode: 'UltraCode' };
+  return cap === 'ultracode' ? 'supports all effort levels' : `supports up to ${name[cap]}`;
+}
+
 /** Human-friendly label for any claude model id (e.g. gateway aliases like
  *  "anthropic/opencode/claude-opus-5" → "Opus 5"). Falls back to the raw id
  *  for shapes it can't parse. */
@@ -55,6 +127,8 @@ interface SettingsState {
   chatModel: string;
   chatMaxTurns: number;
   autoCompactWindow: number;
+  /** model effort level ('auto' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'). */
+  chatEffort: string;
   setEditorFontSize: (v: number) => void;
   setAutoSave: (v: boolean) => void;
   setAutoSaveDelay: (v: number) => void;
@@ -65,6 +139,7 @@ interface SettingsState {
   setChatModel: (v: string) => void;
   setChatMaxTurns: (v: number) => void;
   setAutoCompactWindow: (v: number) => void;
+  setChatEffort: (v: string) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -80,6 +155,7 @@ export const useSettingsStore = create<SettingsState>()(
       chatModel: 'claude-haiku-4-5-20251001',
       chatMaxTurns: 50,
       autoCompactWindow: 190,
+      chatEffort: 'auto',
       setEditorFontSize: (v) => set({ editorFontSize: clamp(v, FONT_MIN, FONT_MAX) }),
       setAutoSave: (v) => set({ autoSave: v }),
       setAutoSaveDelay: (v) => set({ autoSaveDelay: clamp(v, DELAY_MIN, DELAY_MAX) }),
@@ -89,7 +165,8 @@ export const useSettingsStore = create<SettingsState>()(
       setLineNumbers: (v) => set({ lineNumbers: v }),
       setChatModel: (v) => set({ chatModel: v }),
       setChatMaxTurns: (v) => set({ chatMaxTurns: clamp(v, TURNS_MIN, TURNS_MAX) }),
-      setAutoCompactWindow: (v) => set({ autoCompactWindow: clamp(v, 10, 1000) })
+      setAutoCompactWindow: (v) => set({ autoCompactWindow: clamp(v, 10, 1000) }),
+      setChatEffort: (v) => set({ chatEffort: v })
     }),
     { name: 'fcc-settings' }
   )

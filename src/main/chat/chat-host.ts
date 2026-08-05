@@ -117,7 +117,7 @@ export class ChatHost {
   }
 
   private async spawn(sessionId: string, folder: string, prompt: string, opts?: ChatStartOpts): Promise<void> {
-    const { model, maxTurns, autoCompactWindow } = getChatConfig();
+    const { model, maxTurns, autoCompactWindow, effort } = getChatConfig();
     const entry: ActiveSession = {
       session: undefined as unknown as CliSession,
       sawResult: false,
@@ -146,6 +146,7 @@ export class ChatHost {
       resume: opts?.resume,
       permissionMode: opts?.permissionMode,
       autoCompactWindow,
+      effort,
       onEvent: (msg) => {
         const m = msg as CliEvent;
         if (m.type === 'result') entry.sawResult = true;
@@ -184,6 +185,20 @@ export class ChatHost {
     this.sessions.set(sessionId, entry);
     entry.session.start();
     entry.session.send(prompt, opts?.images);
+  }
+
+  /** Forward a live SDK control_request to the running CLI (set_permission_mode
+   *  for an immediate mode switch, apply_flag_settings for next-turn effort).
+   *  Handled locally by the CLI — never through the FCC proxy. Keeps the stored
+   *  spawn-mode in sync so a later stop→respawn keeps the current mode. */
+  control(sessionId: string, subtype: string, request: Record<string, unknown>): void {
+    const live = this.sessions.get(sessionId);
+    if (live && !live.cleaned) {
+      if (subtype === 'set_permission_mode' && typeof request.mode === 'string') {
+        this.modes.set(sessionId, request.mode as PermissionMode);
+      }
+      live.session.sendControl(subtype, request);
+    }
   }
 
   stop(sessionId: string): void {

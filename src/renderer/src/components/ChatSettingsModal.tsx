@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSettingsStore, CURATED_CLAUDE_MODELS, claudeLabel } from '../stores/settings-store';
+import { useSettingsStore, CURATED_CLAUDE_MODELS, claudeLabel, EFFORT_LEVELS, effortCapLabel, effectiveEffort, effortControlSettings } from '../stores/settings-store';
 import { useChatStore } from '../stores/chat-store';
 import { useExplorerStore } from '../stores/explorer-store';
 import { useModalFocus } from '../hooks/useModal';
@@ -56,10 +56,26 @@ function SettingsTab() {
   const chatModel = useSettingsStore((s) => s.chatModel);
   const chatMaxTurns = useSettingsStore((s) => s.chatMaxTurns);
   const autoCompactWindow = useSettingsStore((s) => s.autoCompactWindow);
+  const chatEffort = useSettingsStore((s) => s.chatEffort);
   const setChatModel = useSettingsStore((s) => s.setChatModel);
   const setChatMaxTurns = useSettingsStore((s) => s.setChatMaxTurns);
   const setAutoCompactWindow = useSettingsStore((s) => s.setAutoCompactWindow);
+  const setChatEffort = useSettingsStore((s) => s.setChatEffort);
   const sessionUsage = useChatStore((s) => s.sessionUsage);
+
+  // Keep the stored effort snapped to what the current model supports: if the
+  // model's ceiling drops below the chosen level (e.g. Sonnet 5 can't do
+  // Max/UltraCode), fall back to its highest supported level. When a snap
+  // happens (usually because the model changed), also push it live so the
+  // current chat's next turn uses it. Idempotent: only fires on an actual snap.
+  useEffect(() => {
+    const eff = effectiveEffort(chatModel, chatEffort);
+    if (eff !== chatEffort) {
+      setChatEffort(eff);
+      const sid = useChatStore.getState().activeSessionId;
+      if (sid) void window.fcc.chatControl(sid, 'apply_flag_settings', { settings: effortControlSettings(eff) });
+    }
+  }, [chatModel, chatEffort]);
   // Models the connected FCC gateway serves — fetched from /v1/models, filtered
   // to claude-related entries and de-duplicated against the curated list.
   const [discovered, setDiscovered] = useState<GatewayModel[] | null>(null);
@@ -110,7 +126,18 @@ function SettingsTab() {
       </div>
       <label className="settings-row">
         <span>Model</span>
-        <select value={chatModel} onChange={(e) => setChatModel(e.target.value)} className="settings-select">
+        <select
+          value={chatModel}
+          onChange={(e) => {
+            const m = e.target.value;
+            setChatModel(m); // persisted — the next conversation spawns with it
+            // Realtime: switch the live conversation's model on its next turn
+            // (a mid-turn switch applies to the next model call of that turn).
+            const sid = useChatStore.getState().activeSessionId;
+            if (sid) void window.fcc.chatControl(sid, 'set_model', { model: m });
+          }}
+          className="settings-select"
+        >
           <optgroup label="Claude">
             {CURATED_CLAUDE_MODELS.map((m) => (
               <option key={m.id} value={m.id}>
@@ -153,7 +180,37 @@ function SettingsTab() {
           onChange={(e) => setAutoCompactWindow(Number(e.target.value) || 190)}
         />
       </label>
-      <div className="settings-note">Settings apply to the next conversation.</div>
+      <label className="settings-row">
+        <span>Effort</span>
+        <select
+          value={effectiveEffort(chatModel, chatEffort)}
+          onChange={(e) => {
+            const eff = effectiveEffort(chatModel, e.target.value);
+            setChatEffort(eff);
+            // Realtime: push to the live conversation's next turn too, so the
+            // current chat picks it up without waiting for a new conversation.
+            const sid = useChatStore.getState().activeSessionId;
+            if (sid) void window.fcc.chatControl(sid, 'apply_flag_settings', { settings: effortControlSettings(eff) });
+          }}
+          className="settings-select"
+        >
+          <option value="auto">Auto (model default)</option>
+          {EFFORT_LEVELS.map((l) => (
+            <option key={l.value} value={l.value}>
+              {l.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className="cs-note">
+        {claudeLabel(chatModel)} {effortCapLabel(chatModel)}.
+      </div>
+      {chatEffort !== 'auto' && effectiveEffort(chatModel, chatEffort) !== chatEffort && (
+        <div className="cs-note">
+          {chatEffort} isn’t supported here — set to {effectiveEffort(chatModel, chatEffort)} instead.
+        </div>
+      )}
+      <div className="settings-note">Model &amp; Effort apply to the current chat’s next turn — Max turns &amp; auto-compact apply to the next conversation.</div>
     </>
   );
 }
@@ -212,6 +269,20 @@ function McpTab({ root }: { root: string | null }) {
   const [name, setName] = useState('');
   const [command, setCommand] = useState('');
   const [args, setArgs] = useState('');
+  // Live enabled-state for the running session (absent = enabled by default).
+  const [disabled, setDisabled] = useState<Record<string, boolean>>({});
+
+  const liveSessionId = (): string | null => useChatStore.getState().activeSessionId;
+  const toggleServer = (n: string): void => {
+    const next = !disabled[n];
+    setDisabled((d) => ({ ...d, [n]: next }));
+    const sid = liveSessionId();
+    if (sid) void window.fcc.chatControl(sid, 'mcp_toggle', { serverName: n, enabled: !next });
+  };
+  const reconnect = (n: string): void => {
+    const sid = liveSessionId();
+    if (sid) void window.fcc.chatControl(sid, 'mcp_reconnect', { serverName: n });
+  };
 
   const load = (): void => {
     void window.fcc.mcpGet().then((c) => setServers(c.mcpServers)).catch(() => setServers({}));
@@ -262,6 +333,17 @@ function McpTab({ root }: { root: string | null }) {
               {def.command} {def.args?.join(' ') ?? ''}
             </div>
           </div>
+          <button
+            className="ghost"
+            disabled={!liveSessionId()}
+            onClick={() => toggleServer(n)}
+            title={disabled[n] ? 'Enable for the running conversation' : 'Disable for the running conversation'}
+          >
+            {disabled[n] ? 'Off' : 'On'}
+          </button>
+          <button className="ghost" disabled={!liveSessionId()} onClick={() => reconnect(n)} title="Reconnect now">
+            ↻
+          </button>
           <button className="icon-btn" onClick={() => void remove(n)} title="Remove">
             <IconTrash width={13} height={13} />
           </button>
@@ -282,6 +364,9 @@ function McpTab({ root }: { root: string | null }) {
         </button>
       </div>
       <div className="cs-note">MCP changes apply to new conversations.</div>
+      <div className="cs-note">
+        On/Off and ↻ apply live to the running conversation{liveSessionId() ? '' : ' (start one to use them)'}.
+      </div>
     </>
   );
 }

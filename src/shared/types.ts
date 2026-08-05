@@ -35,6 +35,9 @@ export interface ChatSettings {
   maxTurns: number;
   /** auto-compact threshold in thousands of tokens (CLAUDE_CODE_AUTO_COMPACT_WINDOW / 1000). */
   autoCompactWindow?: number;
+  /** model effort level passed as --effort at spawn: 'auto' (model default, unset) or
+   *  low|medium|high|xhigh|max. Only models that support effort honor it. */
+  effort?: string;
 }
 
 /** Base64 image attached to a chat turn (sent as an image content block). */
