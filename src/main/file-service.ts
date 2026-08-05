@@ -4,6 +4,21 @@ import { isInside, isInsideResolved } from '@shared/path-utils';
 import type { FileEntry, SearchHit } from '@shared/types';
 
 const SKIP_DIRS = new Set(['node_modules', '.git', '.next', 'dist', 'out', 'release']);
+
+// MIME map for relative markdown image assets + a size cap so a huge image can't
+// balloon into a multi-MB base64 data URI in the renderer.
+const ASSET_MIME: Record<string, string> = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  svg: 'image/svg+xml',
+  bmp: 'image/bmp',
+  ico: 'image/x-icon'
+};
+const ASSET_MAX = 4 * 1024 * 1024;
+
 let rootDir: string | null = null;
 
 export function setRoot(dir: string): void {
@@ -130,6 +145,23 @@ export async function listDir(dir: string): Promise<FileEntry[]> {
 export async function readFile(p: string): Promise<string> {
   await assertInside(p);
   return fs.readFile(p, 'utf-8');
+}
+
+/** Read an image/asset as a base64 data URI for markdown previews. Null when the
+ *  file is missing, not a supported image, or over the size cap. */
+export async function readAsset(p: string): Promise<string | null> {
+  await assertInside(p);
+  try {
+    const st = await fs.stat(p);
+    if (!st.isFile() || st.size > ASSET_MAX) return null;
+    const ext = p.split('.').pop()?.toLowerCase() ?? '';
+    const mime = ASSET_MIME[ext];
+    if (!mime) return null;
+    const buf = await fs.readFile(p);
+    return `data:${mime};base64,${buf.toString('base64')}`;
+  } catch {
+    return null; // ENOENT / unreadable
+  }
 }
 
 export async function writeFile(p: string, content: string): Promise<void> {

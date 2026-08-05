@@ -47,6 +47,10 @@ processes, or read env on its own.
 - **Never rename a channel** without updating preload + both sides simultaneously.
 - The terminal channels deliberately use `term:output` (not `term:data`) to avoid
   colliding with the invoke channel `term:data`.
+- **Markdown preview wiring** adds two channels: `shell:open-external`
+  (`shell.openExternal` guarded to http:/https:/mailto: only) and `fs:read-asset`
+  (`file-service.readAsset` — image → base64 data URI, ≤ 4 MB, MIME by extension,
+  `assertInside`-gated) for rendering external links + relative images.
 
 ---
 

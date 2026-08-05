@@ -182,7 +182,7 @@ export default function EditorPane() {
       ) : active && mdPreview ? (
         <div className="md-preview">
           <div className="md-preview-inner">
-            <Markdown text={active.content} />
+            <Markdown text={active.content} basePath={active.path} highlight />
           </div>
         </div>
       ) : active ? (

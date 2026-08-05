@@ -151,6 +151,16 @@ the window center grows the panel); the left sidebar is **not** inverted.
   render as `.tool-card` (status-colored border: running=blue, success=green,
   error=red). Extended thinking folds as `.msg-thinking` (accent left rail + mono
   pre, `<details>` collapsed by default).
+- **Markdown** renders through a single shared component (`src/renderer/src/chat/
+  markdown.tsx`, react-markdown + GFM + math/katex + slug/autolink headings)
+  wrapping its output in **`.fcc-md`** — style markdown via `.fcc-md` element
+  selectors (everything adopted the class-based `.md-*` system at one point; that's
+  gone). Syntax highlighting (`rehype-highlight`) is **preview-only** (streaming
+  chat skips it; token colors are the `.hljs-*` set tuned to the warm-dark palette).
+  Links/images resolve via `src/renderer/src/markdown/resolve.ts`: repo-relative
+  → open the file (`fcc:open-file`) / load via `readAsset`; `#` → anchor scroll;
+  http(s)/mailto → `openExternal`. The `.md` file preview adds `basePath` so links
+  resolve from the file's own directory; chat resolves from the open-folder root.
 - **Slash `/` picker** + **`@` file picker**: `--bg-2` floating card, `--shadow-3`,
   items are `mono command | flex:1 description | dim arg-hint(right)`, active row
   `--bg-3` + accent command.

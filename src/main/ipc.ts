@@ -1,4 +1,4 @@
-import { ipcMain, dialog, clipboard, type BrowserWindow } from 'electron';
+import { ipcMain, dialog, clipboard, shell, type BrowserWindow } from 'electron';
 import { IPC } from '@shared/ipc';
 import type { ChatImage, ClaudeSettingsFile, McpServerDef } from '@shared/types';
 import * as files from './file-service';
@@ -45,6 +45,20 @@ export function registerIpc(win: BrowserWindow): void {
   ipcMain.handle(IPC.openFolderAt, (_e, dir: string) => files.openRootAt(dir));
   ipcMain.handle(IPC.fsRead, (_e, p: string) => files.readFile(p));
   ipcMain.handle(IPC.fsWrite, (_e, p: string, content: string) => files.writeFile(p, content));
+  ipcMain.handle(IPC.readAsset, (_e, p: string) => files.readAsset(p));
+  // Markdown preview opens http/https/mailto links in the system browser — never
+  // arbitrary schemes (a crafted href must not launch a local executable).
+  ipcMain.handle(IPC.openExternal, (_e, url: string) => {
+    let u: URL;
+    try {
+      u = new URL(url);
+    } catch {
+      return;
+    }
+    if (u.protocol === 'http:' || u.protocol === 'https:' || u.protocol === 'mailto:') {
+      return shell.openExternal(url);
+    }
+  });
   ipcMain.handle(IPC.fsCreate, (_e, p: string, isDir: boolean) => files.createEntry(p, isDir));
   ipcMain.handle(IPC.fsRename, (_e, p: string, newName: string) => files.renameEntry(p, newName));
   ipcMain.handle(IPC.fsDelete, (_e, p: string) => files.deleteEntry(p));

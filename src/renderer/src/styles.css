@@ -1767,40 +1767,114 @@ button.icon-btn:hover {
   margin: 0 auto;
   padding: 28px 36px 48px;
 }
-.md-preview-inner .md-p {
-  margin: 0 0 12px;
-  font-size: 14px;
-  line-height: 1.7;
+/* ---------- Markdown (react-markdown output, shared by preview + chat + help) ---------- */
+.fcc-md {
   color: var(--text-1);
 }
-.md-preview-inner .md-p:last-child {
+.fcc-md > *:first-child {
+  margin-top: 0;
+}
+.fcc-md > *:last-child {
   margin-bottom: 0;
 }
-.md-preview-inner .md-heading {
-  margin: 24px 0 10px;
+.fcc-md p {
+  margin: 0 0 12px;
+  line-height: 1.7;
+}
+.fcc-md h1,
+.fcc-md h2,
+.fcc-md h3,
+.fcc-md h4,
+.fcc-md h5,
+.fcc-md h6 {
+  margin: 22px 0 9px;
   font-weight: 650;
+  line-height: 1.35;
   color: var(--text-1);
+  /* anchor links scroll past the tab/breadcrumb row */
+  scroll-margin-top: 14px;
 }
-.md-preview-inner h1.md-heading {
-  font-size: 26px;
+.fcc-md h1 {
+  font-size: 1.7em;
   border-bottom: 1px solid var(--border-0);
-  padding-bottom: 8px;
+  padding-bottom: 7px;
 }
-.md-preview-inner h2.md-heading {
-  font-size: 21px;
+.fcc-md h2 {
+  font-size: 1.4em;
 }
-.md-preview-inner h3.md-heading {
-  font-size: 17px;
+.fcc-md h3 {
+  font-size: 1.2em;
 }
-.md-preview-inner .md-code {
+.fcc-md h4 {
+  font-size: 1.05em;
+}
+.fcc-md h5,
+.fcc-md h6 {
+  font-size: 1em;
+  color: var(--text-2);
+}
+/* rehype-autolink-headings wraps heading text in an .anchor link */
+.fcc-md h1 a,
+.fcc-md h2 a,
+.fcc-md h3 a,
+.fcc-md h4 a,
+.fcc-md h5 a,
+.fcc-md h6 a {
+  color: inherit;
+  text-decoration: none;
+}
+.fcc-md .anchor {
+  color: var(--text-3);
+  text-decoration: none;
+  padding-right: 6px;
+}
+.fcc-md .anchor:hover {
+  color: var(--accent);
+}
+.fcc-md ul,
+.fcc-md ol {
+  margin: 0 0 12px;
+  padding-left: 24px;
+}
+.fcc-md li {
+  margin: 3px 0;
+}
+.fcc-md li > ul,
+.fcc-md li > ol {
+  margin: 3px 0;
+}
+/* GFM task lists */
+.fcc-md li.task-list-item {
+  list-style: none;
+  margin-left: -24px;
+}
+.fcc-md input[type='checkbox'] {
+  accent-color: var(--accent);
+  margin: 0 7px 0 2px;
+  vertical-align: -1px;
+}
+.fcc-md blockquote {
+  margin: 12px 0;
+  padding: 3px 14px;
+  border-left: 3px solid var(--accent);
+  background: var(--bg-1);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  color: var(--text-2);
+}
+.fcc-md hr {
+  border: none;
+  border-top: 1px solid var(--border-0);
+  margin: 18px 0;
+}
+.fcc-md code {
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 0.88em;
   background: var(--bg-2);
   border: 1px solid var(--border-0);
   border-radius: 4px;
   padding: 1px 5px;
 }
-.md-preview-inner .md-pre {
+.fcc-md pre {
   background: var(--bg-2);
   border: 1px solid var(--border-0);
   border-radius: var(--radius-md);
@@ -1808,36 +1882,56 @@ button.icon-btn:hover {
   margin: 12px 0;
   overflow-x: auto;
 }
-.md-preview-inner .md-pre code {
-  font-family: var(--font-mono);
+.fcc-md pre code {
+  display: block;
+  background: none;
+  border: none;
+  padding: 0;
   font-size: 12.5px;
   line-height: 1.6;
   color: var(--text-1);
   white-space: pre;
 }
-.md-preview-inner .md-list {
-  margin: 0 0 12px;
+.fcc-md table {
+  border-collapse: collapse;
+  margin: 12px 0;
+  width: 100%;
+  font-size: 13px;
 }
-.md-preview-inner .md-li {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 4px;
-  font-size: 14px;
-  line-height: 1.7;
+.fcc-md th,
+.fcc-md td {
+  border: 1px solid var(--border-0);
+  padding: 6px 10px;
+  text-align: left;
 }
-.md-preview-inner .md-bullet {
-  color: var(--accent);
-  flex-shrink: 0;
-  min-width: 18px;
-  text-align: right;
+.fcc-md th {
+  background: var(--bg-2);
   font-weight: 600;
 }
-.md-preview-inner .md-li-text {
-  flex: 1;
+.fcc-md tbody tr:hover {
+  background: var(--bg-2);
 }
-.md-preview-inner a {
+.fcc-md a {
   color: var(--accent);
   text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.fcc-md a:hover {
+  color: var(--accent-hover);
+}
+.fcc-md img {
+  max-width: 100%;
+  border-radius: var(--radius-sm);
+}
+.fcc-md .md-img-missing {
+  color: var(--text-3);
+  font-size: 12px;
+}
+.fcc-md .katex-display {
+  margin: 12px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 .agent-banner {
   display: flex;
@@ -2026,61 +2120,37 @@ button.icon-btn:hover {
   min-width: 0;
 }
 
-/* markdown inside assistant messages */
-.msg.assistant .md-p {
+/* markdown inside assistant messages (compact scale) */
+.msg.assistant .fcc-md p {
   margin: 0 0 8px;
 }
-.msg.assistant .md-p:last-child {
+.msg.assistant .fcc-md p:last-child {
   margin-bottom: 0;
 }
-.msg.assistant .md-heading {
+.msg.assistant .fcc-md h1,
+.msg.assistant .fcc-md h2,
+.msg.assistant .fcc-md h3,
+.msg.assistant .fcc-md h4,
+.msg.assistant .fcc-md h5,
+.msg.assistant .fcc-md h6 {
   font-size: 14px;
-  font-weight: 600;
-  color: var(--text-1);
   margin: 10px 0 6px;
 }
-.msg.assistant .md-heading:first-child {
+.msg.assistant .fcc-md h1:first-child,
+.msg.assistant .fcc-md h2:first-child,
+.msg.assistant .fcc-md h3:first-child,
+.msg.assistant .fcc-md h4:first-child,
+.msg.assistant .fcc-md h5:first-child,
+.msg.assistant .fcc-md h6:first-child {
   margin-top: 0;
 }
-.msg.assistant .md-code {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  background: var(--bg-1);
-  border: 1px solid var(--border-0);
-  border-radius: 4px;
-  padding: 1px 5px;
+.msg.assistant .fcc-md ul,
+.msg.assistant .fcc-md ol {
+  margin-bottom: 8px;
 }
-.msg.assistant .md-pre {
+.msg.assistant .fcc-md pre {
   background: var(--bg-1);
-  border: 1px solid var(--border-0);
-  border-radius: var(--radius-md);
-  padding: 10px 12px;
   margin: 8px 0;
-  overflow-x: auto;
-}
-.msg.assistant .md-pre code {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--text-1);
-  white-space: pre;
-}
-.msg.assistant .md-list {
-  margin: 0 0 8px;
-}
-.msg.assistant .md-li {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 2px;
-}
-.msg.assistant .md-bullet {
-  color: var(--accent);
-  flex-shrink: 0;
-  min-width: 16px;
-  text-align: right;
-}
-.msg.assistant .md-li-text {
-  flex: 1;
 }
 .msg.assistant a {
   color: var(--accent);
@@ -2121,36 +2191,22 @@ button.icon-btn:hover {
   color: var(--text-2);
   animation: msg-in 180ms cubic-bezier(0.4, 0, 0.2, 1) both;
 }
-.chat-help .md-p {
+.chat-help .fcc-md p {
   margin: 0 0 8px;
 }
-.chat-help .md-p:last-child {
+.chat-help .fcc-md p:last-child {
   margin-bottom: 0;
 }
-.chat-help .md-code {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  background: var(--bg-2);
-  border: 1px solid var(--border-0);
-  border-radius: 4px;
-  padding: 1px 5px;
-}
-.chat-help .md-list {
+.chat-help .fcc-md ul,
+.chat-help .fcc-md ol {
   margin: 4px 0;
 }
-.chat-help .md-li {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 2px;
+.chat-help .fcc-md li {
+  margin: 2px 0;
 }
-.chat-help .md-bullet {
+.chat-help .fcc-md a {
   color: var(--accent);
-  flex-shrink: 0;
-  min-width: 16px;
-  text-align: right;
-}
-.chat-help .md-li-text {
-  flex: 1;
+  text-decoration: underline;
 }
 .chat-usage {
   color: var(--text-3);
@@ -3016,3 +3072,28 @@ button.primary:focus-visible,
 .cs-usagebar-lg.lg-read i { background: var(--blue); }
 .cs-usagebar-lg.lg-fresh i { background: var(--text-4); }
 .cs-usagebar-lg.lg-out i { background: var(--yellow); }
+
+/* code token colors — preview-only (rehype-highlight), tuned to the warm-dark palette */
+.fcc-md pre code .hljs-comment,
+.fcc-md pre code .hljs-quote { color: var(--text-3); font-style: italic; }
+.fcc-md pre code .hljs-keyword,
+.fcc-md pre code .hljs-selector-tag,
+.fcc-md pre code .hljs-tag,
+.fcc-md pre code .hljs-template-tag { color: var(--blue); }
+.fcc-md pre code .hljs-string,
+.fcc-md pre code .hljs-regexp,
+.fcc-md pre code .hljs-addition { color: var(--green); }
+.fcc-md pre code .hljs-number,
+.fcc-md pre code .hljs-literal,
+.fcc-md pre code .hljs-variable,
+.fcc-md pre code .hljs-operator { color: var(--yellow); }
+.fcc-md pre code .hljs-title,
+.fcc-md pre code .hljs-title.function_,
+.fcc-md pre code .hljs-function { color: var(--accent); }
+.fcc-md pre code .hljs-attr,
+.fcc-md pre code .hljs-attribute { color: #a8c7ff; }
+.fcc-md pre code .hljs-built_in,
+.fcc-md pre code .hljs-type,
+.fcc-md pre code .hljs-class { color: #d0b6ff; }
+.fcc-md pre code .hljs-meta,
+.fcc-md pre code .hljs-section { color: var(--text-3); }

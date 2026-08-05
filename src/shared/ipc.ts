@@ -41,6 +41,8 @@ export const IPC = {
   mcpSet: 'mcp:set',
   setChatSettings: 'settings:set',
   setTitleBarOverlay: 'window:set-titlebar-overlay',
+  openExternal: 'shell:open-external',
+  readAsset: 'fs:read-asset',
   // events main -> renderer
   evtChat: 'chat:event',
   evtFcc: 'fcc:status-changed',

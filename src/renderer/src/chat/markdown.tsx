@@ -1,151 +1,105 @@
-import type { ReactNode } from 'react';
+import { memo, useEffect, useMemo, useState, type MouseEvent } from 'react';
+import ReactMarkdown, { type Components } from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import rehypeSlug from 'rehype-slug';
+import rehypeAutolinkHeadings from 'rehype-autolink-headings';
+import rehypeHighlight from 'rehype-highlight';
+import { useExplorerStore } from '../stores/explorer-store';
+import { resolveHref } from '../markdown/resolve';
 
-// Minimal, safe markdown renderer. Builds React elements only — no
-// dangerouslySetInnerHTML — so untrusted model output can't inject HTML.
-// Supports the common surface: paragraphs, # headers, **bold**, `code`,
-// ``` fenced blocks ```, - / 1. lists, and [links](url). Everything else
-// falls back to pre-wrap text.
+// Full GFM/math markdown renderer (react-markdown). Shared by the .md file
+// preview, chat messages, subagent output, and help — the plan is "as complete
+// as VSCode". `highlight` is preview-only (chat streams text chunk-by-chunk and
+// doesn't need per-token colors). Links/images are resolved against the current
+// file's directory (basePath) or the open-folder root (chat).
 
-// Token order matters: multi-char constructs first, then newline, then a
-// plain run, then a single-char catch-all (so a lone `*`/`[` is kept, not
-// swallowed or dropped).
-const TOKEN = /(`[^`]+`|\*\*[^*]+\*\*|\[[^\]\n]+\]\([^)\s]+\)|\n|[^\n`*]+|.)/g;
+/** Load a relative repo image from disk as a data URI via IPC — the sandboxed
+ *  renderer can't read file:// under the http dev scheme. Cached per path. */
+const assetCache = new Map<string, string>();
 
-function inline(text: string, key: number): ReactNode[] {
-  const out: ReactNode[] = [];
-  let i = 0;
-  let m: RegExpExecArray | null;
-  TOKEN.lastIndex = 0;
-  while ((m = TOKEN.exec(text)) !== null) {
-    const tok = m[0];
-    if (tok === '\n') {
-      out.push(<br key={key + i} />);
-      i++;
-    } else if (tok.startsWith('`') && tok.endsWith('`') && tok.length > 2) {
-      out.push(
-        <code className="md-code" key={key + i}>
-          {tok.slice(1, -1)}
-        </code>
-      );
-      i++;
-    } else if (tok.startsWith('**') && tok.endsWith('**') && tok.length > 4) {
-      out.push(<strong key={key + i}>{tok.slice(2, -2)}</strong>);
-      i++;
-    } else if (tok.startsWith('[') && tok.includes('](')) {
-      const close = tok.indexOf('](');
-      const label = tok.slice(1, close);
-      const url = tok.slice(close + 2, -1);
-      out.push(
-        <a key={key + i} href={url} target="_blank" rel="noreferrer">
-          {label}
-        </a>
-      );
-      i++;
-    } else {
-      out.push(tok);
+function AssetImage({ path, alt }: { path: string; alt?: string }) {
+  const [src, setSrc] = useState<string | null>(() => assetCache.get(path) ?? null);
+  useEffect(() => {
+    if (assetCache.has(path)) {
+      setSrc(assetCache.get(path)!);
+      return;
     }
-  }
-  return out;
+    let cancelled = false;
+    void window.fcc.readAsset(path).then((d) => {
+      if (cancelled || !d) return;
+      assetCache.set(path, d);
+      setSrc(d);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [path]);
+  if (!src) return null; // loading or missing — nothing until the bytes arrive
+  return <img src={src} alt={alt ?? ''} />;
 }
 
-function block(text: string): ReactNode[] {
-  const lines = text.split('\n');
-  const nodes: ReactNode[] = [];
-  let i = 0;
-  let fence: string[] | null = null;
-  let list: string[] | null = null;
-  let ordered = false;
+const HTTP_SCHEME = /^(https?):/i;
 
-  const flushList = (key: number) => {
-    if (!list) return;
-    nodes.push(
-      <div className="md-list" key={key}>
-        {list.map((li, idx) => (
-          <div className="md-li" key={idx}>
-            <span className="md-bullet">{ordered ? `${idx + 1}.` : '•'}</span>
-            <span className="md-li-text">{inline(li, idx * 1000)}</span>
-          </div>
-        ))}
-      </div>
-    );
-    list = null;
-  };
+export default memo(function Markdown({
+  text,
+  basePath,
+  highlight
+}: {
+  text: string;
+  basePath?: string;
+  /** syntax-highlight fenced code (preview only — off for streaming chat). */
+  highlight?: boolean;
+}): React.ReactElement {
+  const root = useExplorerStore((s) => s.root);
 
-  while (i < lines.length) {
-    const line = lines[i];
-
-    if (fence) {
-      if (line.trim().startsWith('```')) {
-        nodes.push(
-          <pre className="md-pre" key={nodes.length}>
-            <code>{fence.join('\n')}</code>
-          </pre>
+  const components = useMemo<Components>(() => {
+    const openRepo = (absPath: string): void =>
+      void window.dispatchEvent(new CustomEvent('fcc:open-file', { detail: absPath }));
+    return {
+      a({ href, children, node: _node, ...rest }) {
+        const action = href ? resolveHref(href, { basePath, root }) : null;
+        const onClick = (e: MouseEvent<HTMLAnchorElement>): void => {
+          if (!action) return;
+          e.preventDefault();
+          if (action.kind === 'external') void window.fcc.openExternal(action.url);
+          else if (action.kind === 'anchor') {
+            document.getElementById(action.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } else if (action.kind === 'repo') {
+            openRepo(action.absPath);
+          }
+        };
+        return (
+          <a {...rest} href={href} onClick={onClick}>
+            {children}
+          </a>
         );
-        fence = null;
-      } else {
-        fence.push(line);
+      },
+      img({ src, alt, node: _node, ...rest }) {
+        const action = src ? resolveHref(src, { basePath, root }) : null;
+        if (action?.kind === 'repo') return <AssetImage path={action.absPath} alt={alt} />;
+        // http(s) images and embedded data: URIs render directly.
+        if (action?.kind === 'data' || (action?.kind === 'external' && !!src && HTTP_SCHEME.test(src))) {
+          return <img {...rest} src={src} alt={alt ?? ''} />;
+        }
+        return <span className="md-img-missing">🖼 {alt ?? src ?? 'image'}</span>;
       }
-      i++;
-      continue;
-    }
+    };
+  }, [basePath, root]);
 
-    if (line.trim().startsWith('```')) {
-      flushList(nodes.length);
-      fence = [];
-      i++;
-      continue;
-    }
+  const html = useMemo(
+    () => (
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[rehypeKatex, rehypeSlug, rehypeAutolinkHeadings, ...(highlight ? [rehypeHighlight] : [])]}
+        components={components}
+      >
+        {text}
+      </ReactMarkdown>
+    ),
+    [text, components, highlight]
+  );
 
-    const heading = line.match(/^(#{1,3})\s+(.*)$/);
-    if (heading) {
-      flushList(nodes.length);
-      const level = heading[1].length;
-      const Tag = (['h1', 'h2', 'h3'] as const)[level - 1];
-      nodes.push(
-        <Tag className="md-heading" key={nodes.length}>
-          {inline(heading[2], nodes.length)}
-        </Tag>
-      );
-      i++;
-      continue;
-    }
-
-    const ul = line.match(/^\s*[-*]\s+(.*)$/);
-    const ol = line.match(/^\s*\d+\.\s+(.*)$/);
-    if (ul || ol) {
-      if (!list) {
-        list = [];
-        ordered = !!ol;
-      }
-      list.push((ul ?? ol)![1]);
-      i++;
-      continue;
-    }
-
-    if (list) flushList(nodes.length);
-    if (line.trim() === '') {
-      i++;
-      continue;
-    }
-
-    nodes.push(
-      <p className="md-p" key={nodes.length}>
-        {inline(line, nodes.length)}
-      </p>
-    );
-    i++;
-  }
-  if (fence) {
-    nodes.push(
-      <pre className="md-pre" key={nodes.length}>
-        <code>{fence.join('\n')}</code>
-      </pre>
-    );
-  }
-  flushList(nodes.length);
-  return nodes;
-}
-
-export default function Markdown({ text }: { text: string }): ReactNode {
-  return <>{block(text)}</>;
-}
+  return <div className="fcc-md">{html}</div>;
+});
