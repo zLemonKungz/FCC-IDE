@@ -293,3 +293,6 @@ the window center grows the panel); the left sidebar is **not** inverted.
 - **Git diff per file**: clicking a changed row in Source Control dispatches
   `fcc:git-diff` → `GitDiffView.tsx` (Monaco DiffEditor, original=`HEAD` blob
   via `git:show` normalized to forward-slash pathspecs, modified=disk).
+- **Image preview**: opening a `png/jpg/gif/webp/svg/bmp/ico` file renders it
+  centered (`.image-preview`, `ImagePreview` in `Editor.tsx`) via the sandboxed
+  `readAsset` data-URI IPC instead of raw Monaco text.

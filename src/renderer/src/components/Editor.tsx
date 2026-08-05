@@ -156,6 +156,7 @@ Instruction: ${instruction}`;
 
   const active = tabs.find((t) => t.path === activePath);
   const isMd = active ? langFor(active.path) === 'markdown' : false;
+  const isImage = active ? /\.(png|jpe?g|gif|webp|svg|bmp|ico)$/i.test(active.path) : false;
 
   return (
     <div className="editor-pane">
@@ -225,6 +226,8 @@ Instruction: ${instruction}`;
         <DiffView path={diffPath} onClose={() => setDiff(null)} />
       ) : gitDiffPath ? (
         <GitDiffView path={gitDiffPath} onClose={() => setGitDiffPath(null)} />
+      ) : active && isImage ? (
+        <ImagePreview path={active.path} />
       ) : active && mdPreview ? (
         <div className="md-preview">
           <div className="md-preview-inner">
@@ -335,6 +338,47 @@ Instruction: ${instruction}`;
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Rendered preview for image files (png/jpg/gif/webp/svg/...), loaded as a data
+// URI via the sandboxed readAsset IPC.
+function ImagePreview({ path }: { path: string }) {
+  const [src, setSrc] = useState<string | null>(null);
+  const [err, setErr] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    setSrc(null);
+    setErr(false);
+    void window.fcc
+      .readAsset(path)
+      .then((d) => {
+        if (cancelled) return;
+        if (d) setSrc(d);
+        else setErr(true);
+      })
+      .catch(() => !cancelled && setErr(true));
+    return () => {
+      cancelled = true;
+    };
+  }, [path]);
+  if (err)
+    return (
+      <div className="empty-state">
+        <div className="empty-title">Can’t preview</div>
+        <div className="empty-hint">This file isn’t a readable image.</div>
+      </div>
+    );
+  if (!src)
+    return (
+      <div className="empty-state">
+        <span className="spinner" /> Loading…
+      </div>
+    );
+  return (
+    <div className="image-preview">
+      <img src={src} alt="" />
     </div>
   );
 }
