@@ -195,3 +195,10 @@ export async function deleteEntry(p: string): Promise<void> {
   }
   await fs.rm(p, { recursive: true, force: true });
 }
+
+/** Copy a file or directory (recursive) to a target inside the open folder. */
+export async function copyPath(from: string, to: string): Promise<void> {
+  await assertInside(from);
+  await assertInside(to);
+  await fs.cp(from, to, { recursive: true });
+}

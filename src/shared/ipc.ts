@@ -6,6 +6,7 @@ export const IPC = {
   fsCreate: 'fs:create',
   fsRename: 'fs:rename',
   fsDelete: 'fs:delete',
+  fsCopy: 'fs:copy',
   fsSearch: 'fs:search',
   fsSearchContent: 'fs:search-content',
   dialogOpenFolder: 'dialog:open-folder',

@@ -718,10 +718,32 @@ button.icon-btn:hover {
   border-radius: var(--radius-sm);
   text-align: left;
   padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  font-size: 12.5px;
+  color: var(--text-2);
 }
-.ctx-menu button:hover {
+.ctx-menu button:not(:disabled):hover {
   background: var(--bg-3);
   color: var(--text-1);
+}
+.ctx-menu button:disabled {
+  color: var(--text-4);
+  cursor: default;
+}
+.ctx-menu button.danger {
+  color: var(--red);
+}
+.ctx-menu button.danger:not(:disabled):hover {
+  background: var(--bg-3);
+  color: var(--red);
+}
+.ctx-sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--border-0);
 }
 
 /* Settings modal */
@@ -1611,6 +1633,24 @@ button.icon-btn:hover {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+/* Inline rename / new-file name input inside a tree row */
+.tree-row .tree-edit {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--text-1);
+  background: var(--bg-0);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-sm);
+  padding: 1px 4px;
+  outline: none;
+}
+.tree-row .tree-edit:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
 }
 .tree-children {
   margin-left: 13px;

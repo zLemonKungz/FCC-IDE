@@ -251,6 +251,12 @@ the window center grows the panel); the left sidebar is **not** inverted.
 - `MenuBar.tsx` dropdowns are `-webkit-app-region: no-drag`, `position: fixed` at
   z-1001 over `.ctx-backdrop` (z-1000), inside the titlebar stacking context; close
   on outside click or Escape.
+- The shared `.ctx-menu` is used by tab menus and the **Explorer right-click menu**
+  (New File/Folder, Rename/Duplicate/Copy/Cut/Paste/Delete). Menu rows: icon + label,
+  `:disabled` greyed, `.danger` (Delete) in `--red`; clamps to the viewport. Rename
+  and new-file/folder names edit **inline** in the tree (`.tree-edit` mono input,
+  Enter commits, Esc cancels). Copy/Cut/Paste and Duplicate live in `explorer-store`
+  (a renderer-local clipboard), and Delete reuses the existing inline ✓/✗ confirm.
 - The titlebar brand shows **`FCC Studio` + a muted mono version** (`.brand-ver`)
   from `app:info`. The old "?" is an **About (ⓘ)** button opening an `.about-popover`
   (logo, name, version, description, repo link). Keyboard shortcuts open from the

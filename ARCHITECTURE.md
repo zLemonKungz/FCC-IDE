@@ -303,6 +303,9 @@ envelopes to the CLI's stdin — the same mechanism as the SDK's `setPermissionM
 - `deleteEntry` refuses to delete the project root.
 - `renameEntry` refuses to overwrite an existing target; `createEntry` uses
   `{ flag: 'wx' }`.
+- `copyPath` (recursive `fs.cp`) backs copy / cut+paste / duplicate; both source
+  and target go through `assertInside` (past-then-copy-into-own-subtree is
+  rejected by `fs.cp` itself).
 - Directory listing skips `node_modules`, `.git`, `.next`, `dist`, `out`, `release`.
 
 ## 11. FCC server

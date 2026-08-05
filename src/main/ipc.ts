@@ -66,6 +66,7 @@ export function registerIpc(win: BrowserWindow): void {
   ipcMain.handle(IPC.fsCreate, (_e, p: string, isDir: boolean) => files.createEntry(p, isDir));
   ipcMain.handle(IPC.fsRename, (_e, p: string, newName: string) => files.renameEntry(p, newName));
   ipcMain.handle(IPC.fsDelete, (_e, p: string) => files.deleteEntry(p));
+  ipcMain.handle(IPC.fsCopy, (_e, from: string, to: string) => files.copyPath(from, to));
   ipcMain.handle(IPC.fsSearch, () => files.searchFiles());
   ipcMain.handle(IPC.fsSearchContent, (_e, query: string) => files.searchContent(query));
 

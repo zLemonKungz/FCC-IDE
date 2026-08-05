@@ -51,7 +51,11 @@ function buildMenus(
     {
       label: 'File',
       items: [
-        { label: 'New File', disabled: !root, run: () => void explorer.createFile(root ?? '') },
+        {
+          label: 'New File',
+          disabled: !root,
+          run: () => window.dispatchEvent(new CustomEvent('fcc:new-file'))
+        },
         { label: 'Open Folder…', run: () => void explorer.openRoot() },
         { label: 'Save', shortcut: 'Ctrl+S', disabled: !editor.activePath, run: saveActive },
         { sep: true },

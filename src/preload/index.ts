@@ -34,6 +34,7 @@ const api = {
   fsCreate: (p: string, isDir: boolean): Promise<void> => ipcRenderer.invoke(IPC.fsCreate, p, isDir),
   fsRename: (p: string, newName: string): Promise<void> => ipcRenderer.invoke(IPC.fsRename, p, newName),
   fsDelete: (p: string): Promise<void> => ipcRenderer.invoke(IPC.fsDelete, p),
+  fsCopy: (from: string, to: string): Promise<void> => ipcRenderer.invoke(IPC.fsCopy, from, to),
   fsSearch: (): Promise<string[]> => ipcRenderer.invoke(IPC.fsSearch),
   fsSearchContent: (query: string): Promise<SearchHit[]> => ipcRenderer.invoke(IPC.fsSearchContent, query),
   openFolder: (): Promise<string | null> => ipcRenderer.invoke(IPC.dialogOpenFolder),
