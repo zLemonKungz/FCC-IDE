@@ -31,6 +31,7 @@ function spawnLabel(messages: ChatMessage[], child: ChatMessage): string {
 export default function SubagentPanel() {
   const messages = useChatStore((s) => s.messages);
   const activeSessionId = useChatStore((s) => s.activeSessionId);
+  const liveTasks = useChatStore((s) => s.liveTasks);
   const [open, setOpen] = useState<Set<string>>(new Set());
 
   const groups = useMemo(() => {
@@ -77,6 +78,18 @@ export default function SubagentPanel() {
           <div className="empty-state">
             <div className="empty-title">No subagents yet</div>
             <div className="empty-hint">Claude will list subagents it spawns (Agent / Task) here.</div>
+          </div>
+        )}
+        {activeSessionId && Object.values(liveTasks).length > 0 && (
+          <div className="subagent-running">
+            <div className="subagent-running-title">Running</div>
+            {Object.values(liveTasks).map((t) => (
+              <div key={t.taskId} className="subagent-running-item" title={`${t.agent} · ${t.tokens ? t.tokens.toLocaleString() + ' tok' : ''}`}>
+                <span className="sri-dot" />
+                <span className="sri-desc">{t.description}</span>
+                <span className="sri-meta">{t.lastTool ?? 'working…'}{t.tokens ? ` · ${t.tokens.toLocaleString()} tok` : ''}</span>
+              </div>
+            ))}
           </div>
         )}
         {groups.map((g) => {

@@ -33,6 +33,17 @@ export interface ChatUiState {
   /** live session status from the CLI's system/status events (mode/model),
    *  for the status bar — reflects realtime set_permission_mode / set_model. */
   liveStatus: { permissionMode?: string; model?: string };
+  /** running background/subagent tasks from system:task_started/task_progress,
+   *  keyed by task_id — cleared when the turn finishes (result). */
+  liveTasks: Record<string, LiveTask>;
+}
+
+export interface LiveTask {
+  taskId: string;
+  description: string;
+  agent: string;
+  lastTool?: string;
+  tokens?: number;
 }
 export interface FileEvent {
   path: string;
@@ -52,7 +63,17 @@ export type ChatEvent =
     }
   | { type: 'session-id'; session_id: string }
   | { type: 'slash-commands'; commands: string[] }
-  | { type: 'system'; subtype?: string; permissionMode?: string; model?: string }
+  | {
+      type: 'system';
+      subtype?: string;
+      permissionMode?: string;
+      model?: string;
+      task_id?: string;
+      description?: string;
+      subagent_type?: string;
+      last_tool_name?: string;
+      usage?: { total_tokens?: number };
+    }
   | { type: 'started' }
   | { type: 'stopped' }
   | { type: 'error'; message: string };
@@ -67,7 +88,8 @@ export function emptyChatState(): ChatUiState {
     slashCommands: [],
     awaitingPlanApproval: false,
     sessionUsage: { input: 0, output: 0, cost: 0 },
-    liveStatus: {}
+    liveStatus: {},
+    liveTasks: {}
   };
 }
 
@@ -203,6 +225,9 @@ export function applyChatEvent(
         running: false,
         error: ev.is_error ? (ev.errors ?? ['Agent error']).join('; ') : null,
         lastUsage: usage,
+        // The turn finished — its subagent/background tasks are done, so the
+        // live-progress list clears.
+        liveTasks: {},
         sessionUsage: usage
           ? {
               input: s.sessionUsage.input + usage.input,
@@ -249,6 +274,37 @@ export function applyChatEvent(
         if (ev.permissionMode) patch.permissionMode = ev.permissionMode;
         if (ev.model) patch.model = ev.model;
         s = { ...s, liveStatus: patch };
+      } else if (ev.subtype === 'task_started' && ev.task_id && ev.description) {
+        // A subagent/background task begins — show it as live progress.
+        s = {
+          ...s,
+          liveTasks: {
+            ...s.liveTasks,
+            [ev.task_id]: {
+              taskId: ev.task_id,
+              description: ev.description,
+              agent: ev.subagent_type ?? 'subagent',
+              lastTool: undefined,
+              tokens: 0
+            }
+          }
+        };
+      } else if (ev.subtype === 'task_progress' && ev.task_id) {
+        const cur = s.liveTasks[ev.task_id];
+        if (cur) {
+          s = {
+            ...s,
+            liveTasks: {
+              ...s.liveTasks,
+              [ev.task_id]: {
+                ...cur,
+                lastTool: ev.last_tool_name,
+                description: ev.description ?? cur.description,
+                tokens: ev.usage?.total_tokens ?? cur.tokens
+              }
+            }
+          };
+        }
       }
       break;
     }
