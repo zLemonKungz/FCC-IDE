@@ -10,6 +10,8 @@ export interface FccStatus {
   version?: string;
   /** true when the fcc-server was spawned by this app (eligible for Stop). */
   managed?: boolean;
+  /** true while this app's spawn is booting (before the first healthy /health). */
+  starting?: boolean;
 }
 
 /** Result of probing whether free-claude-code (fcc-server) is usable on this machine. */

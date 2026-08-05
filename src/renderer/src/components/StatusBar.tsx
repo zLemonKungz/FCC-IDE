@@ -84,6 +84,11 @@ export default function StatusBar() {
             </button>
           )}
         </>
+      ) : status?.starting ? (
+        <span className="fcc starting">
+          <span className="dot" />
+          Starting FCC server…
+        </span>
       ) : (
         <>
           <span className="fcc down">

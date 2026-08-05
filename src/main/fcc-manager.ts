@@ -100,9 +100,12 @@ let lastStatus: FccStatus = { online: false, port: FCC_PORT };
 /** PID of the fcc-server this app spawned (null when it's not ours, e.g. the
  *  FCC tray app started it). Only our own server gets a Stop button. */
 let managedPid: number | null = null;
+/** True while our spawn is booting — the status bar shows "Starting…" instead
+ *  of "offline" until the first healthy /health. */
+let starting = false;
 
 export function buildStatus(ok: boolean, port: number): FccStatus {
-  return { online: ok, port, managed: managedPid !== null };
+  return { online: ok, port, managed: managedPid !== null, starting };
 }
 
 export async function checkHealth(): Promise<FccStatus> {
@@ -132,7 +135,7 @@ export async function checkHealth(): Promise<FccStatus> {
   return lastStatus;
 }
 
-export async function startServer(): Promise<FccStatus> {
+export async function startServer(win?: BrowserWindow): Promise<FccStatus> {
   const before = await checkHealth();
   if (!before.online) {
     const inst = await detectInstall();
@@ -140,6 +143,10 @@ export async function startServer(): Promise<FccStatus> {
     // the renderer route to the setup guide.
     if (!inst.installed) return buildStatus(false, FCC_PORT);
     const bin = inst.serverPath ?? 'fcc-server';
+    // Push "starting" immediately so the status bar shows the boot in progress
+    // instead of a misleading "offline" during the spawn delay.
+    starting = true;
+    if (win) win.webContents.send(IPC.evtFcc, buildStatus(false, FCC_PORT));
     const child = spawn(bin, [], { detached: true, stdio: 'ignore', windowsHide: true });
     // Missing/invalid binary shouldn't crash the app — the 5s health poll
     // simply keeps reporting offline.
@@ -151,10 +158,14 @@ export async function startServer(): Promise<FccStatus> {
       const s = await checkHealth();
       if (s.online) {
         managedPid = pid;
+        starting = false;
         // Rebuild so the just-set managed flag is reflected immediately.
-        return buildStatus(true, FCC_PORT);
+        const f = buildStatus(true, FCC_PORT);
+        if (win) win.webContents.send(IPC.evtFcc, f);
+        return f;
       }
     }
+    starting = false;
   }
   return lastStatus;
 }
@@ -164,6 +175,7 @@ export async function startServer(): Promise<FccStatus> {
 export async function stopServer(): Promise<FccStatus> {
   const pid = managedPid;
   managedPid = null;
+  starting = false;
   if (pid !== null) {
     if (process.platform === 'win32') {
       // Detached so the kill survives an app quit mid-taskkill.
@@ -182,7 +194,8 @@ export async function stopServer(): Promise<FccStatus> {
 /** One-shot on app launch: spawn fcc-server in the background when installed
  *  and offline, so the app is chat-ready without the user starting anything. */
 export function autoStartServer(win: BrowserWindow): void {
-  void startServer().then((s) => win.webContents.send(IPC.evtFcc, s));
+  // startServer pushes both the "starting" and final status events itself.
+  void startServer(win);
 }
 
 export function startPolling(win: BrowserWindow): void {

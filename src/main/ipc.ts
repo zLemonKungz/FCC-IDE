@@ -74,7 +74,7 @@ export function registerIpc(win: BrowserWindow): void {
   ipcMain.handle(IPC.termDispose, (_e, id: number) => terminal.disposeTerminal(id));
 
   ipcMain.handle(IPC.fccStatus, () => fcc.checkHealth());
-  ipcMain.handle(IPC.fccStart, () => fcc.startServer());
+  ipcMain.handle(IPC.fccStart, () => fcc.startServer(win));
   ipcMain.handle(IPC.fccStop, () => fcc.stopServer());
   ipcMain.handle(IPC.fccDetect, () => fcc.detectInstall());
 

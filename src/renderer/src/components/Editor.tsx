@@ -210,6 +210,9 @@ export default function EditorPane() {
             minimap: { enabled: minimap },
             fontSize: editorFontSize,
             fontFamily: 'var(--font-mono)',
+            // JetBrains Mono is only loaded at 400/500; the page's 600 weight
+            // would be synthesized extra-thick in the editor.
+            fontWeight: '400',
             tabSize,
             wordWrap: wordWrap ? 'on' : 'off',
             lineNumbers: lineNumbers ? 'on' : 'off'
