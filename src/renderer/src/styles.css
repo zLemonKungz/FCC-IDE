@@ -2138,6 +2138,46 @@ button.icon-btn:hover {
   padding: 3px 8px;
   font-size: 12px;
 }
+.chat-col-strip {
+  flex: 1;
+  display: flex;
+  overflow-x: auto;
+  min-height: 0;
+}
+.chat-column {
+  flex: 1;
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--border-0);
+}
+.chat-column:last-child {
+  border-right: none;
+}
+.chat-col-header {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  align-items: center;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-0);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.chat-col-header .title {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-2);
+}
+.chat-col-header button {
+  padding: 2px 7px;
+  font-size: 11px;
+}
 .chat-messages {
   position: relative;
   flex: 1;
