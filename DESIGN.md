@@ -161,6 +161,14 @@ the window center grows the panel); the left sidebar is **not** inverted.
   → open the file (`fcc:open-file`) / load via `readAsset`; `#` → anchor scroll;
   http(s)/mailto → `openExternal`. The `.md` file preview adds `basePath` so links
   resolve from the file's own directory; chat resolves from the open-folder root.
+- **Language coverage** — the editor's `langFor()` (`Editor.tsx` `EXT_LANG`) maps
+  common extensions to Monaco ids (Monaco bundles all of them from `monaco-editor`
+  core, so opening `.sql`/`.rb`/`.php`/`.kt`/`.ps1`/`Dockerfile` highlights instead
+  of plaintext). The preview merges lowlight's 37 common grammars + a few
+  highlight.js extras (powershell, dos, dockerfile, julia, dart). Gotchas:
+  rehype-highlight's `languages` option **replaces** common rather than extending
+  (spread `{...common, …}`); highlight.js ships **no batch or TOML grammar** (DOS is
+  `dos`, and the grammar modules have no TS declarations — ambient `hljs-grammars.d.ts`).
 - **Slash `/` picker** + **`@` file picker**: `--bg-2` floating card, `--shadow-3`,
   items are `mono command | flex:1 description | dim arg-hint(right)`, active row
   `--bg-3` + accent command.

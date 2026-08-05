@@ -8,7 +8,7 @@ import { useSettingsStore } from '../stores/settings-store';
 import DiffView from './DiffView';
 import FileIcon from './FileIcon';
 import Markdown from '../chat/markdown';
-import { IconChevronRight, IconClaude, IconClose, IconFile, IconSparkles } from './icons';
+import { IconChevronRight, IconClaude, IconClose, IconFile } from './icons';
 
 loader.config({ monaco });
 
@@ -302,26 +302,116 @@ function Breadcrumbs({ path, root }: { path: string; root: string | null }) {
   );
 }
 
+const EXT_LANG: Record<string, string> = {
+  // web
+  ts: 'typescript',
+  mts: 'typescript',
+  cts: 'typescript',
+  tsx: 'typescript',
+  js: 'javascript',
+  mjs: 'javascript',
+  cjs: 'javascript',
+  jsx: 'javascript',
+  json: 'json',
+  jsonc: 'json',
+  json5: 'json',
+  html: 'html',
+  htm: 'html',
+  vue: 'vue',
+  svelte: 'svelte',
+  svg: 'html',
+  xml: 'xml',
+  xhtml: 'xml',
+  xslt: 'xml',
+  css: 'css',
+  scss: 'scss',
+  sass: 'scss',
+  less: 'less',
+  styl: 'css',
+  // scripting
+  py: 'python',
+  pyw: 'python',
+  rb: 'ruby',
+  php: 'php',
+  phtml: 'php',
+  pl: 'perl',
+  pm: 'perl',
+  lua: 'lua',
+  r: 'r',
+  sh: 'shell',
+  bash: 'shell',
+  zsh: 'shell',
+  ksh: 'shell',
+  ps1: 'powershell',
+  psm1: 'powershell',
+  psd1: 'powershell',
+  bat: 'bat',
+  cmd: 'bat',
+  // compiled / system
+  java: 'java',
+  kt: 'kotlin',
+  kts: 'kotlin',
+  swift: 'swift',
+  go: 'go',
+  rs: 'rust',
+  c: 'c',
+  h: 'c',
+  cpp: 'cpp',
+  cc: 'cpp',
+  cxx: 'cpp',
+  hpp: 'cpp',
+  hh: 'cpp',
+  cs: 'csharp',
+  csx: 'csharp',
+  m: 'objective-c',
+  mm: 'objective-c',
+  dart: 'dart',
+  ex: 'elixir',
+  exs: 'elixir',
+  erl: 'erlang',
+  hrl: 'erlang',
+  hs: 'haskell',
+  lhs: 'haskell',
+  clj: 'clojure',
+  cljs: 'clojure',
+  scala: 'scala',
+  groovy: 'groovy',
+  vb: 'vb',
+  fs: 'fsharp',
+  fsx: 'fsharp',
+  // data / config
+  sql: 'sql',
+  mysql: 'mysql',
+  pgsql: 'pgsql',
+  yml: 'yaml',
+  yaml: 'yaml',
+  toml: 'ini',
+  ini: 'ini',
+  conf: 'ini',
+  proto: 'protobuf',
+  graphql: 'graphql',
+  gql: 'graphql',
+  md: 'markdown',
+  markdown: 'markdown',
+  mdx: 'mdx',
+  twig: 'twig',
+  liquid: 'liquid',
+  handlebars: 'handlebars',
+  hbs: 'handlebars',
+  dockerfile: 'dockerfile',
+  makefile: 'makefile',
+  tex: 'latex',
+  rst: 'plaintext',
+  txt: 'plaintext',
+  log: 'plaintext',
+  csv: 'plaintext'
+};
+
+/** Monaco language id for a file path. Monaco (from monaco-editor core) bundles
+ *  grammars for all the ids mapped here — unknown extensions fall back to plain
+ *  text rather than erroring. Files like "Dockerfile"/"Makefile" (no dot) are
+ *  caught because splitting on '.' yields the whole name as the "extension". */
 export function langFor(p: string): string {
   const ext = p.split('.').pop()?.toLowerCase() ?? '';
-  const map: Record<string, string> = {
-    ts: 'typescript',
-    tsx: 'typescript',
-    js: 'javascript',
-    jsx: 'javascript',
-    json: 'json',
-    md: 'markdown',
-    html: 'html',
-    css: 'css',
-    py: 'python',
-    rs: 'rust',
-    go: 'go',
-    java: 'java',
-    c: 'c',
-    cpp: 'cpp',
-    sh: 'shell',
-    yml: 'yaml',
-    yaml: 'yaml'
-  };
-  return map[ext] ?? 'plaintext';
+  return EXT_LANG[ext] ?? 'plaintext';
 }

@@ -6,8 +6,29 @@ import rehypeKatex from 'rehype-katex';
 import rehypeSlug from 'rehype-slug';
 import rehypeAutolinkHeadings from 'rehype-autolink-headings';
 import rehypeHighlight from 'rehype-highlight';
+import type { PluggableList } from 'unified';
+import { common, type LanguageFn } from 'lowlight';
+import powershell from 'highlight.js/lib/languages/powershell';
+import dos from 'highlight.js/lib/languages/dos';
+import dockerfile from 'highlight.js/lib/languages/dockerfile';
+import julia from 'highlight.js/lib/languages/julia';
+import dart from 'highlight.js/lib/languages/dart';
 import { useExplorerStore } from '../stores/explorer-store';
 import { resolveHref } from '../markdown/resolve';
+
+// rehype-highlight bundles lowlight's 37 common languages by default but its
+// `languages` option REPLACES those, not extends — so merge common + the extras
+// (frequently-used langs outside common: Powershell / DOS-batch for Windows,
+// Dockerfile, Julia, Dart). highlight.js has no TOML grammar, so ```toml blocks
+// fall back to plaintext.
+const HIGHLIGHT_LANGUAGES: Record<string, LanguageFn> = {
+  ...common,
+  powershell,
+  dos,
+  dockerfile,
+  julia,
+  dart
+};
 
 // Full GFM/math markdown renderer (react-markdown). Shared by the .md file
 // preview, chat messages, subagent output, and help — the plan is "as complete
@@ -88,18 +109,23 @@ export default memo(function Markdown({
     };
   }, [basePath, root]);
 
-  const html = useMemo(
-    () => (
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[rehypeKatex, rehypeSlug, rehypeAutolinkHeadings, ...(highlight ? [rehypeHighlight] : [])]}
-        components={components}
-      >
+  const html = useMemo<React.ReactNode>(() => {
+    // rehype-highlight with options must be the [plugin, options] tuple form.
+    // Push with an explicit `as Pluggable` — a spread inside a ternary widens
+    // the tuple to a plain array and TS then reads the options object as a plugin.
+    const rehype: PluggableList = [rehypeKatex, rehypeSlug, rehypeAutolinkHeadings];
+    if (highlight) {
+      rehype.push([
+        rehypeHighlight,
+        { languages: HIGHLIGHT_LANGUAGES }
+      ] as [typeof rehypeHighlight, { languages: Record<string, LanguageFn> }]);
+    }
+    return (
+      <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={rehype} components={components}>
         {text}
       </ReactMarkdown>
-    ),
-    [text, components, highlight]
-  );
+    );
+  }, [text, components, highlight]);
 
   return <div className="fcc-md">{html}</div>;
 });
