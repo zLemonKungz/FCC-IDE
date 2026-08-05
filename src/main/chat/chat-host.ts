@@ -43,17 +43,8 @@ export class ChatHost {
   constructor(private win: BrowserWindow) {}
 
   async start(sessionId: string, folder: string, prompt: string, opts?: ChatStartOpts): Promise<void> {
-    // A new conversation supersedes any previous one — kill processes and drop
-    // stored folders so nothing leaks between chats. Persist the superseded
-    // conversations BEFORE clearing, so their in-memory transcripts survive.
-    for (const [, s] of this.sessions) {
-      s.cleaned = true;
-      s.session.stop();
-    }
-    history.flushAll();
-    this.sessions.clear();
-    this.folders.clear();
-    this.modes.clear();
+    // One conversation = one sessionId = one subprocess. Multiple sessions can
+    // coexist (multi-chat panel); this only begins/respawns the named session.
     this.folders.set(sessionId, folder);
     this.modes.set(sessionId, opts?.permissionMode ?? 'acceptEdits');
     // Open the new transcript before the first user-message so the title + first
