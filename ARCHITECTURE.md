@@ -114,6 +114,12 @@ extension parity (skills, plugins, hooks, MCP, slash commands).
   consumers (status bar, settings, menu, palette, SubagentPanel) target the
   active column via `sendActive`/`stopActive`/`resetActive`/… aliases. Chat
   columns are **not persisted** across restarts.
+- **Agent telemetry** (`telemetry-store`): on every finished turn (result /
+  error / stopped) chat-store feeds one `TurnRecord` — summary, edited files
+  (Edit/Write success count), ordered tool sequence (incl. subagent children),
+  usage, and whether a pre-turn snapshot exists. Drives the sidebar **Activity**
+  panel (Timeline / Influence / Agent flow) with read-only snapshot preview +
+  restore. Turns are pruned when a column is closed or reset.
 - **`Stop`** kills the subprocess and emits `stopped`. The `{"type":"interrupt"}`
   control message is **not reliable** through the FCC proxy — the app uses
   kill + respawn under the same `sessionId` instead. After a stop the same

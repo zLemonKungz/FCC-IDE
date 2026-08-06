@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { ChatImage, HistoryRecord, PermissionMode } from '@shared/types';
 import { emptyChatState, applyChatEvent, type ChatEvent, type ChatUiState, type FileEvent } from '../chat/chat-reducer';
 import { useEditorStore } from './editor-store';
+import { useTelemetryStore } from './telemetry-store';
 
 type ChatSession = ChatUiState & {
   id: string;
@@ -59,6 +60,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   closeChat: (id) => {
     void window.fcc.chatStop(id);
+    useTelemetryStore.getState().forgetSession(id);
     set((s) => {
       const sessions = s.sessions.filter((x) => x.id !== id);
       if (sessions.length === 0) {
@@ -157,6 +159,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     const idx = get().sessions.findIndex((x) => x.id === id);
     if (idx < 0) return;
     void window.fcc.chatStop(id);
+    useTelemetryStore.getState().forgetSession(id);
     set((st) => {
       const sessions = st.sessions.slice();
       sessions[idx] = emptySession(id, st.sessions[idx].folder);
@@ -204,6 +207,18 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         for (const t of useEditorStore.getState().tabs) files[t.path] = t.content;
         set((st) => ({ checkpoints: { ...st.checkpoints, [last.id]: files } }));
       }
+    }
+    // Turn finished → feed agent telemetry (Timeline / Influence / Agent flow).
+    const ev = message as ChatEvent;
+    if (ev.type === 'result' || ev.type === 'error' || ev.type === 'stopped') {
+      const usage = ev.type === 'result' && ev.usage
+        ? {
+            input: (ev.usage.input_tokens ?? 0) + (ev.usage.cache_creation_input_tokens ?? 0) + (ev.usage.cache_read_input_tokens ?? 0),
+            output: ev.usage.output_tokens ?? 0,
+            cost: ev.total_cost_usd ?? undefined
+          }
+        : null;
+      useTelemetryStore.getState().finalizeTurn(sessionId, get().sessions[idx].messages, get().checkpoints, usage);
     }
   },
 

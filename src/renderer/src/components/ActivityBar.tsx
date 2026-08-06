@@ -1,5 +1,5 @@
 import { useLayoutStore } from '../stores/layout-store';
-import { IconChat, IconFolder, IconGitBranch, IconMoon, IconSearch, IconSparkles, IconSun, IconTerminal } from './icons';
+import { IconActivity, IconChat, IconFolder, IconGitBranch, IconMoon, IconSearch, IconSparkles, IconSun, IconTerminal } from './icons';
 
 // Leftmost icon rail — each icon toggles its panel open/closed; the active
 // highlight shows which panels are currently open.
@@ -29,6 +29,10 @@ export default function ActivityBar() {
   };
   const showSource = (): void => {
     setSidebarView('source');
+    if (!sidebarVisible) toggleSidebar();
+  };
+  const showActivity = (): void => {
+    setSidebarView('activity');
     if (!sidebarVisible) toggleSidebar();
   };
 
@@ -61,6 +65,13 @@ export default function ActivityBar() {
         onClick={showSource}
       >
         <IconGitBranch width={20} height={20} />
+      </button>
+      <button
+        className={`activity ${sidebarVisible && sidebarView === 'activity' ? 'active' : ''}`}
+        title="Activity (agent timeline)"
+        onClick={showActivity}
+      >
+        <IconActivity width={20} height={20} />
       </button>
       <button
         className={`activity ${chatVisible ? 'active' : ''}`}

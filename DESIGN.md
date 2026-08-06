@@ -125,8 +125,9 @@ cols: auto  auto  auto  minmax(0,1fr)
 - **Titlebar**: 34px, frameless drag region, `padding-right: 150px` reserves the
   native caption buttons (see §10).
 - **Activity bar**: the leftmost icon rail; the active highlight shows what's open.
-- **Sidebar**: Explorer / Find-in-files / Subagents (width persisted via
-  `layout-store`). Panels take the full height.
+- **Sidebar**: Explorer / Find-in-files / Subagents / Activity (agent telemetry:
+  timeline + file influence + tool flow) (width persisted via `layout-store`).
+  Panels take the full height.
 - **Center**: the editor (`<Editor />` stays mounted so Monaco buffers survive).
   A centered chat overlays it `position:absolute; inset:0`.
 - **Right column** (`.right-col`): chat + optional right-docked terminal.
