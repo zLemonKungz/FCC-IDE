@@ -213,6 +213,9 @@ the window center grows the panel); the left sidebar is **not** inverted.
   that draws a real SVG commit graph (`.scg`): vertical backbones down first-parent
   chains and horizontal merge joins to branch lanes, dots (HEAD accent), ref chips,
   and the subject — no raw hash. Empty states: "Not a git repository" / "No changes".
+- **Program settings** (`SettingsModal`) gains an **Updates** section
+  (`UpdatesSection`): installed version, check/download/install states, progress
+  bar, and an auto-check-on-launch toggle — wired to `electron-updater` in main.
 - **Settings modal** (`ChatSettingsModal`): tab bar `.cs-tabs` (accent underline +
   accent-dim pill on active), body load via IPC into **local state** (never a
   zustand selector that returns a fresh array), rows `.settings-row` in a 2-column

@@ -14,6 +14,7 @@ import * as git from './git-service';
 import { listModels } from './chat/models';
 import { ChatHost, type ChatStartOpts } from './chat/chat-host';
 import { setChatConfig } from './chat/config';
+import { checkForUpdates, downloadUpdate, installUpdate } from './updater';
 
 let chatHost: ChatHost | null = null;
 let ipcRegistered = false;
@@ -51,7 +52,7 @@ export function registerIpc(win: BrowserWindow): void {
   ipcMain.handle(IPC.readAsset, (_e, p: string) => files.readAsset(p));
   // Markdown preview opens http/https/mailto links in the system browser — never
   // arbitrary schemes (a crafted href must not launch a local executable).
-  ipcMain.handle(IPC.appInfo, () => ({ name: app.getName(), version: app.getVersion() }));
+  ipcMain.handle(IPC.appInfo, () => ({ name: app.getName(), version: app.getVersion(), packaged: app.isPackaged }));
   ipcMain.handle(IPC.openExternal, (_e, url: string) => {
     let u: URL;
     try {
@@ -135,4 +136,7 @@ export function registerIpc(win: BrowserWindow): void {
   ipcMain.handle(IPC.agentsRead, (_e, name: string) => agents.readAgent(name));
   ipcMain.handle(IPC.agentsSave, (_e, name: string, content: string) => agents.saveAgent(name, content));
   ipcMain.handle(IPC.agentsDelete, (_e, name: string) => agents.deleteAgent(name));
+  ipcMain.handle(IPC.updatesCheck, () => checkForUpdates());
+  ipcMain.handle(IPC.updatesDownload, () => downloadUpdate());
+  ipcMain.handle(IPC.updatesInstall, () => installUpdate());
 }

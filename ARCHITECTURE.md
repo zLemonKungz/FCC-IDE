@@ -388,3 +388,22 @@ so interactive per-tool approval is not reachable. Local hooks
   with `@vitejs/plugin-react@6` (peers vite ^8). `vitest.config` is `.mts`
   (ESM) so it silences vite 8's `configLoader:'native'` CJS warning. Node ABI for
   `node-pty` under Electron 43 was verified by a spawn smoke.
+## 15. Auto-update & distribution
+
+- `npm run dist:win` produces `release/FCC Studio-<v>-x64.exe` (+ `.blockmap`,
+  `latest.yml`). electron-builder config: `appId com.fccstudio.app`, NSIS
+  (oneClick off, installation dir change allowed), `npmRebuild: false` — node-pty
+  ships an Electron-43-compatible build already; rebuilding needs VS Build Tools
+  which the build machine lacks.
+- `electron-updater` (`src/main/updater.ts`): `initUpdater(win)` is gated on
+  `app.isPackaged` and pushes `UpdateState` to the renderer over `updates:event`;
+  `updates:check` / `updates:download` / `updates:install` round-trip over IPC.
+  `publish: [{ provider: 'github' }]` auto-detects owner/repo from the git remote
+  (resolves to `zLemonKungz/FCC-IDE` today). The feed (`app-update.yml` +
+  GitHub Releases) goes live once that repo exists and a `v*` tag runs
+  `.github/workflows/release.yml`.
+- Renderer: Settings → **Updates** (`UpdatesSection`) — version, status,
+  download progress, Download / Restart & install, auto-check-on-launch toggle.
+  Auto-check is renderer-driven on App mount (respects `settings.autoUpdate`).
+- Windows is **unsigned** for now (`win.forceCodeSigning: false`); signing turns
+  on by providing `CSC_LINK` / `CSC_KEY_PASSWORD` when building.
