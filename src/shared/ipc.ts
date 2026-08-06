@@ -48,6 +48,8 @@ export const IPC = {
   historyList: 'history:list',
   historyOpen: 'history:open',
   historyDelete: 'history:delete',
+  claudeHistoryList: 'claude-history:list',
+  claudeHistoryRead: 'claude-history:read',
   mcpGet: 'mcp:get',
   mcpSet: 'mcp:set',
   pluginsList: 'plugins:list',

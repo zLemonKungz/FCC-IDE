@@ -62,7 +62,9 @@ warm-dark terracotta look, deliberately small, built to feel like a real product
 - **Live agent view** — watch subagents, background tasks, and their progress.
 - **Activity panel** — every finished turn lands in a sidebar timeline with a file
   influence heat map, ordered tool flow, and read-only snapshot preview + restore.
-- **History**: reopen past conversations and continue them (`--resume`).
+- **History**: reopen past conversations and continue them (`--resume`) — plus
+  your existing **Claude Code CLI sessions** from `~/.claude`, imported and
+  resumable in-app.
 - **Checkpoints** — rewind your files to before any Claude turn.
 
 ### 📁 File explorer + editor

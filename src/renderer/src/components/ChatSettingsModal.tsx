@@ -261,12 +261,18 @@ function HistoryTab({ onClose }: { onClose: () => void }) {
   const [items, setItems] = useState<HistorySummary[] | null>(null);
 
   const load = (): void => {
-    void window.fcc.historyList().then(setItems).catch(() => setItems([]));
+    void window.fcc
+      .historyList()
+      .then((app) => window.fcc.claudeHistoryList().then((cc) => setItems([...app, ...cc])))
+      .catch(() => setItems([]));
   };
   useEffect(load, []);
 
-  const open = async (id: string): Promise<void> => {
-    const rec = await window.fcc.historyOpen(id).catch(() => null);
+  const open = async (h: HistorySummary): Promise<void> => {
+    const rec =
+      h.source === 'claude-code'
+        ? await window.fcc.claudeHistoryRead(h.id).catch(() => null)
+        : await window.fcc.historyOpen(h.id).catch(() => null);
     if (rec) {
       useChatStore.getState().openHistory(rec);
       onClose();
@@ -291,15 +297,18 @@ function HistoryTab({ onClose }: { onClose: () => void }) {
           <div className="cs-hist-main">
             <div className="cs-hist-title">{h.title || 'Untitled'}</div>
             <div className="cs-hist-meta">
+              {h.source === 'claude-code' && <span className="cs-hist-src">Claude Code</span>}
               {h.folder?.split(/[\\/]/).filter(Boolean).pop() ?? '—'} · {fmtTime(h.updatedAt)}
             </div>
           </div>
-          <button className="ghost" onClick={() => void open(h.id)}>
+          <button className="ghost" onClick={() => void open(h)}>
             Open
           </button>
-          <button className="icon-btn" onClick={() => void del(h.id)} title="Delete" aria-label="Delete">
-            <IconTrash width={13} height={13} />
-          </button>
+          {h.source !== 'claude-code' && (
+            <button className="icon-btn" onClick={() => void del(h.id)} title="Delete" aria-label="Delete">
+              <IconTrash width={13} height={13} />
+            </button>
+          )}
         </div>
       ))}
     </>

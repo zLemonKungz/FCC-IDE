@@ -4005,3 +4005,6 @@ button.primary:focus-visible,
 .upd-status { font-size: 12px; color: var(--text-2); }
 .upd-bar { height: 6px; border-radius: 3px; background: var(--bg-3); overflow: hidden; margin: 6px 0; }
 .upd-bar > div { height: 100%; background: var(--accent); border-radius: 3px; transition: width 150ms ease; }
+
+/* History tab — imported Claude Code session tag */
+.cs-hist-src { font-size: 10px; color: var(--accent); background: var(--accent-dim); padding: 1px 5px; border-radius: var(--radius-sm); margin-right: 4px; text-transform: uppercase; letter-spacing: 0.05em; }

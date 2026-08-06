@@ -8,6 +8,13 @@ All notable changes to **FCC Studio** are documented here. Format follows
 
 _Next release notes go here._
 
+## [0.1.1] - 2026-08-06
+
+### Added
+- **Import Claude Code CLI history** — the History tab also lists sessions from
+  `~/.claude/projects` (tagged "Claude Code"), and you can open and resume them
+  in the app (`--resume`).
+
 ## [0.1.0] - 2026-08-06
 
 First public release — a warm-dark, all-in-one desktop IDE for Claude Code,

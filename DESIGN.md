@@ -216,6 +216,9 @@ the window center grows the panel); the left sidebar is **not** inverted.
 - **Program settings** (`SettingsModal`) gains an **Updates** section
   (`UpdatesSection`): installed version, check/download/install states, progress
   bar, and an auto-check-on-launch toggle — wired to `electron-updater` in main.
+- **Chat history** (`ChatSettingsModal` → History tab): lists the app's own
+  `userData/sessions` plus **imported Claude Code CLI sessions**
+  (`~/.claude/projects`, tagged "Claude Code") — open/resume them in-app.
 - **Settings modal** (`ChatSettingsModal`): tab bar `.cs-tabs` (accent underline +
   accent-dim pill on active), body load via IPC into **local state** (never a
   zustand selector that returns a fresh array), rows `.settings-row` in a 2-column

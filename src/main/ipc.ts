@@ -5,6 +5,7 @@ import * as files from './file-service';
 import * as terminal from './terminal-service';
 import * as fcc from './fcc-manager';
 import * as history from './chat/history';
+import { listClaude, readClaude } from './chat/claude-history';
 import * as mcp from './mcp-service';
 import * as claudeSettings from './claude-settings';
 import * as agents from './claude-agents';
@@ -123,6 +124,8 @@ export function registerIpc(win: BrowserWindow): void {
   ipcMain.handle(IPC.historyList, () => history.list());
   ipcMain.handle(IPC.historyOpen, (_e, id: string) => history.read(id));
   ipcMain.handle(IPC.historyDelete, (_e, id: string) => history.remove(id));
+  ipcMain.handle(IPC.claudeHistoryList, () => listClaude());
+  ipcMain.handle(IPC.claudeHistoryRead, (_e, id: string) => readClaude(id));
   ipcMain.handle(IPC.mcpGet, () => mcp.getMcpOverview());
   ipcMain.handle(IPC.mcpSet, (_e, servers: Record<string, McpServerDef>) => mcp.setMcpConfig(servers));
   ipcMain.handle(IPC.pluginsList, () => plugins.listPlugins());

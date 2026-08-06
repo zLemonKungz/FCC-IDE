@@ -120,6 +120,11 @@ extension parity (skills, plugins, hooks, MCP, slash commands).
   usage, and whether a pre-turn snapshot exists. Drives the sidebar **Activity**
   panel (Timeline / Influence / Agent flow) with read-only snapshot preview +
   restore. Turns are pruned when a column is closed or reset.
+- **History** — transcripts persist to `userData/sessions/<sessionId>.json`
+  (`chat/history.ts`, flush on result). `chat/claude-history.ts` imports the
+  Claude Code CLI's `~/.claude/projects/**/*.jsonl` sessions (real `cwd` read from
+  events, title = first user message, `sessionId` doubles as a `--resume` id), so
+  the History tab merges both — imported rows are tagged and can be resumed.
 - **`Stop`** kills the subprocess and emits `stopped`. The `{"type":"interrupt"}`
   control message is **not reliable** through the FCC proxy — the app uses
   kill + respawn under the same `sessionId` instead. After a stop the same

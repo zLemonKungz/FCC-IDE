@@ -79,6 +79,8 @@ export interface HistorySummary {
   folder: string;
   createdAt: number;
   updatedAt: number;
+  /** 'app' (own sessions) vs 'claude-code' (imported from the CLI's ~/.claude). */
+  source?: 'app' | 'claude-code';
 }
 
 /** A server definition inside .mcp.json (Claude Code schema). */

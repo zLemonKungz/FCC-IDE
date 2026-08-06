@@ -21,10 +21,17 @@ jobs:
       - name: Validate tag
         run: |
           if ("$env:GITHUB_REF_NAME" -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { throw "unexpected ref: $env:GITHUB_REF_NAME" }
-      # electron-builder --publish always already created the release + assets;
-      # we only attach the changelog as release notes.
-      - name: Attach release notes from changelog
-        run: gh release edit "$env:TAG_NAME" --notes-file CHANGELOG.md
+      # electron-builder --publish always already created the release + assets.
+      # Cut release notes to only THIS version's CHANGELOG section (## [<ver>]
+      # up to the next ## heading) so notes don't accumulate over releases.
+      - name: Attach release notes (this version only)
+        run: |
+          $version = $env:GITHUB_REF_NAME -replace '^v',''
+          $body = Get-Content -Raw CHANGELOG.md
+          $m = [regex]::Match($body, "(?ms)^## \[$([regex]::Escape($version))\].*?(?=^## )")
+          if (-not $m.Success) { throw "no CHANGELOG section found for v$version" }
+          Set-Content -Path RELEASE_NOTES.md -Value $m.Value.Trim()
+          gh release edit "$env:TAG_NAME" --notes-file RELEASE_NOTES.md
         env:
           TAG_NAME: ${{ github.ref_name }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
