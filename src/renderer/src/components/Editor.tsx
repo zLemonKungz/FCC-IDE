@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Editor, { loader } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
+import { langFor as langForPure, EXT_LANG, mergeMonacoLanguages, type MonacoLangInfo } from '../lang/highlight';
 import { useEditorStore } from '../stores/editor-store';
 import { useExplorerStore } from '../stores/explorer-store';
 import { useLayoutStore } from '../stores/layout-store';
@@ -445,116 +446,21 @@ function Breadcrumbs({ path, root }: { path: string; root: string | null }) {
   );
 }
 
-const EXT_LANG: Record<string, string> = {
-  // web
-  ts: 'typescript',
-  mts: 'typescript',
-  cts: 'typescript',
-  tsx: 'typescript',
-  js: 'javascript',
-  mjs: 'javascript',
-  cjs: 'javascript',
-  jsx: 'javascript',
-  json: 'json',
-  jsonc: 'json',
-  json5: 'json',
-  html: 'html',
-  htm: 'html',
-  vue: 'vue',
-  svelte: 'svelte',
-  svg: 'html',
-  xml: 'xml',
-  xhtml: 'xml',
-  xslt: 'xml',
-  css: 'css',
-  scss: 'scss',
-  sass: 'scss',
-  less: 'less',
-  styl: 'css',
-  // scripting
-  py: 'python',
-  pyw: 'python',
-  rb: 'ruby',
-  php: 'php',
-  phtml: 'php',
-  pl: 'perl',
-  pm: 'perl',
-  lua: 'lua',
-  r: 'r',
-  sh: 'shell',
-  bash: 'shell',
-  zsh: 'shell',
-  ksh: 'shell',
-  ps1: 'powershell',
-  psm1: 'powershell',
-  psd1: 'powershell',
-  bat: 'bat',
-  cmd: 'bat',
-  // compiled / system
-  java: 'java',
-  kt: 'kotlin',
-  kts: 'kotlin',
-  swift: 'swift',
-  go: 'go',
-  rs: 'rust',
-  c: 'c',
-  h: 'c',
-  cpp: 'cpp',
-  cc: 'cpp',
-  cxx: 'cpp',
-  hpp: 'cpp',
-  hh: 'cpp',
-  cs: 'csharp',
-  csx: 'csharp',
-  m: 'objective-c',
-  mm: 'objective-c',
-  dart: 'dart',
-  ex: 'elixir',
-  exs: 'elixir',
-  erl: 'erlang',
-  hrl: 'erlang',
-  hs: 'haskell',
-  lhs: 'haskell',
-  clj: 'clojure',
-  cljs: 'clojure',
-  scala: 'scala',
-  groovy: 'groovy',
-  vb: 'vb',
-  fs: 'fsharp',
-  fsx: 'fsharp',
-  // data / config
-  sql: 'sql',
-  mysql: 'mysql',
-  pgsql: 'pgsql',
-  yml: 'yaml',
-  yaml: 'yaml',
-  toml: 'ini',
-  ini: 'ini',
-  conf: 'ini',
-  proto: 'protobuf',
-  graphql: 'graphql',
-  gql: 'graphql',
-  md: 'markdown',
-  markdown: 'markdown',
-  mdx: 'mdx',
-  twig: 'twig',
-  liquid: 'liquid',
-  handlebars: 'handlebars',
-  hbs: 'handlebars',
-  dockerfile: 'dockerfile',
-  makefile: 'makefile',
-  tex: 'latex',
-  rst: 'plaintext',
-  txt: 'plaintext',
-  log: 'plaintext',
-  csv: 'plaintext'
-};
+/** Monaco language id for a file path. The curated map above is enriched at
+ *  runtime with every language the bundled monaco registers (getLanguages →
+ *  extensions + filenames), so any grammar Monaco ships is picked up by its
+ *  extension — no per-language bookkeeping needed here. */
+let langByExt: Record<string, string> | null = null;
+function languageMap(): Record<string, string> {
+  if (langByExt) return langByExt;
+  try {
+    langByExt = mergeMonacoLanguages(EXT_LANG, monaco.languages.getLanguages() as MonacoLangInfo[]);
+  } catch {
+    langByExt = EXT_LANG; // monaco not ready — the curated set is still usable
+  }
+  return langByExt;
+}
 
-/** Monaco language id for a file path. Monaco (from monaco-editor core) bundles
- *  grammars for all the ids mapped here — unknown extensions fall back to plain
- *  text rather than erroring. Files like "Dockerfile"/"Makefile" (no dot) are
- *  caught because splitting on '.' yields the whole name as the "extension". */
 export function langFor(p: string): string {
-  const ext = p.split('.').pop()?.toLowerCase() ?? '';
-  return EXT_LANG[ext] ?? 'plaintext';
+  return langForPure(p, languageMap());
 }
