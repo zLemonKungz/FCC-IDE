@@ -60,6 +60,9 @@
     "node-pty@1.1.0": true,
     "electron-winstaller@5.4.0": true
   },
+  "overrides": {
+    "dompurify": "^3.4.13"
+  },
   "build": {
     "asarUnpack": [
       "node_modules/@anthropic-ai/claude-agent-sdk-*/**"
