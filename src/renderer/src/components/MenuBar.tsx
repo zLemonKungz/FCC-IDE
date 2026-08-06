@@ -136,6 +136,7 @@ function buildMenus(
       label: 'Help',
       items: [
         { label: 'Keyboard Shortcuts', run: () => window.dispatchEvent(new CustomEvent('fcc:open-shortcuts')) },
+        { label: "What's New", run: () => window.dispatchEvent(new CustomEvent('fcc:open-whatsnew')) },
         { label: 'Command Palette', shortcut: 'Ctrl+Shift+P', run: openPalette }
       ]
     }
