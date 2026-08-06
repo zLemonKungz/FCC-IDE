@@ -60,6 +60,8 @@ warm-dark terracotta look, deliberately small, built to feel like a real product
   and thinking controls.
 - **Attach images, `@`-mention files**, paste screenshots, re-send an edited turn.
 - **Live agent view** — watch subagents, background tasks, and their progress.
+- **Activity panel** — every finished turn lands in a sidebar timeline with a file
+  influence heat map, ordered tool flow, and read-only snapshot preview + restore.
 - **History**: reopen past conversations and continue them (`--resume`).
 - **Checkpoints** — rewind your files to before any Claude turn.
 
@@ -78,6 +80,8 @@ warm-dark terracotta look, deliberately small, built to feel like a real product
   guided setup modal.
 - **Themes** — warm-dark terracotta and a light theme; titlebar, editor, terminal,
   chat and icons all follow (`Ctrl+K Ctrl+T`).
+- **What's New** — Help menu opens in-app release notes straight from the bundled
+  `CHANGELOG.md`.
 
 ## Quick start
 
@@ -123,6 +127,7 @@ npm run dev        # or run straight from source (HMR)
   (chat subprocess protocol, realtime control, IPC contract, file-system safety).
 - [DESIGN.md](DESIGN.md) — the design system (palette, type, layout, motion, theme, a11y).
 - [CLAUDE.md](CLAUDE.md) — entry point for Claude Code in this repo.
+- [CHANGELOG.md](CHANGELOG.md) — release history (also viewable in-app via Help → What's New).
 
 ## License
 

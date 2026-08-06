@@ -183,10 +183,12 @@ the window center grows the panel); the left sidebar is **not** inverted.
   sanitized with **DOMPurify** (`sanitizeRawHtml` in `markdown.tsx`) before
   rendering — the chat/subagent/.md text is untrusted, so HTML is never injected
   verbatim (scripts/event handlers/javascript: are stripped).
-- **Language coverage** — the editor's `langFor()` (`Editor.tsx` `EXT_LANG`) maps
-  common extensions to Monaco ids (Monaco bundles all of them from `monaco-editor`
-  core, so opening `.sql`/`.rb`/`.php`/`.kt`/`.ps1`/`Dockerfile` highlights instead
-  of plaintext). The preview merges lowlight's 37 common grammars + a few
+- **Language coverage** — `langFor()` (`src/renderer/src/lang/highlight.ts`) starts
+  from a curated `EXT_LANG` map then folds in **every** grammar Monaco registers at
+  runtime (`monaco.languages.getLanguages()` → extensions + filenames), so any
+  language Monaco ships highlights by extension (`.sql`/`.rb`/`.php`/`.kt`/
+  `Dockerfile`, …) instead of plaintext; curated entries win on ambiguity (`.h` → c).
+  The preview merges lowlight's 37 common grammars + a few
   highlight.js extras (powershell, dos, dockerfile, julia, dart). Gotchas:
   rehype-highlight's `languages` option **replaces** common rather than extending
   (spread `{...common, …}`); highlight.js ships **no batch or TOML grammar** (DOS is
