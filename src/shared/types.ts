@@ -191,3 +191,13 @@ export interface SearchHit {
   /** trimmed matching line, capped for display */
   text: string;
 }
+
+/** Auto-update status pushed from main (electron-updater) to the renderer. */
+export type UpdateState =
+  | { status: 'idle' }
+  | { status: 'checking' }
+  | { status: 'available'; version: string; notes?: string }
+  | { status: 'none' }
+  | { status: 'downloading'; percent: number }
+  | { status: 'downloaded'; version: string }
+  | { status: 'error'; message: string };

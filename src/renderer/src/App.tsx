@@ -122,6 +122,15 @@ export default function App() {
   // registered in the main process (fs:open-root) BEFORE any file IPC, or the
   // "No folder open" guard rejects every list/read.
   const restored = useRef(false);
+  // Auto-check for updates once on launch (packaged builds; respects the toggle).
+  useEffect(() => {
+    void window.fcc
+      .appInfo()
+      .then((i) => {
+        if (i.packaged && useSettingsStore.getState().autoUpdate) void window.fcc.updatesCheck();
+      })
+      .catch(() => undefined);
+  }, []);
   useEffect(() => {
     if (restored.current) return;
     restored.current = true;

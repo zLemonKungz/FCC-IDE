@@ -57,9 +57,13 @@ export const IPC = {
   appInfo: 'app:info',
   openExternal: 'shell:open-external',
   readAsset: 'fs:read-asset',
+  updatesCheck: 'updates:check',
+  updatesDownload: 'updates:download',
+  updatesInstall: 'updates:install',
   // events main -> renderer
   evtChat: 'chat:event',
   evtFcc: 'fcc:status-changed',
   evtTerm: 'term:output',
-  evtFileModified: 'file:modified'
+  evtFileModified: 'file:modified',
+  evtUpdate: 'updates:event'
 } as const;

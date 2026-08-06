@@ -129,6 +129,8 @@ interface SettingsState {
   autoCompactWindow: number;
   /** model effort level ('auto' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'). */
   chatEffort: string;
+  /** check for updates automatically on launch (renderer-driven). */
+  autoUpdate: boolean;
   setEditorFontSize: (v: number) => void;
   setAutoSave: (v: boolean) => void;
   setAutoSaveDelay: (v: number) => void;
@@ -140,6 +142,7 @@ interface SettingsState {
   setChatMaxTurns: (v: number) => void;
   setAutoCompactWindow: (v: number) => void;
   setChatEffort: (v: string) => void;
+  setAutoUpdate: (v: boolean) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -156,6 +159,7 @@ export const useSettingsStore = create<SettingsState>()(
       chatMaxTurns: 50,
       autoCompactWindow: 190,
       chatEffort: 'auto',
+      autoUpdate: true,
       setEditorFontSize: (v) => set({ editorFontSize: clamp(v, FONT_MIN, FONT_MAX) }),
       setAutoSave: (v) => set({ autoSave: v }),
       setAutoSaveDelay: (v) => set({ autoSaveDelay: clamp(v, DELAY_MIN, DELAY_MAX) }),
@@ -166,7 +170,8 @@ export const useSettingsStore = create<SettingsState>()(
       setChatModel: (v) => set({ chatModel: v }),
       setChatMaxTurns: (v) => set({ chatMaxTurns: clamp(v, TURNS_MIN, TURNS_MAX) }),
       setAutoCompactWindow: (v) => set({ autoCompactWindow: clamp(v, 10, 1000) }),
-      setChatEffort: (v) => set({ chatEffort: v })
+      setChatEffort: (v) => set({ chatEffort: v }),
+      setAutoUpdate: (v) => set({ autoUpdate: v })
     }),
     { name: 'fcc-settings' }
   )

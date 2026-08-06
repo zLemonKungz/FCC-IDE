@@ -3,6 +3,7 @@ import { join } from 'path';
 import { disposeChatHost, registerIpc } from './ipc';
 import * as fcc from './fcc-manager';
 import { createSplash, closeSplash } from './splash';
+import { initUpdater } from './updater';
 
 function createWindow(): void {
   const splash = createSplash();
@@ -28,6 +29,8 @@ function createWindow(): void {
   });
 
   registerIpc(win);
+  // Auto-update only makes sense in a packaged app — dev has no update feed.
+  if (app.isPackaged) initUpdater(win);
   fcc.startPolling(win);
   // Open the app chat-ready: if FCC is installed but its server is offline,
   // spawn it in the background (the user shouldn't need the FCC tray app).

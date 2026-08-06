@@ -2,6 +2,7 @@ import { useSettingsStore } from '../stores/settings-store';
 import { useLayoutStore } from '../stores/layout-store';
 import { useModalFocus } from '../hooks/useModal';
 import Switch from './Switch';
+import UpdatesSection from './UpdatesSection';
 import { IconClose, IconMoon, IconSun } from './icons';
 
 // Program (app) settings only — appearance + editor + file-save behavior. Chat
@@ -103,6 +104,8 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
           />
         </label>
         <div className="settings-note">Editor settings apply to the next opened file.</div>
+
+        <UpdatesSection />
       </div>
     </div>
   );

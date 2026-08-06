@@ -82,6 +82,9 @@ warm-dark terracotta look, deliberately small, built to feel like a real product
   chat and icons all follow (`Ctrl+K Ctrl+T`).
 - **What's New** — Help menu opens in-app release notes straight from the bundled
   `CHANGELOG.md`.
+- **Auto-update** — Settings → Updates: checks GitHub Releases on launch (or
+  manually), downloads and installs on restart. Ready; the feed goes live once
+  the release repo exists.
 
 ## Quick start
 

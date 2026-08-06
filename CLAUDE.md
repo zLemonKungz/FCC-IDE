@@ -24,7 +24,13 @@ npm run test         # vitest run (tests/ — git-ignored, dev-only)
 npm run smoke        # node smoke/sdk-smoke.mjs — live FCC proxy round-trip check (uses the SDK directly, not the app's chat path)
 npm run icons        # electron scripts/generate-icons.mjs — re-render build/icon-*.png + icon.ico from resources/icon.svg
 npm run dist:win     # build + electron-builder NSIS Windows installer
+npm run release      # dist:win + publish to GitHub Releases (needs a v* tag + GH_TOKEN)
 ```
+
+**Releasing**: bump `version` in `package.json` → tag `v<version>` → push. The
+GitHub Actions `release.yml` builds + publishes the installer, which becomes the
+auto-update feed (Settings → Updates checks it; `CHANGELOG.md` is shown in-app as
+Help → What's New).
 
 To run a single test file: `npx vitest run tests/path-utils.test.ts`.
 

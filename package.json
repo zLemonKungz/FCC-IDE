@@ -15,7 +15,8 @@
     "test": "vitest run",
     "smoke": "node smoke/sdk-smoke.mjs",
     "icons": "electron scripts/generate-icons.mjs",
-    "dist:win": "electron-vite build && electron-builder --win nsis"
+    "dist:win": "electron-vite build && electron-builder --win nsis",
+    "release": "electron-vite build && electron-builder --win nsis --publish always"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.222",
@@ -23,6 +24,7 @@
     "@fontsource/comic-neue": "^5.3.0",
     "@fontsource/jetbrains-mono": "^5.3.0",
     "dompurify": "^3.4.13",
+    "electron-updater": "^6.8.9",
     "katex": "^0.18.1",
     "node-pty": "^1.0.0",
     "react-markdown": "^10.1.0",
@@ -64,8 +66,35 @@
     "dompurify": "^3.4.13"
   },
   "build": {
+    "appId": "com.fccstudio.app",
+    "productName": "FCC Studio",
     "asarUnpack": [
-      "node_modules/@anthropic-ai/claude-agent-sdk-*/**"
-    ]
+      "node_modules/@anthropic-ai/claude-agent-sdk-*/**",
+      "node_modules/node-pty/**"
+    ],
+    "files": [
+      "out/**/*"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "artifactName": "FCC Studio-${version}-${arch}.${ext}",
+    "npmRebuild": false,
+    "publish": [
+      { "provider": "github" }
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon.ico",
+      "forceCodeSigning": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "FCC Studio"
+    }
   }
 }
