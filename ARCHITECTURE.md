@@ -96,8 +96,10 @@ extension parity (skills, plugins, hooks, MCP, slash commands).
 - Reads `\n`-terminated JSONL events from stdout.
 - The binary resolves via `CLI_PATH` env > the SDK's bundled platform package
   (`node_modules/@anthropic-ai/claude-agent-sdk-<platform>/claude.*`) > PATH.
-- **Packaged build**: `resolveCliBinary()` also checks `process.resourcesPath/app.asar.unpacked`,
-  and `package.json` `build.asarUnpack` ships `claude.exe` **out** of the asar — an
+- **Packaged build**: `resolveCliBinary()` checks `process.resourcesPath/app.asar.unpacked`
+  **before** the `app.asar` path — `fs.existsSync` reports asar stubs as present
+  but spawn can't execute them (this ordering was the v0.1.2 ENOENT fix).
+  `package.json` `build.asarUnpack` ships `claude.exe` **out** of the asar — an
   executable inside `app.asar` can't be spawned.
 
 ### Empirically-verified invariants (the load-bearing ones)

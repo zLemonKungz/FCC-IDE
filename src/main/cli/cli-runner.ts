@@ -43,8 +43,11 @@ export function resolveCliBinary(): string {
   const bases = [process.cwd()];
   const appPath = typeof app?.getAppPath === 'function' ? app.getAppPath() : null;
   if (appPath) {
-    bases.push(appPath);
+    // The real binary ships unpacked (build.asarUnpack); inside app.asar there
+    // is only a stub that existsSync() reports as present but spawn cannot
+    // execute — so the unpacked copy must be checked first.
     if (process.resourcesPath) bases.push(resolve(process.resourcesPath, 'app.asar.unpacked'));
+    bases.push(appPath);
   }
   for (const base of bases) {
     const p = resolve(base, rel);

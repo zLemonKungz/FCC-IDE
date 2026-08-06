@@ -8,6 +8,14 @@ All notable changes to **FCC Studio** are documented here. Format follows
 
 _Next release notes go here._
 
+## [0.1.2] - 2026-08-06
+
+### Fixed
+- **Packaged app could not start the Claude CLI** — `resolveCliBinary()`
+  resolved to the `app.asar` stub instead of the unpacked copy
+  (`app.asar.unpacked`), so spawn failed with `ENOENT`. The unpacked path is now
+  checked first.
+
 ## [0.1.1] - 2026-08-06
 
 ### Added
