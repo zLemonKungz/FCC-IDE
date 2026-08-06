@@ -2,11 +2,13 @@ import { memo, useEffect, useMemo, useState, type MouseEvent } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
+import rehypeRaw from 'rehype-raw';
 import rehypeKatex from 'rehype-katex';
 import rehypeSlug from 'rehype-slug';
 import rehypeAutolinkHeadings from 'rehype-autolink-headings';
 import rehypeHighlight from 'rehype-highlight';
-import type { PluggableList } from 'unified';
+import DOMPurify from 'dompurify';
+import type { Pluggable, PluggableList } from 'unified';
 import { common, type LanguageFn } from 'lowlight';
 import powershell from 'highlight.js/lib/languages/powershell';
 import dos from 'highlight.js/lib/languages/dos';
@@ -63,6 +65,22 @@ function AssetImage({ path, alt }: { path: string; alt?: string }) {
 
 const HTTP_SCHEME = /^(https?):/i;
 
+// rehype-raw turns raw HTML in the markdown into `raw` nodes that
+// react-markdown would inject verbatim — but the text here is untrusted (chat
+// output, subagent text, .md files). Sanitize every raw node with DOMPurify
+// before it renders; runs right after rehypeRaw.
+const sanitizeRawHtml = (() => (tree: unknown) => {
+  const walk = (node: unknown): void => {
+    if (node && typeof node === 'object' && (node as { type?: string }).type === 'raw') {
+      const raw = node as { value?: string };
+      if (typeof raw.value === 'string') raw.value = DOMPurify.sanitize(raw.value);
+    }
+    const kids = (node as { children?: unknown[] } | null)?.children ?? [];
+    for (const c of kids) walk(c);
+  };
+  walk(tree);
+}) as unknown as Pluggable;
+
 export default memo(function Markdown({
   text,
   basePath,
@@ -113,7 +131,7 @@ export default memo(function Markdown({
     // rehype-highlight with options must be the [plugin, options] tuple form.
     // Push with an explicit `as Pluggable` — a spread inside a ternary widens
     // the tuple to a plain array and TS then reads the options object as a plugin.
-    const rehype: PluggableList = [rehypeKatex, rehypeSlug, rehypeAutolinkHeadings];
+    const rehype: PluggableList = [rehypeRaw, sanitizeRawHtml, rehypeKatex, rehypeSlug, rehypeAutolinkHeadings];
     if (highlight) {
       rehype.push([
         rehypeHighlight,
