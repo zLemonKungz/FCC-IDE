@@ -1,64 +1,128 @@
-# FCC Studio
+<p align="center">
+  <img src="resources/mark.svg" width="92" alt="FCC Studio mark" />
+</p>
 
-A small, VS Code–like desktop IDE for [free-claude-code (FCC)](https://github.com/Alishahryar1/free-claude-code). Instead of running `fcc-claude` separately in a terminal, everything lives in one Electron app: a file explorer + Monaco editor, a chat panel that talks to Claude through the FCC proxy, an integrated xterm terminal, and FCC server health management.
+<h1 align="center">FCC <span style="color:#d97a4a;">Studio</span></h1>
 
-It is deliberately small — not a VS Code clone.
+<p align="center">
+  A warm-dark, <b>VS Code–like</b> desktop IDE for Claude Code —<br/>
+  run the real <code>claude</code> CLI from one app, <i>many conversations at once</i>.
+</p>
+
+<p align="center" style="letter-spacing:0.12em;font-size:13px">
+  <span style="color:#d97a4a;">◆</span> <b>concurrent chat</b>
+  <span style="color:#3b82f6;">◆</span> <b>claude-code parity</b>
+  <span style="color:#e6e6e4;">◆</span> <b>warm-dark</b>
+</p>
+
+<p align="center">
+  <img alt="Electron 43" src="https://img.shields.io/badge/Electron-43-47848f?logo=electron&logoColor=white&style=flat-square" />
+  <img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black&style=flat-square" />
+  <img alt="TypeScript 7" src="https://img.shields.io/badge/TypeScript-7-3178C6?logo=typescript&logoColor=white&style=flat-square" />
+  <img alt="Vite 8" src="https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white&style=flat-square" />
+  <img alt="Monaco" src="https://img.shields.io/badge/Monaco-0.56-007ACC?style=flat-square" />
+  <img alt="Vitest 4" src="https://img.shields.io/badge/Vitest-4-6E9F18?logo=vitest&logoColor=white&style=flat-square" />
+</p>
+
+<p align="center">
+  <img alt="chat engine" src="https://img.shields.io/badge/chat%20engine-free--claude--code-d97a4a?style=flat-square" />
+  <img alt="multi chat" src="https://img.shields.io/badge/multi--chat-concurrent-ff6b6b?style=flat-square" />
+  <img alt="license" src="https://img.shields.io/badge/license-MIT-97ca00?style=flat-square" />
+  <img alt="PRs" src="https://img.shields.io/badge/PRs-welcome-22c55e?style=flat-square" />
+</p>
+
+<p align="center">
+  <a href="#features">Features</a> ·
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#shortcuts">Shortcuts</a> ·
+  <a href="#docs">Docs</a> ·
+  <a href="#license">License</a>
+</p>
+
+---
+
+**FCC Studio** is an [Electron](https://www.electronjs.org/) desktop IDE for
+[free-claude-code (FCC)](https://github.com/Alishahryar1/free-claude-code). Instead
+of juggling a terminal, a browser tab, and a proxy tray app, everything lives in
+one window: a file explorer + [Monaco](https://microsoft.github.io/monaco-editor/)
+editor, a chat panel that talks to Claude **through the FCC proxy**, an integrated
+[xterm](https://xtermjs.org/) terminal, and FCC server health management — a
+warm-dark terracotta look, deliberately small, built to feel like a real product.
 
 ## Features
 
-- **File explorer** — open a folder, browse, create/rename/delete files and directories
-- **Monaco editor** — multi-tab, syntax highlighting, `Ctrl+S` save, dirty-tab discard guard
-- **Chat panel** — talk to Claude through the local FCC proxy, with agent edit diff review
-- **Integrated terminal** — xterm via node-pty, resizable
-- **FCC server management** — health status in the status bar, one-click start when offline
-- **Dark/light themes** — switch with `Ctrl+K Ctrl+T`, everything (titlebar, editor, terminal, icons) follows the theme
-- **Resizable panels** — sidebar, chat, and terminal drag handles
+### 💬 Multi-conversation chat
+- **Run several chats side by side** — each conversation is its own column with its
+  own live `claude` subprocess, so you can work two-plus Claude threads in parallel.
+- Talks to Claude through the **local FCC proxy**, driving the real `claude` CLI
+  over `stream-json` for full Claude Code parity (slash commands, skills, modes).
+- **Mode toggle** — `Plan` / `Act` per conversation, plus live effort, fast-mode,
+  and thinking controls.
+- **Attach images, `@`-mention files**, paste screenshots, re-send an edited turn.
+- **Live agent view** — watch subagents, background tasks, and their progress.
+- **History**: reopen past conversations and continue them (`--resume`).
+- **Checkpoints** — rewind your files to before any Claude turn.
 
-## Getting started
+### 📁 File explorer + editor
+- Open a folder; the tree supports **right-click rename / copy / cut / paste /
+  duplicate / delete**, new file/folder inline.
+- Multi-tab Monaco editor with syntax highlighting, image preview, undo-aware tabs.
+- Find-in-files across the project.
+
+### 🛠 Integrations & panels
+- **Terminal** — xterm via node-pty, multiple tabs, dockable right/bottom.
+- **Source control** — git status / stage / unstage / diff / commit graph.
+- **Settings** — program + chat settings, an editor for your Claude Code settings,
+  an MCP server manager, custom **agents** editor.
+- **FCC server** — health in the status bar, one-click start, install detection +
+  guided setup modal.
+- **Themes** — warm-dark terracotta and a light theme; titlebar, editor, terminal,
+  chat and icons all follow (`Ctrl+K Ctrl+T`).
+
+## Quick start
+
+### Install the app (Windows)
+
+1. **Download the installer** — `FCC Studio-<version>-x64.exe`. Double-click and
+   walk through the wizard; a desktop shortcut and a Start-menu entry are added.
+
+2. **Install FCC** — on first launch the app checks for it. If it's missing, the
+   setup modal gives you the exact install command for your machine (FCC is a
+   Python/uv tool, not npm). Once it's there, the app starts the proxy for you.
+
+3. **Start chatting** — open a project folder and ask Claude anything in a chat
+   column. Use the panel's **+** button to add a second conversation and run
+   several Claude threads side by side.
+
+> ⚠️ Until the app is code-signed, Windows may show a **SmartScreen "Unknown
+> publisher"** prompt on first launch — click *More info → Run anyway*.
+
+### Build it yourself (developers)
 
 ```bash
 npm install
-npm run dev        # electron-vite dev (HMR renderer, restarts main/preload)
+npm run dist:win   # electron-builder NSIS installer → release/
+npm run dev        # or run straight from source (HMR)
 ```
 
-The app bundles the FCC proxy — see `src/main/fcc-manager.ts` for how the FCC server is started and the env vars to override it (`FCC_SERVER_BIN`, `FCC_PORT`, `FCC_AUTH_TOKEN`, `FCC_BASE_URL`).
+## Shortcuts
 
-## Commands
+| Shortcut          | Action            |
+| ----------------- | ----------------- |
+| `Ctrl+K Ctrl+T`   | Toggle theme      |
+| `Ctrl+B`          | Toggle sidebar    |
+| `` `Ctrl+` ``     | Toggle terminal   |
+| `` `Ctrl+Shift+` `` | Toggle chat panel |
+| `Ctrl+J`          | Toggle terminal   |
+| `Ctrl+S`          | Save file         |
+| `Shift+Tab` (chat) | Toggle Plan / Act |
 
-| Command | Description |
-| --- | --- |
-| `npm run dev` | electron-vite dev (HMR renderer, restarts main/preload) |
-| `npm run build` | electron-vite build (main + preload + renderer → `out/`) |
-| `npm run preview` | electron-vite preview |
-| `npm run typecheck` | `tsc --noEmit` for both node + web tsconfigs |
-| `npm run test` | vitest run (`tests/`) |
-| `npm run smoke` | live SDK↔FCC proxy round-trip check (needs a running FCC server) |
-| `npm run dist:win` | electron-vite build + electron-builder NSIS installer → `release/` |
+## Docs
 
-Run a single test file: `npx vitest run tests/path-utils.test.ts`.
-
-## Keyboard shortcuts
-
-| Shortcut | Action |
-| --- | --- |
-| `Ctrl+K Ctrl+T` | Toggle dark/light theme |
-| `Ctrl+B` | Toggle sidebar |
-| `Ctrl+`` | Toggle terminal |
-| `Ctrl+Shift+`` | Toggle chat panel |
-| `Ctrl+J` | Toggle terminal |
-| `Ctrl+S` | Save the active file |
-| Middle-click tab | Close tab |
-| Right-click tab | Tab context menu (close / close others / close saved / close all) |
-
-Closing a **dirty** tab (one with unsaved changes, marked by a red dot) arms a discard-confirm: click ✕ again to discard. `Close Others` / `Close All` are blocked while any tab is dirty.
-
-## Architecture
-
-Electron 3-process layout under `electron-vite`, with a shared module (`src/shared`) imported by all three:
-
-- **`src/main`** — Node side. Creates the `BrowserWindow`, registers IPC (`ipc.ts`), files (`file-service.ts`), node-pty terminal (`terminal-service.ts`), FCC health/start (`fcc-manager.ts`), and the Claude Agent SDK chat host (`chat/chat-host.ts`).
-- **`src/preload`** — exposes `window.fcc`, a typed promise-based API over `ipcRenderer`. The renderer never touches `ipcRenderer` directly.
-- **`src/renderer`** — React + Zustand. Stores under `stores/`, components under `components/`, theme in `styles.css`.
+- [ARCHITECTURE.md](ARCHITECTURE.md) — how it's built + every verified constraint
+  (chat subprocess protocol, realtime control, IPC contract, file-system safety).
+- [DESIGN.md](DESIGN.md) — the design system (palette, type, layout, motion, theme, a11y).
+- [CLAUDE.md](CLAUDE.md) — entry point for Claude Code in this repo.
 
 ## License
 

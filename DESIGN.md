@@ -178,6 +178,10 @@ the window center grows the panel); the left sidebar is **not** inverted.
   → open the file (`fcc:open-file`) / load via `readAsset`; `#` → anchor scroll;
   http(s)/mailto → `openExternal`. The `.md` file preview adds `basePath` so links
   resolve from the file's own directory; chat resolves from the open-folder root.
+  **Raw HTML** in markdown is enabled via `rehype-raw` but every raw node is
+  sanitized with **DOMPurify** (`sanitizeRawHtml` in `markdown.tsx`) before
+  rendering — the chat/subagent/.md text is untrusted, so HTML is never injected
+  verbatim (scripts/event handlers/javascript: are stripped).
 - **Language coverage** — the editor's `langFor()` (`Editor.tsx` `EXT_LANG`) maps
   common extensions to Monaco ids (Monaco bundles all of them from `monaco-editor`
   core, so opening `.sql`/`.rb`/`.php`/`.kt`/`.ps1`/`Dockerfile` highlights instead

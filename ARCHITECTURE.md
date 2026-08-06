@@ -365,13 +365,20 @@ so interactive per-tool approval is not reachable. Local hooks
 
 ## 14. Node/npm gotchas
 
-- npm 24 `allowScripts` policy blocks postinstall scripts for `electron`/`esbuild`
-  by default; whitelisted in `package.json`. There is deliberately **no
-  `postinstall` script** — node-pty ships N-API prebuilds, so
-  `electron-builder install-app-deps` (which would trigger a node-gyp rebuild) is
-  skipped.
+- npm 24 `allowScripts` policy blocks install/postinstall scripts unless
+  whitelisted in `package.json`. The allowlist covers the binary + native
+  packages: `electron@43`, `esbuild` (both the 0.25 and 0.28 vite copies),
+  `node-pty@1.1.0` (its `install: node-gyp rebuild` script) and
+  `electron-winstaller` (packaging). Keep this list in sync when those versions
+  move, or the binaries won't download / native modules won't build. There is
+  deliberately **no `postinstall` script**.
 - **node-pty must be externalized** in `electron.vite.config.ts`
   (`externalizeDepsPlugin()` on main+preload) — bundling it breaks `conpty.node`
   loading. `@anthropic-ai/claude-agent-sdk` stays as a dependency solely to ship the
   bundled `claude` binary (platform packages); the app never imports the SDK —
   `chat-host.ts` spawns the binary directly.
+- **Toolchain pins**: `electron-vite` is on `6.0.0-beta.1` because it is the only
+  line whose peer range includes `vite ^8` (stable 5.x caps at vite ^7); it pairs
+  with `@vitejs/plugin-react@6` (peers vite ^8). `vitest.config` is `.mts`
+  (ESM) so it silences vite 8's `configLoader:'native'` CJS warning. Node ABI for
+  `node-pty` under Electron 43 was verified by a spawn smoke.
