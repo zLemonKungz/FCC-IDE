@@ -73,6 +73,13 @@ processes, or read env on its own.
   switch/create, and an **✨ Message** button that fills the chat input with a
   "write a commit message for this staged diff" prompt (`fcc:chat-input`). It
   refreshes on folder open, `fcc:file-modified`, and an 8s poll.
+- **Push/Pull/remote** — `git:push`, `git:pull`, `git:set-remote` run
+  `git push/pull` + set the `origin` URL; a normal user's **first push triggers
+  Windows Git Credential Manager's browser sign-in** (the app does not embed
+  OAuth). `gitStatus` now returns the full remote URL (`git remote get-url
+  origin`). The Source Control panel shows remote + branch in one compact top
+  row, and a **single state-driven action button** (changes → Commit, committed →
+  Push, behind → Pull, else Synced).
 
 ---
 
@@ -122,6 +129,11 @@ extension parity (skills, plugins, hooks, MCP, slash commands).
   usage, and whether a pre-turn snapshot exists. Drives the sidebar **Activity**
   panel (Timeline / Influence / Agent flow) with read-only snapshot preview +
   restore. Turns are pruned when a column is closed or reset.
+- **Double-submit guard**: chat-store keeps a per-session `inFlightSend` set.
+  The `running` flag only flips when the CLI's `started` event round-trips, so
+  two rapid sends (Enter repeat) would otherwise both call `chatStart` — a
+  duplicate bubble + second process. The set is filled synchronously on send and
+  cleared on the next event (this was the v0.1.3 fix).
 - **History** — transcripts persist to `userData/sessions/<sessionId>.json`
   (`chat/history.ts`, flush on result). `chat/claude-history.ts` imports the
   Claude Code CLI's `~/.claude/projects/**/*.jsonl` sessions (real `cwd` read from

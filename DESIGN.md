@@ -137,6 +137,10 @@ cols: auto  auto  auto  minmax(0,1fr)
   conversation. Each column has its own `.chat-col-header` (label, Plan/Act,
   Stop, New, ✕ close), its own message scroll + input, equal `flex:1` widths
   with `min-width:300px` and a `--border-0` divider. Column resize deferred.
+- **Chat input = one framed field** (`.chat-field` inside `.chat-input`): the
+  textarea + a bottom control row (Plan/Act pill, **model selector dropdown**,
+  ~tokens, gear, send↔stop) live in a single thin-framed box with a `focus-within`
+  glow. The model chip opens a dropdown (`.chat-model-dd`) to pick any model.
 - **Terminal** (bottom or right): hides via `display:none` but stays mounted.
 - **Statusbar**: 28px, folder | spacer | chat-status | cursor | FCC server.
 
@@ -203,7 +207,12 @@ the window center grows the panel); the left sidebar is **not** inverted.
   fill + accent title with the pulsing accent dot) above grouped per-subagent
   `.subagent-card`s (card language, caret-expand; detail shows thinking + Markdown
   text + tool cards).
-- **Source control panel** (`sidebarView:'source'`, git activity-bar icon): file
+- **Source control panel** (`sidebarView:'source'`, git activity-bar icon): a
+  compact **top row** holds the remote chip (`.sc-remote-chip`, click → URL/Cancel
+  connect form with a "sign in via browser on first push" hint) next to the
+  branch selector. The commit area is one frame: message textarea with a small
+  **✨** (ask Claude) inside, plus a single **full-width state-driven button**
+  (changes → Commit, committed → Push, behind → Pull, else Synced). File
   rows `.sc-row` with a mono status letter (`.sc-kind`, yellow / red for conflicts); clicking a row
   opens a **HEAD-vs-working diff** (`GitDiffView.tsx`, Monaco DiffEditor) in the editor
   area via `fcc:git-diff`, per-file stage/unstage/discard revealed on hover (`.sc-actions`), section titles

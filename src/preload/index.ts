@@ -50,6 +50,9 @@ const api = {
   gitAction: (action: 'stage' | 'unstage' | 'discard', paths: string[]): Promise<boolean> =>
     ipcRenderer.invoke(IPC.gitAction, action, paths),
   gitCommit: (message: string): Promise<{ ok: boolean; err?: string }> => ipcRenderer.invoke(IPC.gitCommit, message),
+  gitPush: (): Promise<{ ok: boolean; err?: string }> => ipcRenderer.invoke(IPC.gitPush),
+  gitPull: (): Promise<{ ok: boolean; err?: string }> => ipcRenderer.invoke(IPC.gitPull),
+  gitSetRemote: (url: string): Promise<{ ok: boolean; err?: string }> => ipcRenderer.invoke(IPC.gitSetRemote, url),
   gitStagedDiff: (): Promise<string | null> => ipcRenderer.invoke(IPC.gitStagedDiff),
   gitBranch: (action: 'list' | 'switch' | 'create', name?: string): Promise<GitBranch[] | { ok: boolean; err?: string } | null> =>
     ipcRenderer.invoke(IPC.gitBranch, action, name),

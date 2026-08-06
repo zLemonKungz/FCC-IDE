@@ -4,6 +4,7 @@ import { useChatStore, useActiveChat } from '../stores/chat-store';
 import { useExplorerStore } from '../stores/explorer-store';
 import { useModalFocus } from '../hooks/useModal';
 import ClaudeConfigTab from './ClaudeConfigTab';
+import Switch from './Switch';
 import type { AgentSummary, GatewayModel, HistorySummary, McpOverview, McpServerDef, PluginInfo } from '@shared/types';
 import { IconTrash, IconPlus, IconClose } from './icons';
 
@@ -91,6 +92,7 @@ export default function ChatSettingsModal({ onClose }: { onClose: () => void }) 
 }
 
 function SettingsTab() {
+  const thinking = useChatStore((s) => s.thinking);
   const chatModel = useSettingsStore((s) => s.chatModel);
   const chatMaxTurns = useSettingsStore((s) => s.chatMaxTurns);
   const autoCompactWindow = useSettingsStore((s) => s.autoCompactWindow);
@@ -235,6 +237,10 @@ function SettingsTab() {
               </option>
             ))}
           </select>
+        </label>
+        <label className="settings-row">
+          <span>Extended thinking</span>
+          <Switch checked={thinking} onChange={() => useChatStore.getState().toggleThinking()} />
         </label>
         <label className="settings-row">
           <span>Auto-compact (k tokens)</span>

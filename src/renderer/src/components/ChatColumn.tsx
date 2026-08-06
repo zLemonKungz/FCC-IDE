@@ -70,6 +70,8 @@ export default function ChatColumn({ id, label }: { id: string; label: string })
   const [help, setHelp] = useState<string | null>(null);
   const [images, setImages] = useState<ChatImage[]>([]);
   const [picker, setPicker] = useState<{ open: boolean; index: number }>({ open: false, index: 0 });
+  const [modelOpen, setModelOpen] = useState(false);
+  const [models, setModels] = useState<{ id: string }[] | null>(null);
   const [atBottom, setAtBottom] = useState(true);
   const [atPicker, setAtPicker] = useState<{ open: boolean; index: number; files: string[] }>({ open: false, index: 0, files: [] });
   // File list for '@' mentions, cached once per open folder (fs:search walks it).
@@ -503,42 +505,76 @@ Type anything else to send it to Claude.`;
             ))}
           </div>
         )}
-        {!root && <div className="hint">Open a folder first</div>}
-        <button
-          className="ghost chat-gear"
-          onClick={() => window.dispatchEvent(new CustomEvent('fcc:open-chat-settings'))}
-          title="Chat settings"
-          aria-label="Chat settings"
-        >
-          <IconSettings width={14} height={14} />
-        </button>
-        <textarea
-          ref={inputRef}
-          value={input}
-          placeholder={root ? 'Ask Claude to do something... (type / for commands, @ to mention a file)' : ''}
-          onChange={(e) => void handleChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onPaste={(e) => void handlePaste(e)}
-          disabled={!root}
-        />
-        <button
-          className={`send${running ? ' busy' : ''}`}
-          onClick={submit}
-          disabled={!root || running || (!input.trim() && images.length === 0)}
-          title="Send (Enter)"
-        >
-          <IconSend width={14} height={14} />
-        </button>
-      </div>
-      <div className="chat-input-footer">
-        <span className="cif-left">
-          <span className="cif-model" title={chatModel}>{claudeLabel(chatModel)}</span>
-          {planMode && <span className="cif-plan">Plan</span>}
-        </span>
-        <span className="cif-right">
-          {tokenEstimate > 0 && <span className="cif-tokens">~{tokenEstimate.toLocaleString()} tokens</span>}
-          <span className="cif-keys">Enter ↵ send · Shift+Enter ⏎ newline</span>
-        </span>
+        {!root && <div className="chat-hint">Open a folder first</div>}
+        <div className="chat-field">
+          <textarea
+            ref={inputRef}
+            value={input}
+            placeholder={root ? 'Message Claude…' : ''}
+            onChange={(e) => void handleChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onPaste={(e) => void handlePaste(e)}
+            disabled={!root}
+          />
+          <div className="chat-box-foot">
+            <button
+              className={`chat-plan${planMode ? ' on' : ''}`}
+              onClick={toggleMode}
+              title={planMode ? 'Act mode — click to switch to Plan' : 'Plan mode — click to switch to Act'}
+            >
+              {planMode ? 'Act' : 'Plan'}
+            </button>
+            <div className="chat-model" onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setModelOpen(false); }}>
+              <button
+                className="cbf-model"
+                title={chatModel}
+                onClick={() => {
+                  if (!models) void window.fcc.chatModels().then((l) => setModels(l as { id: string }[])).catch(() => setModels([]));
+                  setModelOpen((v) => !v);
+                }}
+              >
+                {claudeLabel(chatModel)} <span className="cm-caret">▾</span>
+              </button>
+              {modelOpen && (
+                <div className="chat-model-dd">
+                  {(models && models.length ? models : [{ id: chatModel }]).map((m) => (
+                    <button
+                      key={m.id}
+                      className={m.id === chatModel ? 'active' : ''}
+                      onClick={() => { useSettingsStore.getState().setChatModel(m.id); setModelOpen(false); }}
+                    >
+                      {claudeLabel(m.id)}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {tokenEstimate > 0 && <span className="cbf-tokens">~{tokenEstimate.toLocaleString()} tokens</span>}
+            <span className="cbf-spacer" />
+            <button
+              className="cbf-gear"
+              onClick={() => window.dispatchEvent(new CustomEvent('fcc:open-chat-settings'))}
+              title="Chat settings"
+              aria-label="Chat settings"
+            >
+              <IconSettings width={13} height={13} />
+            </button>
+            {running ? (
+              <button className="chat-stop" onClick={() => st().stop(id)} title="Stop" aria-label="Stop">
+                <IconStop width={14} height={14} />
+              </button>
+            ) : (
+              <button
+                className="chat-send"
+                onClick={submit}
+                disabled={!root || (!input.trim() && images.length === 0)}
+                title="Send (Enter)"
+              >
+                <IconSend width={14} height={14} />
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

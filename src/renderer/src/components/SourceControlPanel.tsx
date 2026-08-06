@@ -4,6 +4,9 @@ import type { GitBranch, GitCommit, GitStatus } from '@shared/types';
 import CommitGraph from './CommitGraph';
 import { IconCheck, IconClose, IconPlus } from './icons';
 
+/** Compact remote for the chip: drop the scheme + .git suffix. */
+const asShortRemote = (u: string): string => u.replace(/^https?:\/\//, '').replace(/\.git$/, '');
+
 // Source Control sidebar: git status (staged / unstaged / untracked), per-file
 // stage/unstage/discard, a commit box on top, branch switch/create, and an "✨"
 // helper that asks Claude to write the commit message from the staged diff.
@@ -12,10 +15,11 @@ export default function SourceControlPanel() {
   const [status, setStatus] = useState<GitStatus | null | undefined>(undefined); // undefined = loading
   const [message, setMessage] = useState('');
   const [branches, setBranches] = useState<GitBranch[] | null>(null);
-  const [newBranch, setNewBranch] = useState('');
-  const [busy, setBusy] = useState(false);
+    const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [history, setHistory] = useState<GitCommit[] | null>(null);
+  const [remoteOpen, setRemoteOpen] = useState(false);
+  const [remoteInput, setRemoteInput] = useState('');
 
   const load = useCallback(() => {
     if (!root) {
@@ -66,6 +70,30 @@ export default function SourceControlPanel() {
     load();
   };
 
+  const sync = async (action: 'push' | 'pull'): Promise<void> => {
+    if (!root) return;
+    setBusy(true);
+    const r =
+      action === 'push'
+        ? await window.fcc.gitPush().catch(() => ({ ok: false, err: 'push failed' }))
+        : await window.fcc.gitPull().catch(() => ({ ok: false, err: 'pull failed' }));
+    setBusy(false);
+    setFeedback(r.ok ? (action === 'push' ? 'Pushed ✓' : 'Pulled ✓') : (r.err ?? 'failed'));
+    load();
+  };
+
+  const setRemote = async (): Promise<void> => {
+    const url = remoteInput.trim();
+    if (!url) return;
+    setBusy(true);
+    const r = await window.fcc.gitSetRemote(url).catch(() => ({ ok: false, err: 'could not set remote' }));
+    setBusy(false);
+    setFeedback(r.ok ? 'Remote set ✓' : (r.err ?? 'failed'));
+    setRemoteInput('');
+    setRemoteOpen(false);
+    load();
+  };
+
   const suggest = (): void => {
     if (!root) return;
     void window.fcc.gitStagedDiff().then((diff) => {
@@ -85,17 +113,6 @@ export default function SourceControlPanel() {
     if (r && !Array.isArray(r) && r.ok) setFeedback(`Switched to ${name} ✓`);
     load();
   };
-  const createBranch = async (): Promise<void> => {
-    const n = newBranch.trim();
-    if (!n) return;
-    const r = await window.fcc.gitBranch('create', n);
-    if (r && !Array.isArray(r) && r.ok) {
-      setNewBranch('');
-      setFeedback(`Created ${n} ✓`);
-    }
-    load();
-  };
-
   if (!root) {
     return (
       <div className="empty-state">
@@ -127,6 +144,19 @@ export default function SourceControlPanel() {
   const count = status.changes.length;
   const stagedPaths = staged.map((c) => c.path);
   const workingPaths = [...unstaged, ...untracked].map((c) => c.path);
+
+  // One action button that follows the state: changes → Commit, committed →
+  // Push, behind the upstream → Pull, otherwise Synced (disabled).
+  const dirty = status.changes.length > 0;
+  const actLabel = dirty ? 'Commit' : status.ahead > 0 ? 'Push' : status.behind > 0 ? 'Pull' : 'Synced';
+  const actBusy = busy || (dirty ? !message.trim() : status.ahead === 0 && status.behind === 0);
+  const actClick = dirty
+    ? () => void commit()
+    : status.ahead > 0
+      ? () => void sync('push')
+      : status.behind > 0
+        ? () => void sync('pull')
+        : () => undefined;
 
   const renderRow = (c: { path: string; kind: string; conflict?: boolean; staged?: boolean }) => (
     <div key={c.path} className="sc-row" onClick={() => openGitDiff(c.path)} title={c.path}>
@@ -165,52 +195,65 @@ export default function SourceControlPanel() {
           ⟳
         </button>
       </div>
-      <div className="sc-branch-bar">
-        <div className="sc-branch-row1">
-          <span className="sc-branch-label">⎇ Branch</span>
-          <select
-            className="sc-branch-select"
-            value={status.branch}
-            onChange={(e) => void switchBranch(e.target.value)}
-            title="Switch branch"
+      <div className="sc-remote-top">
+        {remoteOpen ? (
+          <div className="sc-remote-form">
+            <input
+              className="sc-remote-input"
+              placeholder="https://github.com/you/repo.git"
+              value={remoteInput}
+              onChange={(e) => setRemoteInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') void setRemote(); }}
+              autoFocus
+            />
+            <button className="ghost" onClick={() => void setRemote()} disabled={!remoteInput.trim() || busy}>Set</button>
+            <button className="icon-btn" onClick={() => { setRemoteOpen(false); setRemoteInput(''); }} title="Cancel" aria-label="Cancel">
+              <IconClose width={11} height={11} />
+            </button>
+            <div className="sc-remote-hint">You’ll sign in to GitHub through your browser on the first push.</div>
+          </div>
+        ) : (
+          <span
+            className={`sc-remote-chip${status.remote ? '' : ' empty'}`}
+            onClick={() => setRemoteOpen(true)}
+            title={status.remote ?? 'Add a GitHub remote to push/pull'}
           >
-            {(branches ?? []).map((b) => (
-              <option key={b.name} value={b.name}>
-                {b.current ? '● ' : ''} {b.name}
-              </option>
-            ))}
-          </select>
-          {status.ahead + status.behind > 0 && (
-            <span className="sc-aheadchip" title="commits ahead / behind the upstream">
-              ↑{status.ahead} ↓{status.behind}
-            </span>
-          )}
-        </div>
-        <div className="sc-branch-row2">
-          <input
-            className="sc-branch-new"
-            placeholder="Create a branch…"
-            value={newBranch}
-            onChange={(e) => setNewBranch(e.target.value)}
-          />
-          <button className="ghost" onClick={() => void createBranch()} disabled={!newBranch.trim()}>
-            Create
-          </button>
-        </div>
+            {status.remote ? `⌁ ${asShortRemote(status.remote)}` : '+ Connect GitHub'}
+          </span>
+        )}
+        <select
+          className="sc-branch-select"
+          value={status.branch}
+          onChange={(e) => void switchBranch(e.target.value)}
+          title="Switch branch"
+        >
+          {(branches ?? []).map((b) => (
+            <option key={b.name} value={b.name}>
+              {b.current ? '● ' : ''} {b.name}
+            </option>
+          ))}
+        </select>
+        {status.ahead + status.behind > 0 && (
+          <span className="sc-aheadchip" title="commits ahead / behind the upstream">
+            ↑{status.ahead} ↓{status.behind}
+          </span>
+        )}
       </div>
       <div className="sc-commit">
-        <textarea
-          className="sc-commit-input"
-          placeholder="Commit message…"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-        />
-        <div className="sc-commit-actions">
-          <button className="primary" onClick={() => void commit()} disabled={!message.trim() || busy}>
-            <IconCheck width={12} height={12} /> Commit
+        <div className="sc-commit-frame">
+          <textarea
+            className="sc-commit-input"
+            placeholder="Commit message…"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+          />
+          <button className="sc-commit-msg" onClick={suggest} title="Ask Claude to write a commit message" aria-label="Ask Claude for a commit message">
+            ✨
           </button>
-          <button onClick={suggest} title="Ask Claude to write the commit message from the staged diff">
-            ✨ Message
+        </div>
+        <div className="sc-commit-actions">
+          <button className="primary sc-commit-act" onClick={actClick} disabled={actBusy}>
+            {actLabel}
           </button>
         </div>
       </div>

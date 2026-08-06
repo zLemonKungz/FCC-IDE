@@ -86,6 +86,9 @@ export function registerIpc(win: BrowserWindow): void {
     git.gitChangeAction(action, paths)
   );
   ipcMain.handle(IPC.gitCommit, (_e, message: string) => git.gitCommit(message));
+  ipcMain.handle(IPC.gitPush, () => git.gitPush());
+  ipcMain.handle(IPC.gitPull, () => git.gitPull());
+  ipcMain.handle(IPC.gitSetRemote, (_e, url: string) => git.gitSetRemote(url));
   ipcMain.handle(IPC.gitStagedDiff, () => git.gitStagedDiff());
   ipcMain.handle(IPC.gitBranch, (_e, action: 'list' | 'switch' | 'create', name?: string) => {
     if (action === 'list') return git.gitBranchList();

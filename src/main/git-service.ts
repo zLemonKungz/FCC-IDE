@@ -16,6 +16,35 @@ function gitRoot(): string | null {
   return files.getRoot();
 }
 
+/** Push the current branch to its remote. A normal user gets the browser login
+ *  via Git Credential Manager on the first push. */
+export async function gitPush(): Promise<{ ok: boolean; err?: string }> {
+  const root = gitRoot();
+  if (!root) return { ok: false, err: 'No folder open' };
+  const res = await run(root, ['push'], 180000); // network + possibly an auth popup
+  return res.code === 0 ? { ok: true } : { ok: false, err: (res.err || res.out).trim() || 'push failed' };
+}
+/** Pull the current branch from its remote. */
+export async function gitPull(): Promise<{ ok: boolean; err?: string }> {
+  const root = gitRoot();
+  if (!root) return { ok: false, err: 'No folder open' };
+  const res = await run(root, ['pull'], 180_000);
+  return res.code === 0 ? { ok: true } : { ok: false, err: (res.err || res.out).trim() || 'pull failed' };
+}
+
+const REMOTE_URL = /^[A-Za-z0-9@.:\/_~+-]+$/;
+/** Set the origin remote to a GitHub/other URL (`remote add` or `set-url`). */
+export async function gitSetRemote(url: string): Promise<{ ok: boolean; err?: string }> {
+  const root = gitRoot();
+  if (!root) return { ok: false, err: 'No folder open' };
+  const u = url.trim();
+  if (!u || !REMOTE_URL.test(u) || u.includes(' ')) return { ok: false, err: 'That does not look like a git URL.' };
+  // Always add-or-replace origin (safe: the arg is passed as-is to execFile).
+  await run(root, ['remote', 'remove', 'origin']);
+  const res = await run(root, ['remote', 'add', 'origin', u]);
+  return res.code === 0 ? { ok: true } : { ok: false, err: res.err.trim() || 'Could not set remote' };
+}
+
 /** One changed file: its path (repo-relative) and which status letters apply. */
 export interface GitChange {
   path: string;
@@ -59,8 +88,8 @@ export async function gitStatus(): Promise<GitStatus | null> {
     ahead = Number(a) || 0;
     behind = Number(b) || 0;
   }
-  const remoteName = remote.code === 0 ? (remote.out.trim().split(/[\\/]/).pop() ?? null) : null;
-  return { branch, remote: remoteName, changes: parseStatusPorcelain(st.out), ahead, behind };
+  const remoteUrl = remote.code === 0 ? (remote.out.trim() || null) : null;
+  return { branch, remote: remoteUrl, changes: parseStatusPorcelain(st.out), ahead, behind };
 }
 
 /** Parse `git status --porcelain` text into GitChange rows (pure + tested).

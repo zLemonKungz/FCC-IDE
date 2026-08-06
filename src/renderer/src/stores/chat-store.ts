@@ -42,6 +42,12 @@ interface ChatStore {
 
 const uid = (): string => `s-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
+/** Per-session in-flight send guard. The `running` flag only flips once the
+ *  CLI's `started` event round-trips from main, so two rapid submits (Enter
+ *  repeat, Enter+button) would otherwise both call chatStart — a double bubble
+ *  and a second process under the same session. Cleared on the next event. */
+const inFlightSend = new Set<string>();
+
 function emptySession(id: string, folder: string): ChatSession {
   return { ...emptyChatState(), id, folder, planMode: false, pendingResume: null };
 }
@@ -80,6 +86,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     if (idx < 0) return;
     const session = s.sessions[idx];
     if (session.running) return;
+    if (inFlightSend.has(id)) return; // double-submit guard
+    inFlightSend.add(id);
     set({ activeId: id });
 
     if (session.pendingResume) {
@@ -186,6 +194,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   handleEvent: (sessionId, message) => {
+    inFlightSend.delete(sessionId); // any event = the send round-trip returned
     const s = get();
     const idx = s.sessions.findIndex((x) => x.id === sessionId);
     if (idx < 0) return;

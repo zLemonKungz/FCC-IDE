@@ -75,7 +75,9 @@ warm-dark terracotta look, deliberately small, built to feel like a real product
 
 ### 🛠 Integrations & panels
 - **Terminal** — xterm via node-pty, multiple tabs, dockable right/bottom.
-- **Source control** — git status / stage / unstage / diff / commit graph.
+- **Source control** — git status / stage / unstage / diff / commit graph, plus
+  **push / pull to GitHub** (first push signs in through Git Credential Manager)
+  and a one-click remote connect.
 - **Settings** — program + chat settings, an editor for your Claude Code settings,
   an MCP server manager, custom **agents** editor.
 - **FCC server** — health in the status bar, one-click start, install detection +

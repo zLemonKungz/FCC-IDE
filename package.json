@@ -1,6 +1,6 @@
 {
   "name": "fcc-studio",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "IDE for free-claude-code",
   "main": "out/main/index.js",
   "author": "FCC Studio",

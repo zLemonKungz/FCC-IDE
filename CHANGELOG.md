@@ -8,6 +8,29 @@ All notable changes to **FCC Studio** are documented here. Format follows
 
 _Next release notes go here._
 
+## [0.1.3] - 2026-08-06
+
+### Added
+- **Source control sync** — connect a GitHub remote (paste the repo URL), then
+  **Push** / **Pull** from one state-driven button that follows the repo: changes →
+  Commit, committed → Push, behind → Pull. The first push opens your **Git
+  Credential Manager** browser sign-in. ✨ writes the commit message, remote +
+  branch sit in one compact top row.
+- **Model selector in the chat** — the model chip at the bottom of the input is
+  now a dropdown: pick any model, the next conversation spawns with it.
+- **Unified chat input box** — one clean framed field holding the text, Plan/Act,
+  model, tokens, gear, and send/stop.
+- **Extended thinking toggle** in Chat settings (Model tab), on top of the
+  Command-palette entry.
+
+### Fixed
+- **Chat could send the same message twice** — two rapid submits (Enter repeat /
+  Enter + button) before the CLI's `started` event arrived both called
+  `chatStart`, duplicating the bubble and spawning a second process under the
+  same session. A per-session in-flight guard now drops the second send.
+- **Source control panel** — compact top row (remote chip + branch), full-width
+  state-driven action, remote URL surfaced from `git remote get-url origin`.
+
 ## [0.1.2] - 2026-08-06
 
 ### Fixed
