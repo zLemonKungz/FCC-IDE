@@ -405,9 +405,13 @@ function McpTab({ root }: { root: string | null }) {
       {Object.entries(servers).map(([n, def]) => (
         <div key={n} className="cs-mcp-row">
           <div className="cs-hist-main">
-            <div className="cs-hist-title">{n}</div>
-            <div className="cs-hist-meta">
-              {def.command} {def.args?.join(' ') ?? ''}
+            <div className="cs-hist-title">
+              <span className={`mcp-dot${disabled[n] ? ' off' : ''}`} />
+              {n}
+            </div>
+            <div className="cs-hist-meta mcp-cmd">
+              {def.command}
+              {def.args ? <span className="mcp-args">{def.args.join(' ')}</span> : null}
             </div>
           </div>
           <button
@@ -427,17 +431,26 @@ function McpTab({ root }: { root: string | null }) {
         </div>
       ))}
       {Object.keys(servers).length === 0 && root && <div className="cs-empty">No project servers — add one below.</div>}
+      <div className="cs-note">Add a server — Claude Code starts it with this command on the next conversation.</div>
       <div className="cs-mcp-add">
-        <input placeholder="name" value={name} onChange={(e) => setName(e.target.value)} disabled={!root} />
-        <input placeholder="command (e.g. npx)" value={command} onChange={(e) => setCommand(e.target.value)} disabled={!root} />
-        <input placeholder="args" value={args} onChange={(e) => setArgs(e.target.value)} disabled={!root} />
+        <label className="gr-field">
+          <span>Name</span>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="server-name" disabled={!root} />
+        </label>
+        <label className="gr-field">
+          <span>Command</span>
+          <input value={command} onChange={(e) => setCommand(e.target.value)} placeholder="npx" disabled={!root} />
+        </label>
+        <label className="gr-field grow">
+          <span>Args</span>
+          <input value={args} onChange={(e) => setArgs(e.target.value)} placeholder="-y @server/package" disabled={!root} />
+        </label>
         <button
-          className="icon-btn"
+          className="ghost gr-btn gr-add"
           onClick={() => void add()}
           disabled={!root || !name.trim() || !command.trim()}
-          title="Add server"
         >
-          <IconPlus width={13} height={13} />
+          + Add
         </button>
       </div>
       <div className="settings-section">Global (read-only)</div>

@@ -180,6 +180,7 @@ export interface ClaudeSettingsFile {
   includeCoAuthoredBy?: boolean;
   theme?: 'dark' | 'light';
   verbose?: boolean;
+  hooks?: Record<string, unknown>;
 }
 
 /** One match from the find-in-files content search. */

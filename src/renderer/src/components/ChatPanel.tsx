@@ -53,6 +53,12 @@ export default function ChatPanel({ style }: { style?: CSSProperties }) {
         <button className="ghost" onClick={addChat} title="Add chat">
           <IconPlus width={13} height={13} />Add
         </button>
+        <button className="ghost" onClick={() => useChatStore.getState().parallelWorkers(3)} title="Run the active prompt in 3 parallel columns">
+          ⊞3
+        </button>
+        <button className="ghost" onClick={() => useChatStore.getState().mergeWorkers()} title="Combine all columns into one answer">
+          Σ merge
+        </button>
         <button
           className="icon-btn"
           aria-label="Move chat"

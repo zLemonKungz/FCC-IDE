@@ -80,6 +80,21 @@ processes, or read env on its own.
   origin`). The Source Control panel shows remote + branch in one compact top
   row, and a **single state-driven action button** (changes → Commit, committed →
   Push, behind → Pull, else Synced).
+- **Hooks & guardrails** (`src/main/guardrails.ts`, IPC `guardrails:get/set`,
+  `hooks:list`, `hook:add`) — the config tab lets you view/add Claude Code hooks
+  and turn on **guardrails**: writing a `PreToolUse` hook (`matcher: Bash`) in the
+  project's `.claude/settings.json` that points at a generated `fcc-guard.mjs`.
+  The hook reads the PreToolUse stdin (`tool_input.command`) and **exits 2** to
+  block when the command contains a listed pattern; Claude Code surfaces the
+  stderr as the block reason. Uses exit-code-2 blocking, so it works in every
+  permission mode (hooks can tighten, never loosen).
+- **Compose workbench + CLI health** — chat-store `parallelWorkers` / `mergeWorkers`
+  clone the active prompt into N fresh parallel columns and merge every column's
+  latest assistant output into one synthesized answer; `regenerate` truncates a
+  message (and onwards) then re-asks its prompt. `claude-compat.ts` (`cli:compat`)
+  resolves the exact binary the chat spawns and reports its version (a `--help`
+  flag check was dropped — Claude Code's help omits internal flags, so absence
+  there is not a reliable compatibility signal).
 
 ---
 

@@ -7,16 +7,29 @@ import { IconCopy, IconCheck, IconClaude, IconPencil } from './icons';
 export default function ChatMessage({
   message,
   onEdit,
-  onRewind
+  onRewind,
+  onRegenerate
 }: {
   message: Msg;
   /** for user bubbles — re-submits an edited prompt as a new turn */
   onEdit?: (text: string) => void;
   /** for assistant bubbles — restores files to before this message (checkpoints) */
   onRewind?: () => void;
+  /** for assistant bubbles — regenerates this response (truncates and re-asks) */
+  onRegenerate?: () => void;
 }) {
   const [copied, setCopied] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(message.text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch {
+      // clipboard unavailable — ignore
+    }
+  };
 
   if (message.role === 'user') {
     if (editing !== null) {
@@ -40,6 +53,11 @@ export default function ChatMessage({
     return (
       <div className="msg user">
         {message.text}
+        {message.text && (
+          <button className="msg-copy-btn" onClick={copy} title="Copy text" aria-label="Copy text">
+            {copied ? <IconCheck width={11} height={11} /> : <IconCopy width={11} height={11} />}
+          </button>
+        )}
         {onEdit && (
           <button
             className="msg-edit-btn"
@@ -58,16 +76,6 @@ export default function ChatMessage({
       </div>
     );
   }
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(message.text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1200);
-    } catch {
-      // clipboard unavailable — ignore
-    }
-  };
 
   return (
     <div className="msg assistant">
@@ -99,6 +107,11 @@ export default function ChatMessage({
       {message.text && (
         <button className="copy-btn" onClick={copy} title="Copy response">
           {copied ? <IconCheck width={12} height={12} /> : <IconCopy width={12} height={12} />}
+        </button>
+      )}
+      {onRegenerate && (
+        <button className="redo-btn" onClick={onRegenerate} title="Regenerate this response" aria-label="Regenerate">
+          ↻
         </button>
       )}
       {message.tools.map((t) => <ToolCallCard key={t.tool_use_id} tool={t} />)}

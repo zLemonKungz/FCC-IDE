@@ -33,6 +33,9 @@ interface ChatStore {
   rewindTo: (msgId: string) => void;
 
   sendActive: (folder: string, prompt: string, images?: ChatImage[]) => void;
+  regenerate: (sessionId: string, msgId: string) => void;
+  parallelWorkers: (count: number) => void;
+  mergeWorkers: () => void;
   stopActive: () => void;
   resetActive: () => void;
   controlActive: (subtype: string, request: Record<string, unknown>) => void;
@@ -125,6 +128,24 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   stop: (id) => {
     void window.fcc.chatStop(id);
+  },
+
+  // Cut everything from this assistant message onward and re-ask its prompt.
+  regenerate: (sessionId, msgId) => {
+    const s = get();
+    const idx = s.sessions.findIndex((x) => x.id === sessionId);
+    if (idx < 0) return;
+    const sess = s.sessions[idx];
+    const mi = sess.messages.findIndex((m) => m.id === msgId);
+    if (mi < 0) return;
+    const before = sess.messages.slice(0, mi);
+    const prompt = [...before].reverse().find((m) => m.role === 'user')?.text ?? '';
+    set((st) => {
+      const sessions = st.sessions.slice();
+      sessions[idx] = { ...st.sessions[idx], messages: before, running: false, error: null };
+      return { sessions, activeId: sessionId };
+    });
+    if (prompt && sess.folder) get().send(sessionId, sess.folder, prompt);
   },
 
   approve: (id, plan) => {
@@ -246,6 +267,40 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       })();
     }
   },
+
+  // -- Compose workbench: parallel workers + merge ---------------------------------
+  // Re-run the active column's last user prompt into `count` fresh parallel columns.
+  parallelWorkers: (count) => {
+    const s = get();
+    const src = s.sessions.find((x) => x.id === s.activeId);
+    const last = [...(src?.messages ?? [])].reverse().find((m) => m.role === 'user');
+    const text = last?.text ?? '';
+    const folder = src?.folder ?? '';
+    if (!src || !text) return;
+    for (let i = 0; i < count; i++) {
+      const id = uid();
+      set((st) => ({ sessions: [...st.sessions, emptySession(id, folder)], activeId: id }));
+      get().send(id, folder, text);
+    }
+  },
+  // Collect every column's latest assistant answer and ask a fresh column to combine them.
+  mergeWorkers: () => {
+    const s = get();
+    const outs = s.sessions
+      .map((sc) => [...sc.messages].reverse().find((m) => m.role === 'assistant'))
+      .filter((m): m is NonNullable<typeof m> => !!m)
+      .map((m) => m.text)
+      .filter((t) => t.trim().length > 0);
+    if (outs.length === 0) return;
+    const id = uid();
+    const folder = s.sessions[0]?.folder ?? '';
+    set((st) => ({ sessions: [...st.sessions, emptySession(id, folder)], activeId: id }));
+    const body =
+      'Combine the outputs below into a single, coherent answer — dedupe, fill in gaps, and merge them:\n\n' +
+      outs.map((t, i) => `### Agent output ${i + 1}\n${t}`).join('\n\n---\n\n');
+    get().send(id, folder, body);
+  },
+  // --------------------------------------------------------------------------------
 
   sendActive: (folder, prompt, images) => {
     const id = get().activeId;

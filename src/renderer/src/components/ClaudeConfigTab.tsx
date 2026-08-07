@@ -82,6 +82,42 @@ export default function ClaudeConfigTab() {
   const env = draft.env ?? {};
   const setEnv = (next: Record<string, string>): void => set({ env: next });
 
+  // Hooks & Guardrails
+  const [guard, setGuard] = useState<{ enabled: boolean; blocked: string[] } | null>(null);
+  const [gText, setGText] = useState('');
+  const [gMsg, setGMsg] = useState('');
+  const [hooks, setHooks] = useState<{ event: string; matcher: string }[]>([]);
+  const [hEvent, setHEvent] = useState('PostToolUse');
+  const [hMatch, setHMatch] = useState('Edit');
+  const [hCmd, setHCmd] = useState('');
+  useEffect(() => {
+    void window.fcc.guardrailsGet().then((g) => { setGuard(g ?? { enabled: false, blocked: [] }); setGText((g?.blocked ?? []).join('\n')); }).catch(() => undefined);
+    void window.fcc.hooksList().then(setHooks).catch(() => undefined);
+  }, []);
+
+  const [compat, setCompat] = useState<{ command: string; exists: boolean; version: string | null } | null>(null);
+  useEffect(() => {
+    void window.fcc.cliCompatGet().then(setCompat).catch(() => undefined);
+  }, []);
+
+  const enableGuard = async (): Promise<void> => {
+    const blocked = gText.split('\n').map((s) => s.trim()).filter(Boolean);
+    const g = await window.fcc.guardrailsSet(true, blocked).catch(() => null);
+    if (g) { setGuard(g); setGMsg('Guardrails on — Bash commands containing a pattern are blocked.'); }
+  };
+  const disableGuard = async (): Promise<void> => {
+    await window.fcc.guardrailsSet(false, []).catch(() => undefined);
+    setGuard({ enabled: false, blocked: [] });
+    setGText('');
+    setGMsg('Guardrails off.');
+  };
+  const addHook = async (): Promise<void> => {
+    if (!hCmd.trim()) return;
+    await window.fcc.hookAdd(hEvent, hMatch, hCmd).catch(() => undefined);
+    await window.fcc.hooksList().then(setHooks).catch(() => undefined);
+    setGMsg('Hook added.');
+  };
+
   if (!loaded)
     return (
       <div className="cs-empty">
@@ -104,6 +140,18 @@ export default function ClaudeConfigTab() {
           Project
         </button>
       </div>
+
+      {compat && (
+        <div className="cs-compat">
+          <span className="cs-compat-head">Claude Code CLI</span>
+          <span className="cs-compat-line">
+            <span className={`compat-badge${compat.exists && compat.version ? ' ok' : ' fail'}`}>
+              {!compat.exists ? 'not found' : `v${compat.version ?? '?'}`}
+            </span>
+            <code className="cs-compat-cmd" title={compat.command}>{compat.command}</code>
+          </span>
+        </div>
+      )}
 
       <div className="settings-section">General</div>
       <label className="settings-row">
@@ -192,6 +240,71 @@ export default function ClaudeConfigTab() {
         <button className="ghost" onClick={() => setEnv({ ...env, '': '' })}>
           + Add variable
         </button>
+      </div>
+
+      <div className="settings-section">Hooks &amp; Guardrails</div>
+      <div className="cs-card">
+        <div className="gr-head">
+          <span className="gr-title">Guardrails</span>
+          <span className={`gr-badge${guard?.enabled ? ' on' : ''}`}>{guard?.enabled ? 'ON' : 'OFF'}</span>
+        </div>
+        <div className="settings-note">
+          Blocks Bash commands containing any pattern below, via a generated <b>PreToolUse</b> hook.
+        </div>
+        <textarea
+          className="gr-input"
+          rows={4}
+          placeholder={"rm -rf\nsudo\n--force"}
+          value={gText}
+          onChange={(e) => setGText(e.target.value)}
+          spellCheck={false}
+        />
+        <div className="cs-guard-actions">
+          <button className={`ghost gr-btn${guard?.enabled ? ' on' : ''}`} onClick={() => void enableGuard()}>
+            {guard?.enabled ? 'Update guardrails' : 'Enable guardrails'}
+          </button>
+          {guard?.enabled && (
+            <button className="ghost gr-btn" onClick={() => void disableGuard()}>
+              Disable
+            </button>
+          )}
+        </div>
+        {gMsg && <div className="settings-note">{gMsg}</div>}
+
+        <div className="gr-sub-title">Active hooks</div>
+        <div className="cs-hooks">
+          {hooks.length === 0 ? (
+            <span className="settings-note">— none —</span>
+          ) : (
+            hooks.map((h, i) => (
+              <span key={i} className="gr-hook">
+                {h.event} · {h.matcher}
+              </span>
+            ))
+          )}
+        </div>
+        <div className="gr-sub-title">Add a hook</div>
+        <div className="cs-hook-add">
+          <label className="gr-field">
+            <span>Event</span>
+            <select value={hEvent} onChange={(e) => setHEvent(e.target.value)}>
+              {['PreToolUse', 'PostToolUse', 'PermissionRequest', 'Notification', 'Stop', 'SessionStart', 'UserPromptSubmit'].map((e) => (
+                <option key={e} value={e}>{e}</option>
+              ))}
+            </select>
+          </label>
+          <label className="gr-field">
+            <span>Tool</span>
+            <input value={hMatch} onChange={(e) => setHMatch(e.target.value)} placeholder="Bash, Edit…" spellCheck={false} />
+          </label>
+          <label className="gr-field grow">
+            <span>Command</span>
+            <input value={hCmd} onChange={(e) => setHCmd(e.target.value)} placeholder="script path or one-liner" spellCheck={false} />
+          </label>
+          <button className="ghost gr-btn gr-add" onClick={() => void addHook()}>
+            + Add
+          </button>
+        </div>
       </div>
 
       <div className="cs-config-actions">

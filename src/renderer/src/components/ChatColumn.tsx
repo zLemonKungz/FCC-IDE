@@ -421,6 +421,7 @@ Type anything else to send it to Claude.`;
                 message={m}
                 onEdit={m.role === 'user' ? (t) => root && send(t) : undefined}
                 onRewind={m.role === 'assistant' && checkpoints[m.id] ? () => st().rewindTo(m.id) : undefined}
+                onRegenerate={m.role === 'assistant' ? () => st().regenerate(id, m.id) : undefined}
               />
             ))}
             {running && (

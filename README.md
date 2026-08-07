@@ -66,6 +66,9 @@ warm-dark terracotta look, deliberately small, built to feel like a real product
   your existing **Claude Code CLI sessions** from `~/.claude`, imported and
   resumable in-app.
 - **Checkpoints** — rewind your files to before any Claude turn.
+- **Compose** — run one prompt across several parallel columns and merge their
+  answers (`⊞3` / `Σ Merge`); per-response **Copy / Regenerate**; a **Claude Code
+  CLI health** readout (version of the exact binary in use).
 
 ### 📁 File explorer + editor
 - Open a folder; the tree supports **right-click rename / copy / cut / paste /
@@ -78,8 +81,9 @@ warm-dark terracotta look, deliberately small, built to feel like a real product
 - **Source control** — git status / stage / unstage / diff / commit graph, plus
   **push / pull to GitHub** (first push signs in through Git Credential Manager)
   and a one-click remote connect.
-- **Settings** — program + chat settings, an editor for your Claude Code settings,
-  an MCP server manager, custom **agents** editor.
+- **Settings** — program + chat settings, an editor for your Claude Code settings
+  (incl. **hooks & guardrails**: block Bash commands by pattern via a generated
+  PreToolUse hook), an MCP server manager, custom **agents** editor.
 - **FCC server** — health in the status bar, one-click start, install detection +
   guided setup modal.
 - **Themes** — warm-dark terracotta and a light theme; titlebar, editor, terminal,

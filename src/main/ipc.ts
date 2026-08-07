@@ -8,6 +8,8 @@ import * as history from './chat/history';
 import { listClaude, readClaude } from './chat/claude-history';
 import * as mcp from './mcp-service';
 import * as claudeSettings from './claude-settings';
+import * as guards from './guardrails';
+import { cliCompatibility } from './claude-compat';
 import * as agents from './claude-agents';
 import * as plugins from './claude-plugins';
 import { gitDiffText, gitBranchInfo } from './git-diff';
@@ -138,6 +140,11 @@ export function registerIpc(win: BrowserWindow): void {
   ipcMain.handle(IPC.claudeSettingsSet, (_e, scope: 'user' | 'project', patch: ClaudeSettingsFile) =>
     claudeSettings.setSettings(scope, patch)
   );
+  ipcMain.handle(IPC.guardrailsGet, () => guards.getGuardrails());
+  ipcMain.handle(IPC.cliCompatGet, () => cliCompatibility());
+  ipcMain.handle(IPC.guardrailsSet, (_e, enabled: boolean, blocked: string[]) => guards.setGuardrails(enabled, blocked));
+  ipcMain.handle(IPC.hooksList, () => guards.listHooks());
+  ipcMain.handle(IPC.hookAdd, (_e, event: string, matcher: string, command: string) => guards.addHook(event, matcher, command));
   ipcMain.handle(IPC.agentsList, () => agents.listAgents());
   ipcMain.handle(IPC.agentsRead, (_e, name: string) => agents.readAgent(name));
   ipcMain.handle(IPC.agentsSave, (_e, name: string, content: string) => agents.saveAgent(name, content));

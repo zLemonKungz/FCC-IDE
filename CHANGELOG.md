@@ -8,6 +8,20 @@ All notable changes to **FCC Studio** are documented here. Format follows
 
 _Next release notes go here._
 
+## [0.1.4] - 2026-08-07
+
+### Added
+- **Claude Code hooks editor** — view and add hooks (event + matcher + command)
+  from Chat settings → config, written to the project's `.claude/settings.json`.
+- **Guardrails** — per-project **PreToolUse hook** that blocks Bash commands
+  containing user-listed patterns (generated Node script; exit-2 block, preserved
+  across other hooks).
+- **Compose workbench** — re-run a prompt in **N parallel columns** (`⊞3`) and
+  **merge all assistant outputs** into one synthesized answer (`Σ merge`).
+- **Claude Code CLI compatibility check** — the Config tab shows the resolved
+  `claude` binary, its version, and warns if any flag the app uses is missing
+  from the CLI's `--help` (surfaces version drift early).
+
 ## [0.1.3] - 2026-08-06
 
 ### Added

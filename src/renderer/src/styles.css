@@ -4401,3 +4401,62 @@ button.primary:focus-visible,
 /* commit/push action button stretches the full row */
 .sc-commit-actions { display: flex; margin-top: 8px; }
 .sc-commit-act { flex: 1; width: 100%; }
+
+/* -- Hooks & Guardrails -- */
+.gr-input { width: 100%; font-family: var(--font-mono); font-size: 12px; color: var(--text-1); background: var(--bg-1); border: 1px solid var(--border-1); border-radius: var(--radius-sm); padding: 6px 8px; resize: vertical; margin-bottom: 6px; }
+.cs-guard-actions { display: flex; gap: 6px; margin-bottom: 4px; }
+.cs-hooks { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
+.gr-hook { font-family: var(--font-mono); font-size: 11px; color: var(--accent); background: var(--accent-dim); border-radius: var(--radius-sm); padding: 2px 6px; }
+.cs-hook-add { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.cs-hook-add input { flex: 1; min-width: 0; padding: 5px 8px; font-size: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-1); background: var(--bg-1); color: var(--text-1); }
+
+/* -- Hooks & Guardrails polish -- */
+.cs-card { border: 1px solid var(--border-1); border-radius: var(--radius-md); padding: 12px; background: var(--bg-3); box-shadow: var(--surface-highlight); }
+.gr-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.gr-title { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-2); }
+.gr-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; color: var(--text-3); border: 1px solid var(--border-1); }
+.gr-badge.on { color: var(--green); border-color: var(--green); background: rgba(22, 175, 125, 0.12); }
+.gr-input { width: 100%; font-family: var(--font-mono); font-size: 12px; color: var(--text-1); background: var(--bg-1); border: 1px solid var(--border-1); border-radius: var(--radius-sm); padding: 6px 8px; resize: vertical; margin: 6px 0; transition: border-color var(--transition), box-shadow var(--transition); }
+.gr-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+.cs-guard-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.gr-btn.on { color: var(--accent); border-color: var(--accent-border); background: var(--accent-dim); }
+.gr-sub-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-3); margin: 10px 0 4px; }
+.cs-hooks { display: flex; flex-wrap: wrap; gap: 4px; }
+.gr-hook { font-family: var(--font-mono); font-size: 11px; color: var(--accent); background: var(--accent-dim); border: 1px solid var(--accent-border); border-radius: 999px; padding: 2px 8px; }
+.cs-hook-add { display: flex; flex-wrap: wrap; gap: 6px; }
+.cs-hook-add input { flex: 1; min-width: 90px; padding: 5px 8px; font-size: 12px; font-family: var(--font-mono); border-radius: var(--radius-sm); border: 1px solid var(--border-1); background: var(--bg-1); color: var(--text-1); }
+.cs-hook-add input:focus { outline: none; border-color: var(--accent); }
+
+/* -- Add-a-hook form (labeled fields) -- */
+.cs-hook-add { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+.gr-field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.gr-field > span { font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-3); }
+.gr-field select,
+.gr-field input { padding: 5px 8px; font-size: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-1); background: var(--bg-1); color: var(--text-1); }
+.gr-field input { font-family: var(--font-mono); }
+.gr-field input:focus, .gr-field select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim); }
+.gr-field.grow { flex: 1; min-width: 140px; }
+.gr-add { flex-shrink: 0; align-self: flex-end; }
+
+/* -- MCP management polish -- */
+.mcp-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--green); margin-right: 6px; vertical-align: 2px; }
+.mcp-dot.off { background: var(--text-5, var(--text-4)); }
+.cs-mcp-row .cs-hist-meta.mcp-cmd { font-family: var(--font-mono); font-size: 11px; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.mcp-args { color: var(--text-3); }
+.cs-mcp-add { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; margin-top: 6px; }
+
+/* message copy (user) + regenerate (assistant) buttons */
+.msg-copy-btn, .redo-btn { border: none; background: transparent; color: var(--text-3); padding: 2px 3px; cursor: pointer; opacity: 0; transition: opacity var(--transition), color var(--transition); }
+.msg:hover .msg-copy-btn, .msg:hover .redo-btn { opacity: 1; }
+.msg-copy-btn:hover, .redo-btn:hover { color: var(--text-1); }
+
+/* -- Claude Code CLI compatibility readout -- */
+.cs-compat { display: flex; flex-direction: column; gap: 3px; margin-bottom: 12px; }
+.cs-compat-head { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-3); }
+.cs-compat-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.compat-badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: var(--radius-sm); }
+.compat-badge.ok { color: var(--green); background: var(--accent-dim); }
+.compat-badge.warn { color: var(--yellow); background: rgba(217, 164, 78, 0.14); }
+.compat-badge.fail { color: var(--red); background: rgba(224, 108, 90, 0.14); }
+.cs-compat-cmd { font-family: var(--font-mono); font-size: 11px; color: var(--text-2); }
+.cs-compat-miss { font-size: 11px; color: var(--red); }

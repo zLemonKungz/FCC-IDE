@@ -85,6 +85,15 @@ const api = {
     ipcRenderer.invoke(IPC.claudeSettingsGet),
   claudeSettingsSet: (scope: 'user' | 'project', patch: ClaudeSettingsFile): Promise<void> =>
     ipcRenderer.invoke(IPC.claudeSettingsSet, scope, patch),
+  guardrailsGet: (): Promise<{ enabled: boolean; blocked: string[] } | null> =>
+    ipcRenderer.invoke(IPC.guardrailsGet),
+  guardrailsSet: (enabled: boolean, blocked: string[]): Promise<{ enabled: boolean; blocked: string[] }> =>
+    ipcRenderer.invoke(IPC.guardrailsSet, enabled, blocked),
+  cliCompatGet: (): Promise<{ command: string; exists: boolean; version: string | null }> =>
+    ipcRenderer.invoke(IPC.cliCompatGet),
+  hooksList: (): Promise<{ event: string; matcher: string }[]> => ipcRenderer.invoke(IPC.hooksList),
+  hookAdd: (event: string, matcher: string, command: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.hookAdd, event, matcher, command),
   agentsList: (): Promise<AgentSummary[]> => ipcRenderer.invoke(IPC.agentsList),
   agentsRead: (name: string): Promise<string> => ipcRenderer.invoke(IPC.agentsRead, name),
   agentsSave: (name: string, content: string): Promise<void> => ipcRenderer.invoke(IPC.agentsSave, name, content),
