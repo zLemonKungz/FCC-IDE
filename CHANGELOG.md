@@ -4,9 +4,74 @@ All notable changes to **FCC Studio** are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/) and the project uses
 [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [0.1.5] - 2026-08-08
 
-_Next release notes go here._
+### Changed
+- **Settings is a full page, not a modal** — the gear moved from the titlebar
+  to the bottom-left of the activity bar (below the theme toggle), and opening
+  it now fills the window with a **Settings** page. Program settings
+  (appearance/editor/files/updates) and chat settings (model · effort · turns ·
+  history · MCP · agents · plugins · Claude Code config) are unified under one
+  set of sections on a left nav rail:
+  **General · Chat · History · MCP · Agents · Plugins · Claude Code**. The chat
+  gear, menu bar, and command palette all open the page straight to the relevant
+  section; Escape closes it.
+- **Padded, card-based layout** — each settings section is a card panel
+  (`SettingsPanel`) with a header row + grouped rows, keeping the wide page
+  readable rather than a flat stretched list.
+- **Scrollable content column** — the content area is height-bounded with
+  `overflow-y: auto` (panels `flex-shrink: 0`) so tall tabs (History, MCP,
+  Agents, Plugins) scroll inside the page instead of growing it; the nav rail
+  stays pinned.
+
+### Added
+- Settings nav icons: `IconHistory`, `IconPlug`, `IconPuzzle`.
+- **Context meter in the chat** — the input footer shows how full the current
+  conversation is (fill dot + %, green → amber past the auto-compact window → red
+  over it), and a **Compact** pill sends `/compact` to the CLI. The Chat settings
+  usage panel shows the same context-window fill with a progress bar.
+- **Chat** reducer tracks `contextTokens` (the last turn's total input = the
+  live context size, incl. a resumed transcript) and `modelContextWindow`.
+- **Background log file** — the app writes a timestamped log to
+  `userData/logs/app.log` (main lifecycle, FCC status, chat spawns/errors,
+  renderer crashes) plus an `uncaughtException`/`unhandledRejection` safety net;
+  renderer `window.onerror`/`unhandledrejection` forward over the `log:error`
+  IPC so a blank-screen renderer still leaves a trace. Rotates to `app.log.old`
+  at 5 MB.
+- **Model-aware context** — auto-compact is **Auto** by default: the CLI is not
+  given a fixed `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, so compaction follows the
+  selected model's own context window (read from `result.modelUsage[model]
+  .contextWindow`). The chat footer / settings usage meters show the fill against
+  that model window (fallback: the auto-compact window, then 200k), while
+  `auto-compact` in Chat settings still offers a fixed override (100k–500k).
+
+### Fixed
+- **Resumed/imported transcripts no longer stack replies** — restored history
+  messages are marked `restored`, so a live assistant reply opens its own bubble
+  instead of merging into the imported conversation's last message. (Verified:
+  the CLI does not replay history on `--resume`, so the restored transcript is
+  the only copy on screen; the earlier "1 send → many messages" feel came from
+  the reply gluing onto the imported transcript + the full resumed context
+  loading.)
+- **`Ctrl+Shift+F` no longer hides the sidebar** — the global keydown handler
+  read a stale mount-time `sidebarVisible`; it now reads the store at keydown, so
+  Search opens with the sidebar visible.
+- **Chat session could get permanently stuck** — `send()` armed the in-flight
+  guard before its resume branch could bail on an empty folder; the guard is now
+  armed only when a send actually proceeds, and the Source Control panel's
+  busy flag is reset in `finally` so a failed git action can't leave buttons
+  disabled forever.
+- **Streaming render cost** — `ChatColumn`/`ChatMessage` are memoized with
+  stable callbacks, so idle chat columns and unchanged transcript rows skip
+  re-rendering while one conversation streams.
+
+### Accessibility
+- **Settings is a proper dialog** — `role="dialog"` + focus-in on open and
+  **focus return** to the trigger on close (reuses `useModalFocus`); Escape
+  inside a settings input no longer closes the page.
+- **Chat announces itself** — the message scroll is an `aria-live` log region,
+  and the chat textarea, Send button, and every ActivityBar nav button got
+  accessible `aria-label`s.
 
 ## [0.1.4] - 2026-08-07
 

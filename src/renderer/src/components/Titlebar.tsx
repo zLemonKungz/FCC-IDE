@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import Logo from './Logo';
 import MenuBar from './MenuBar';
-import SettingsModal from './SettingsModal';
 import WhatsNewModal from './WhatsNewModal';
-import { IconClose, IconSettings } from './icons';
+import { IconClose } from './icons';
 
 const SHORTCUTS: { keys: string; label: string }[] = [
   { keys: 'Ctrl+K Ctrl+T', label: 'Toggle dark/light theme' },
@@ -19,7 +18,6 @@ const SHORTCUTS: { keys: string; label: string }[] = [
 export default function Titlebar() {
   const [open, setOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
   const [info, setInfo] = useState<{ name: string; version: string } | null>(null);
 
@@ -48,14 +46,11 @@ export default function Titlebar() {
   }, [open, aboutOpen]);
 
   useEffect(() => {
-    const openSettings = () => setSettingsOpen(true);
     const openShortcuts = () => setOpen(true);
     const openWhatsNew = () => setWhatsNewOpen(true);
-    window.addEventListener('fcc:open-settings', openSettings);
     window.addEventListener('fcc:open-shortcuts', openShortcuts);
     window.addEventListener('fcc:open-whatsnew', openWhatsNew);
     return () => {
-      window.removeEventListener('fcc:open-settings', openSettings);
       window.removeEventListener('fcc:open-shortcuts', openShortcuts);
       window.removeEventListener('fcc:open-whatsnew', openWhatsNew);
     };
@@ -70,13 +65,6 @@ export default function Titlebar() {
       </span>
       <MenuBar />
       <span className="titlebar-right">
-        <button
-          className={`titlebar-icon${settingsOpen ? ' active' : ''}`}
-          onClick={() => setSettingsOpen((v) => !v)}
-          title="Settings"
-        >
-          <IconSettings width={13} height={13} />
-        </button>
         <button
           className={`shortcuts-btn${aboutOpen ? ' active' : ''}`}
           onClick={openAbout}
@@ -140,7 +128,6 @@ export default function Titlebar() {
           }}
         />
       )}
-      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
       {whatsNewOpen && <WhatsNewModal onClose={() => setWhatsNewOpen(false)} />}
     </div>
   );

@@ -23,7 +23,7 @@ export interface CliSessionOptions {
   authToken: string;
   resume?: string;
   permissionMode?: PermissionMode;
-  /** auto-compact threshold in thousands of tokens (0 = leave unset). */
+  /** auto-compact threshold in raw tokens (0 = leave unset → CLI model default). */
   autoCompactWindow?: number;
   /** model effort level (low|medium|high|xhigh|max) — omitted when 'auto'/'unset. */
   effort?: string;
@@ -127,7 +127,7 @@ export class CliSession {
         ANTHROPIC_AUTH_TOKEN: this.opts.authToken,
         CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY: '1',
         ...(this.opts.autoCompactWindow
-          ? { CLAUDE_CODE_AUTO_COMPACT_WINDOW: String(this.opts.autoCompactWindow * 1000) }
+          ? { CLAUDE_CODE_AUTO_COMPACT_WINDOW: String(this.opts.autoCompactWindow) }
           : {})
       }
     });

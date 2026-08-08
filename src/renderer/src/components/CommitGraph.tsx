@@ -5,6 +5,14 @@ const LANE_W = 22;
 const ROW_H = 26;
 const DOT = 4;
 
+// Module-scope geometry helpers (pure — module constants only).
+function laneX(lane: number): number {
+  return lane * LANE_W + LANE_W / 2;
+}
+function rowY(row: number): number {
+  return row * ROW_H + ROW_H / 2;
+}
+
 interface Row extends GitCommit {
   lane: number;
   parentLanes: number[];
@@ -44,8 +52,6 @@ export default function CommitGraph({ commits }: { commits: GitCommit[] }) {
   const laneCount = rows.reduce((m, r) => Math.max(m, r.lane + 1), 1);
   const W = laneCount * LANE_W;
   const H = rows.length * ROW_H;
-  const x = (lane: number): number => lane * LANE_W + LANE_W / 2;
-  const y = (row: number): number => row * ROW_H + ROW_H / 2;
 
   const rowOf = useMemo(() => {
     const m = new Map<string, number>();
@@ -56,22 +62,22 @@ export default function CommitGraph({ commits }: { commits: GitCommit[] }) {
   const lines: ReactNode[] = [];
   const dots: ReactNode[] = [];
   for (const r of rows) {
-    const cx = x(r.lane);
-    const cy = y(rows.indexOf(r));
+    const cx = laneX(r.lane);
+    const cy = rowY(rows.indexOf(r));
     const [first, ...rest] = r.parents;
     if (first) {
       const pr = rowOf.get(first);
       if (pr !== undefined) {
-        lines.push(<line key={`b-${r.hash}`} x1={cx} y1={cy} x2={cx} y2={y(pr)} className="scg-line" />);
+        lines.push(<line key={`b-${r.hash}`} x1={cx} y1={cy} x2={cx} y2={rowY(pr)} className="scg-line" />);
       }
     }
     rest.forEach((p, i) => {
       const pl = r.parentLanes[i + 1];
       const pr = rowOf.get(p);
       if (pr === undefined) return;
-      const px = x(pl);
+      const px = laneX(pl);
       lines.push(<line key={`m-${r.hash}-${i}`} x1={cx} y1={cy} x2={px} y2={cy} className="scg-line" />);
-      lines.push(<line key={`v-${r.hash}-${i}`} x1={px} y1={cy} x2={px} y2={y(pr)} className="scg-line" />);
+      lines.push(<line key={`v-${r.hash}-${i}`} x1={px} y1={cy} x2={px} y2={rowY(pr)} className="scg-line" />);
     });
     const head = r.refs.includes('HEAD');
     dots.push(<circle key={`d-${r.hash}`} cx={cx} cy={cy} r={DOT} className={head ? 'scg-dot head' : 'scg-dot'} />);

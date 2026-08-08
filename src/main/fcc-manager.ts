@@ -4,6 +4,7 @@ import { homedir } from 'os';
 import { join } from 'path';
 import { net, type BrowserWindow } from 'electron';
 import { IPC } from '@shared/ipc';
+import { log } from './logger';
 import type { FccInstallStatus, FccStatus } from '@shared/types';
 
 export const FCC_PORT = Number(process.env.FCC_PORT ?? 8082);
@@ -131,6 +132,8 @@ export async function checkHealth(): Promise<FccStatus> {
   });
   // If it's offline, the process we spawned is gone — stop claiming it.
   if (!ok) managedPid = null;
+  // Log a change of state (avoids a line every 5s poll when it's stable).
+  if (ok !== lastStatus.online) log.info('fcc', ok ? 'server online' : 'server offline');
   lastStatus = buildStatus(ok, FCC_PORT);
   return lastStatus;
 }

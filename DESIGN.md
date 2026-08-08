@@ -54,6 +54,9 @@ content and the accent do the talking.
 
 Semantic status: `--green #4caf7d` (success/online), `--red #e06c5a` (error/offline),
 `--yellow #d9a44e` (warning/output), `--blue #6c8cff` (info/running tool).
+Warning surfaces use `--warn-bg` / `--warn-border` — translucent tints of the theme
+`--yellow`, so the context-full banner/meter share the hue without hardcoding a color
+(dark `rgba(217,164,78,.08/.35)`, light `rgba(185,138,46,.10/.35)`).
 
 ### Light
 
@@ -125,6 +128,9 @@ cols: auto  auto  auto  minmax(0,1fr)
 - **Titlebar**: 34px, frameless drag region, `padding-right: 150px` reserves the
   native caption buttons (see §10).
 - **Activity bar**: the leftmost icon rail; the active highlight shows what's open.
+  Its bottom block holds the **theme toggle**, with the **settings gear** just below
+  it (falls to the very bottom via `margin-top:auto`, active while the Settings page
+  is open).
 - **Sidebar**: Explorer / Find-in-files / Subagents / Activity (agent telemetry:
   timeline + file influence + tool flow) (width persisted via `layout-store`).
   Panels take the full height.
@@ -139,8 +145,19 @@ cols: auto  auto  auto  minmax(0,1fr)
   with `min-width:300px` and a `--border-0` divider. Column resize deferred.
 - **Chat input = one framed field** (`.chat-field` inside `.chat-input`): the
   textarea + a bottom control row (Plan/Act pill, **model selector dropdown**,
-  ~tokens, gear, send↔stop) live in a single thin-framed box with a `focus-within`
-  glow. The model chip opens a dropdown (`.chat-model-dd`) to pick any model.
+  a **context-fill dot + %**, ~tokens, a **Compact** pill, gear, send↔stop) live
+  in a single thin-framed box with a `focus-within` glow. The model chip opens a
+  dropdown (`.chat-model-dd`) to pick any model. The context meter (`.cbf-context`,
+  `.ctx-dot`) shows how full the conversation is vs **the model's own context
+  window** (reported by the CLI per turn; fallback: the user's auto-compact
+  window, then 200k) — green → amber `>window` → red `>120%`: the
+  `.warn`/`.full` `.ctx-dot` colors. The **Compact** pill (`.cbf-compact`) sends
+  `/compact` to the CLI. The footer model dropdown and the Chat-settings model
+  select both resolve through the shared `curatedModelOptions()` filter, so the
+  two pickers always offer the same deduped set.
+- **Resumed/saved transcripts** render message bubbles with `restored:true` so a
+  live assistant reply opens its own bubble instead of merging into the imported
+  conversation's last bubble (prevents "stacked answers" on resume).
 - **Terminal** (bottom or right): hides via `display:none` but stays mounted.
 - **Statusbar**: 28px, folder | spacer | chat-status | cursor | FCC server.
 
@@ -222,21 +239,30 @@ the window center grows the panel); the left sidebar is **not** inverted.
   that draws a real SVG commit graph (`.scg`): vertical backbones down first-parent
   chains and horizontal merge joins to branch lanes, dots (HEAD accent), ref chips,
   and the subject — no raw hash. Empty states: "Not a git repository" / "No changes".
-- **Program settings** (`SettingsModal`) gains an **Updates** section
-  (`UpdatesSection`): installed version, check/download/install states, progress
+- **Settings is a full page** (`SettingsPage.tsx`), opened from an activity-bar
+  gear at the bottom-left (below the theme toggle). It overlays the window below
+  the titlebar while keeping the activity bar visible (starts at `left: 46px`);
+  a left nav rail (`.settings-nav-item`, icon + label, accent-dim + accent on
+  active) selects the section, and a content column (`.settings-content`,
+  max-width 820px, `overflow-y: auto`) scrolls on tall tabs. Closes with
+  **Escape** or the ×.
+- Each section groups rows into **card panels** (`SettingsPanel.tsx`,
+  `.settings-panel`): header (`.settings-panel-head`, `--bg-2` + `--border-0`,
+  uppercase micro title `.settings-panel-title`) over `.settings-panel-body`;
+  height: full window height constrained with `overflow-y:auto` and panels
+  `flex-shrink:0` so long lists (History/MCP/Agents/Plugins) scroll inside the
+  column instead of growing the page. The **Updates** section (`.settings-section`
+  in General) shows installed version, check/download/install states, progress
   bar, and an auto-check-on-launch toggle — wired to `electron-updater` in main.
-- **Chat history** (`ChatSettingsModal` → History tab): lists the app's own
+- **Chat tab** uses rows `.settings-row` in a 2-column `.cs-settings-grid` +
+  notes `.cs-note`; list bodies load via IPC into **local state** (never a
+  zustand selector that returns a fresh array); empty state `.cs-empty`. The MCP
+  tab groups servers by scope with `.cs-scope-label`/`.cs-scope-chip`
+  ("global"/"plugin" read-only chips); the Plugins tab shows a list with
+  `.cs-plugin-toggle` + an accent `.cs-plugin-mcp` badge. History lists the app's
   `userData/sessions` plus **imported Claude Code CLI sessions**
-  (`~/.claude/projects`, tagged "Claude Code") — open/resume them in-app.
-- **Settings modal** (`ChatSettingsModal`): tab bar `.cs-tabs` (accent underline +
-  accent-dim pill on active), body load via IPC into **local state** (never a
-  zustand selector that returns a fresh array), rows `.settings-row` in a 2-column
-  `.cs-settings-grid`, notes `.cs-note`, section headers `.settings-section`, empty
-  `.cs-empty`. Tabs: Settings / History / MCP / Agents / Plugins / Config. The MCP
-  tab groups servers by scope with `.settings-section` + `.cs-scope-label`/`.cs-scope-chip`
-  ("global"/"plugin" read-only chips); the Plugins tab uses `.cs-plugin-toggle` +
-  an accent `.cs-plugin-mcp` badge. Editors reuse the app input style: `--bg-1` +
-  1px `--border-1` + `--radius-sm`, focus → `--accent`.
+  (`~/.claude/projects`, tagged "Claude Code"). Editors reuse the app input
+  style: `--bg-1` + 1px `--border-1` + `--radius-sm`, focus → `--accent`.
 - **Inputs**: `background: var(--bg-1); border: 1px solid var(--border-1);
   border-radius: var(--radius-sm); color: var(--text-1); font-size: 13px;`
   focus → `border-color: var(--accent)`.
@@ -263,7 +289,23 @@ the window center grows the panel); the left sidebar is **not** inverted.
 
 - `:focus-visible` gets a 3px `--accent-dim` ring (buttons override their inset
   highlight so the ring stays visible).
-- Icon-only controls need `aria-label` / `title`.
+- Icon-only controls need `aria-label` / `title`. **Every ActivityBar nav button
+  carries an `aria-label`** (Explorer/Search/Subagents/Source/Activity/Chat/
+  Terminal/theme — Settings already had one); the chat textarea and Send button
+  are labelled (`aria-label`), and Stop/Chat-settings use it too.
+- **Live regions**: the chat message scroll (`.chat-messages`) is
+  `role="log" aria-live="polite" aria-label="Conversation"`, so a screen reader
+  announces streamed replies instead of silence. The running indicator is
+  announced via that live region.
+- **Focus management**: the full-page **Settings** view is a real dialog
+  (`role="dialog" aria-modal="true" aria-labelledby="settings-page-title"`) and
+  reuses `useModalFocus` (`src/renderer/src/hooks/useModal.ts`): focus moves in
+  on open and returns to the trigger on Escape/close. The hook's Escape skips
+  when an input/textarea/select is focused, so editing a settings field doesn't
+  close the page.
+- **Streaming perf**: `ChatColumn` and `ChatMessage` are `React.memo`-wrapped;
+  the three per-message callbacks (edit/rewind/regenerate) are `useCallback`-
+  stable, so unchanged transcript rows skip re-render while a turn streams.
 - Status is inferred from more than color (dot + text for FCC online/offline);
   running tool `· tool-state` labels.
 - Contrast: `--text-3`/`--text-4` are used only for non-critical meta; primary text

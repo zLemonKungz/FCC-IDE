@@ -89,14 +89,15 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     if (idx < 0) return;
     const session = s.sessions[idx];
     if (session.running) return;
-    if (inFlightSend.has(id)) return; // double-submit guard
-    inFlightSend.add(id);
-    set({ activeId: id });
 
+    // Resolve the resume branch first so the guard isn't armed on a no-op.
     if (session.pendingResume) {
       const cliId = session.pendingResume;
       const fld = session.folder || folder;
-      if (!fld) return;
+      if (!fld) return; // nothing will send — never arm the guard
+      if (inFlightSend.has(id)) return;
+      inFlightSend.add(id);
+      set({ activeId: id });
       const opts: { resume: string; images?: ChatImage[]; permissionMode?: PermissionMode } = { resume: cliId };
       if (images?.length) opts.images = images;
       if (session.planMode) opts.permissionMode = 'plan';
@@ -108,6 +109,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       void window.fcc.chatStart(id, fld, prompt, opts);
       return;
     }
+
+    if (inFlightSend.has(id)) return; // double-submit guard
+    inFlightSend.add(id);
+    set({ activeId: id });
 
     if (session.messages.length > 0) {
       if (images?.length) void window.fcc.chatSend(id, prompt, images);
@@ -208,7 +213,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         id: `h-${Math.random().toString(36).slice(2)}`,
         role: m.role,
         text: m.text,
-        tools: []
+        tools: [],
+        restored: true
       }))
     };
     set((s) => ({ sessions: [...s.sessions, session], activeId: id }));

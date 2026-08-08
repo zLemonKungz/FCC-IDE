@@ -16,6 +16,10 @@ export interface ChatMessage {
   /** set on a subagent's forwarded output — the id of the message whose
    *  Agent/Task tool call spawned it, so the renderer can nest it underneath. */
   parentId?: string;
+  /** set on transcript messages restored from a saved/imported session (NOT
+   *  live streamed turns). A live assistant reply must never merge into one of
+   *  these — it starts its own message instead. */
+  restored?: boolean;
 }
 export interface ChatUiState {
   messages: ChatMessage[];
@@ -26,18 +30,28 @@ export interface ChatUiState {
    *  the total input tokens (fresh + cache write + cache read); cacheRead /
    *  cacheWrite break that total out for the context-usage bar. */
   lastUsage: { input: number; output: number; cost?: number; cacheRead?: number; cacheWrite?: number } | null;
+  /** current context-window size (input tokens the CLI holds across turns,
+   *  incl. a resumed transcript) — the "how full is this conversation" number. */
+  contextTokens: number;
+  /** the model's context window (tokens) as reported by the CLI via
+   *  result.modelUsage[model].contextWindow — set once a turn runs. Falls back
+   *  to the user's auto-compact window when unknown. */
+  modelContextWindow: number;
   /** cumulative tokens/cost across all completed turns of this conversation */
   sessionUsage: { input: number; output: number; cost: number };
   /** slash commands / skills discovered from the CLI init message (no leading '/') */
   slashCommands: string[];
   /** plan mode surfaced a proposal — the input should offer Approve / Reject. */
   awaitingPlanApproval: boolean;
-  /** live session status from the CLI's system/status events (mode/model),
+  /** live session status from the backend's system/status events (mode/model),
    *  for the status bar — reflects realtime set_permission_mode / set_model. */
   liveStatus: { permissionMode?: string; model?: string };
   /** running background/subagent tasks from system:task_started/task_progress,
    *  keyed by task_id — cleared when the turn finishes (result). */
   liveTasks: Record<string, LiveTask>;
+  /** set when the CLI reports a compact boundary (history was auto-compacted) —
+   *  shown as a "compacted" note in the transcript; cleared on a new turn. */
+  compacted: boolean;
 }
 
 export interface LiveTask {
@@ -62,6 +76,8 @@ export type ChatEvent =
       errors?: string[];
       usage?: { input_tokens?: number; cache_creation_input_tokens?: number; cache_read_input_tokens?: number; output_tokens?: number };
       total_cost_usd?: number;
+      /** per-model usage the CLI reports (model id → usage + context window). */
+      modelUsage?: Record<string, { contextWindow?: number; inputTokens?: number }>;
     }
   | { type: 'session-id'; session_id: string }
   | { type: 'slash-commands'; commands: string[] }
@@ -87,11 +103,14 @@ export function emptyChatState(): ChatUiState {
     error: null,
     sessionId: null,
     lastUsage: null,
+    contextTokens: 0,
+    modelContextWindow: 0,
     slashCommands: [],
     awaitingPlanApproval: false,
     sessionUsage: { input: 0, output: 0, cost: 0 },
     liveStatus: {},
-    liveTasks: {}
+    liveTasks: {},
+    compacted: false
   };
 }
 
@@ -116,7 +135,7 @@ export function applyChatEvent(
 
   switch (ev.type) {
     case 'user-message':
-      s = { ...s, messages: [...s.messages, { id: uid(), role: 'user', text: ev.text, tools: [], imageCount: ev.images }] };
+      s = { ...s, compacted: false, messages: [...s.messages, { id: uid(), role: 'user', text: ev.text, tools: [], imageCount: ev.images }] };
       break;
 
     case 'assistant': {
@@ -165,8 +184,10 @@ export function applyChatEvent(
 
       // ---- main assistant turn ----
       // A main turn never merges into a nested subagent child (which is only on
-      // the list when a subagent just ran).
-      const isAssistantTurn = last && last.role === 'assistant' && !last.parentId;
+      // the list when a subagent just ran), nor into a restored transcript
+      // message (those are history, not the live stream — the new reply must
+      // open its own bubble, not absorb into the imported conversation).
+      const isAssistantTurn = last && last.role === 'assistant' && !last.parentId && !last.restored;
       const baseTools = isAssistantTurn ? last.tools : [];
       const mergedTools = [...baseTools];
       for (const tb of toolBlocks) {
@@ -229,6 +250,20 @@ export function applyChatEvent(
         running: false,
         error: ev.is_error ? (ev.errors ?? ['Agent error']).join('; ') : null,
         lastUsage: usage,
+        // The context footprint is the tokens the CLI held this turn — for a
+        // resumed session that includes the restored transcript. Keeping the
+        // last-turn input (not an accumulated sum) is "how full are we now".
+        contextTokens: usage ? usage.input : s.contextTokens,
+        // The model's real context window, reported per-model by the CLI. Use
+        // the first modelUsage entry that carries one; keep an already-known
+        // window if the CLI stops sending it on a later turn.
+        modelContextWindow: (() => {
+          if (!ev.modelUsage) return s.modelContextWindow;
+          for (const u of Object.values(ev.modelUsage)) {
+            if (u && Number.isFinite(u.contextWindow) && u.contextWindow! > 0) return u.contextWindow!;
+          }
+          return s.modelContextWindow;
+        })(),
         // The turn finished — its subagent/background tasks are done, so the
         // live-progress list clears.
         liveTasks: {},
@@ -309,6 +344,12 @@ export function applyChatEvent(
             }
           };
         }
+      } else if (ev.subtype === 'compact_boundary') {
+        // The CLI finalized an auto/requested compact — the transcript is now a
+        // summary. Surface it (the ChatColumn shows a "compacted" note + offers
+        // a fresh /compact path). No pre-warning event exists (auto-compact is
+        // silent), so this is post-hoc only.
+        s = { ...s, compacted: true };
       }
       break;
     }

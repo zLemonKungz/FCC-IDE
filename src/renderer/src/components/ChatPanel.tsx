@@ -4,7 +4,6 @@ import { useExplorerStore } from '../stores/explorer-store';
 import { useFccStore } from '../stores/fcc-store';
 import { useLayoutStore } from '../stores/layout-store';
 import ChatColumn from './ChatColumn';
-import ChatSettingsModal from './ChatSettingsModal';
 import { IconChat, IconChevronLeft, IconChevronRight, IconClose, IconPlus, IconSparkles } from './icons';
 
 /** The chat panel container: one header (title, add-chat, move/hide) over a
@@ -19,7 +18,6 @@ export default function ChatPanel({ style }: { style?: CSSProperties }) {
   const setSetupOpen = useFccStore((s) => s.setSetupOpen);
   const chatPosition = useLayoutStore((s) => s.chatPosition);
   const setChatPosition = useLayoutStore((s) => s.setChatPosition);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     window.fcc.onChatEvent(({ sessionId: s, message }) => handleEvent(s, message));
@@ -36,12 +34,6 @@ export default function ChatPanel({ style }: { style?: CSSProperties }) {
     window.addEventListener('fcc:ai-fix', onFix);
     return () => window.removeEventListener('fcc:ai-fix', onFix);
   }, [root]);
-
-  useEffect(() => {
-    const openSettings = () => setSettingsOpen(true);
-    window.addEventListener('fcc:open-chat-settings', openSettings);
-    return () => window.removeEventListener('fcc:open-chat-settings', openSettings);
-  }, []);
 
   return (
     <div className="chat-pane" style={style}>
@@ -89,7 +81,6 @@ export default function ChatPanel({ style }: { style?: CSSProperties }) {
           FCC isn’t installed — click to set up
         </button>
       )}
-      {settingsOpen && <ChatSettingsModal onClose={() => setSettingsOpen(false)} />}
     </div>
   );
 }

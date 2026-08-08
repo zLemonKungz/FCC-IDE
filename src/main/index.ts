@@ -4,6 +4,7 @@ import { disposeChatHost, registerIpc } from './ipc';
 import * as fcc from './fcc-manager';
 import { createSplash, closeSplash } from './splash';
 import { initUpdater } from './updater';
+import { initLogging, log, logFilePath, handleRendererError as rendererError } from './logger';
 
 function createWindow(): void {
   const splash = createSplash();
@@ -29,6 +30,13 @@ function createWindow(): void {
   });
 
   registerIpc(win);
+  // Renderer crashes / hangs — log them so a blank-screen or silently-closed
+  // webContents leaves a trace in the log file.
+  win.webContents.on('render-process-gone', (_e, details) => {
+    rendererError(undefined, { type: 'render-process-gone', message: `${details.reason} (exit ${details.exitCode})` });
+  });
+  win.on('unresponsive', () => log.info('window', 'renderer unresponsive'));
+  win.on('responsive', () => log.info('window', 'renderer responsive again'));
   // Auto-update only makes sense in a packaged app — dev has no update feed.
   if (app.isPackaged) initUpdater(win);
   fcc.startPolling(win);
@@ -56,7 +64,9 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  initLogging();
   createWindow();
+  log.info('app', 'ready', { version: app.getVersion(), packaged: app.isPackaged, logs: logFilePath() });
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
@@ -67,6 +77,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('will-quit', () => {
+  log.info('app', 'quitting');
   fcc.stopPolling();
   // Stop the fcc-server we spawned (the kill is detached, so it completes
   // even as the app exits). A tray-app server is left alone.

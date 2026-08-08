@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { modelFamilyStem } from '@shared/model-context';
+import type { GatewayModel } from '@shared/types';
 
 // User preferences, persisted so they survive restarts. Chat settings are
 // pushed to main (which replaces the env defaults) on change — see App.tsx.
@@ -53,9 +55,10 @@ const EFFORT_CAPS: Record<string, string> = {
 };
 
 /** Resolve a (possibly gateway-aliased / version-embedded) model id down to its
- *  family stem so effort caps apply to aliases too. */
+ *  family stem so effort caps apply to aliases too. Delegates to the shared
+ *  normalizer (single home for the model-id regex). */
 function effortFamily(model: string): string {
-  return (model.split('/').pop() ?? model).toLowerCase().replace(/^claude-/, '').replace(/-\d{6,8}$/, '');
+  return modelFamilyStem(model);
 }
 
 /** The highest effort level a model supports ('' = supports none).
@@ -103,7 +106,7 @@ export function effortCapLabel(model: string): string {
  *  "anthropic/opencode/claude-opus-5" → "Opus 5"). Falls back to the raw id
  *  for shapes it can't parse. */
 export function claudeLabel(id: string): string {
-  const seg = (id.split('/').pop() ?? id).replace(/^claude-/, '');
+  const seg = modelFamilyStem(id); // same strip/date-remove as the family matcher
   if (seg.startsWith('3-5-sonnet')) return 'Sonnet 3.5';
   if (seg.startsWith('3-5-haiku')) return 'Haiku 3.5';
   if (seg.startsWith('3-opus')) return 'Opus 3';
@@ -114,6 +117,29 @@ export function claudeLabel(id: string): string {
   const family = m[1][0].toUpperCase() + m[1].slice(1);
   const ver = (m[2] ?? '').replace(/-/g, '.').replace(/\.\d{6,8}$/, '');
   return ver ? `${family} ${ver}` : family;
+}
+
+/** The gateway-side model list: claude-related, excluding the curated presets
+ *  (by id AND friendly label, so aliases don't duplicate) and the noisy "no
+ *  thinking" prefix, de-duped by label and sorted. Shared by the Chat settings
+ *  model select and the chat footer dropdown so both offer the same set. */
+export function curatedModelOptions(discovered: GatewayModel[] | null): GatewayModel[] {
+  const curatedLabels = new Set(CURATED_CLAUDE_MODELS.map((m) => m.label));
+  return Array.from(
+    new Map(
+      (discovered ?? [])
+        .filter((m) => {
+          const label = claudeLabel(m.id);
+          return (
+            /claude/i.test(m.id) &&
+            !m.id.startsWith('claude-3-freecc-no-thinking/') &&
+            !CURATED_CLAUDE_MODELS.some((c) => c.id === m.id) &&
+            !curatedLabels.has(label)
+          );
+        })
+        .map((m) => [claudeLabel(m.id), m])
+    ).values()
+  ).sort((a, b) => claudeLabel(a.id).localeCompare(claudeLabel(b.id)));
 }
 
 interface SettingsState {
@@ -157,7 +183,7 @@ export const useSettingsStore = create<SettingsState>()(
       lineNumbers: true,
       chatModel: 'claude-haiku-4-5-20251001',
       chatMaxTurns: 50,
-      autoCompactWindow: 190,
+      autoCompactWindow: 0, // 0 = follow the model's context window, not a fixed cap
       chatEffort: 'auto',
       autoUpdate: true,
       setEditorFontSize: (v) => set({ editorFontSize: clamp(v, FONT_MIN, FONT_MAX) }),
@@ -169,7 +195,7 @@ export const useSettingsStore = create<SettingsState>()(
       setLineNumbers: (v) => set({ lineNumbers: v }),
       setChatModel: (v) => set({ chatModel: v }),
       setChatMaxTurns: (v) => set({ chatMaxTurns: clamp(v, TURNS_MIN, TURNS_MAX) }),
-      setAutoCompactWindow: (v) => set({ autoCompactWindow: clamp(v, 10, 1000) }),
+      setAutoCompactWindow: (v) => set({ autoCompactWindow: clamp(v, 0, 1000) }),
       setChatEffort: (v) => set({ chatEffort: v }),
       setAutoUpdate: (v) => set({ autoUpdate: v })
     }),

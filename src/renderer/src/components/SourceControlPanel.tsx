@@ -51,9 +51,12 @@ export default function SourceControlPanel() {
   const act = async (action: 'stage' | 'unstage' | 'discard', paths: string[]): Promise<void> => {
     if (!root || paths.length === 0) return;
     setBusy(true);
-    await window.fcc.gitAction(action, paths);
-    setBusy(false);
-    load();
+    try {
+      await window.fcc.gitAction(action, paths);
+      load(); // refresh only on success (apply next before reload)
+    } finally {
+      setBusy(false);
+    }
   };
 
   const commit = async (): Promise<void> => {

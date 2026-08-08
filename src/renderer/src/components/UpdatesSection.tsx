@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSettingsStore } from '../stores/settings-store';
 import type { UpdateState } from '@shared/types';
+import SettingsPanel from './SettingsPanel';
 import Switch from './Switch';
 
 // In-app auto-update UI (Program settings → Updates). Main pushes UpdateState
@@ -30,8 +31,7 @@ export default function UpdatesSection() {
   };
 
   return (
-    <>
-      <div className="settings-section">Updates</div>
+    <SettingsPanel title="Updates">
       {!packaged ? (
         <div className="settings-note">Updates are available in the installed app (dev builds skip them).</div>
       ) : (
@@ -77,6 +77,6 @@ export default function UpdatesSection() {
           </div>
         </>
       )}
-    </>
+    </SettingsPanel>
   );
 }

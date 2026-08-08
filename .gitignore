@@ -15,6 +15,7 @@ release/
 # session/harness artifacts (ไม่ใช่โค้ดโปรเจกต์)
 .claude/
 .remember/
+plans/
 
 # dev-only: unit tests + process docs aren't shipped with the app
 tests/

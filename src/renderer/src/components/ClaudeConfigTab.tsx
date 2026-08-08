@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useExplorerStore } from '../stores/explorer-store';
+import SettingsPanel from './SettingsPanel';
 import Switch from './Switch';
 import type { ClaudePermissions, ClaudeSettingsFile } from '@shared/types';
 
@@ -153,97 +154,99 @@ export default function ClaudeConfigTab() {
         </div>
       )}
 
-      <div className="settings-section">General</div>
-      <label className="settings-row">
-        <span>Model</span>
-        <input value={draft.model ?? ''} spellCheck={false} onChange={(e) => set({ model: e.target.value })} />
-      </label>
-      <div className="settings-row">
-        <span>Theme</span>
-        <select
-          value={draft.theme ?? 'dark'}
-          className="settings-select"
-          onChange={(e) => set({ theme: e.target.value as 'dark' | 'light' })}
-        >
-          <option value="dark">Dark</option>
-          <option value="light">Light</option>
-        </select>
-      </div>
-      <div className="settings-row">
-        <span>Include Co-Authored-By</span>
-        <Switch checked={draft.includeCoAuthoredBy ?? true} onChange={(v) => set({ includeCoAuthoredBy: v })} />
-      </div>
-      <div className="settings-row">
-        <span>Verbose</span>
-        <Switch checked={draft.verbose ?? false} onChange={(v) => set({ verbose: v })} />
-      </div>
+      <SettingsPanel title="General">
+        <label className="settings-row">
+          <span>Model</span>
+          <input value={draft.model ?? ''} spellCheck={false} onChange={(e) => set({ model: e.target.value })} />
+        </label>
+        <div className="settings-row">
+          <span>Theme</span>
+          <select
+            value={draft.theme ?? 'dark'}
+            className="settings-select"
+            onChange={(e) => set({ theme: e.target.value as 'dark' | 'light' })}
+          >
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+          </select>
+        </div>
+        <div className="settings-row">
+          <span>Include Co-Authored-By</span>
+          <Switch checked={draft.includeCoAuthoredBy ?? true} onChange={(v) => set({ includeCoAuthoredBy: v })} />
+        </div>
+        <div className="settings-row">
+          <span>Verbose</span>
+          <Switch checked={draft.verbose ?? false} onChange={(v) => set({ verbose: v })} />
+        </div>
+      </SettingsPanel>
 
-      <div className="settings-section">Permissions</div>
-      <div className="settings-row">
-        <span>Default mode</span>
-        <select
-          value={draft.permissions?.defaultMode ?? 'default'}
-          className="settings-select"
-          onChange={(e) => setPerm({ defaultMode: e.target.value as ClaudePermissions['defaultMode'] })}
-        >
-          {MODES.map((m) => (
-            <option key={m} value={m}>
-              {m}
-            </option>
-          ))}
-        </select>
-      </div>
-      <RuleList label="Allow" rules={draft.permissions?.allow ?? []} onChange={(allow) => setPerm({ allow })} />
-      <RuleList label="Deny" rules={draft.permissions?.deny ?? []} onChange={(deny) => setPerm({ deny })} />
-      <RuleList label="Ask" rules={draft.permissions?.ask ?? []} onChange={(ask) => setPerm({ ask })} />
-      <RuleList
-        label="Additional directories"
-        rules={draft.permissions?.additionalDirectories ?? []}
-        onChange={(additionalDirectories) => setPerm({ additionalDirectories })}
-      />
-      <div className="settings-row">
-        <span>Disable bypass permissions mode</span>
-        <Switch
-          checked={draft.permissions?.disableBypassPermissionsMode ?? false}
-          onChange={(v) => setPerm({ disableBypassPermissionsMode: v })}
+      <SettingsPanel title="Permissions">
+        <div className="settings-row">
+          <span>Default mode</span>
+          <select
+            value={draft.permissions?.defaultMode ?? 'default'}
+            className="settings-select"
+            onChange={(e) => setPerm({ defaultMode: e.target.value as ClaudePermissions['defaultMode'] })}
+          >
+            {MODES.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </div>
+        <RuleList label="Allow" rules={draft.permissions?.allow ?? []} onChange={(allow) => setPerm({ allow })} />
+        <RuleList label="Deny" rules={draft.permissions?.deny ?? []} onChange={(deny) => setPerm({ deny })} />
+        <RuleList label="Ask" rules={draft.permissions?.ask ?? []} onChange={(ask) => setPerm({ ask })} />
+        <RuleList
+          label="Additional directories"
+          rules={draft.permissions?.additionalDirectories ?? []}
+          onChange={(additionalDirectories) => setPerm({ additionalDirectories })}
         />
-      </div>
+        <div className="settings-row">
+          <span>Disable bypass permissions mode</span>
+          <Switch
+            checked={draft.permissions?.disableBypassPermissionsMode ?? false}
+            onChange={(v) => setPerm({ disableBypassPermissionsMode: v })}
+          />
+        </div>
+      </SettingsPanel>
 
-      <div className="settings-section">Environment</div>
-      <div className="cs-env">
-        {Object.entries(env).map(([k, v]) => (
-          <div key={k} className="cs-env-row">
-            <input
-              value={k}
-              spellCheck={false}
-              onChange={(e) => {
-                const next = { ...env };
-                delete next[k];
-                next[e.target.value] = v;
-                setEnv(next);
-              }}
-            />
-            <input value={v} spellCheck={false} onChange={(e) => setEnv({ ...env, [k]: e.target.value })} />
-            <button
-              className="icon-btn"
-              onClick={() => {
-                const next = { ...env };
-                delete next[k];
-                setEnv(next);
-              }}
-              title="Remove"
-            >
-              ✕
-            </button>
-          </div>
-        ))}
-        <button className="ghost" onClick={() => setEnv({ ...env, '': '' })}>
-          + Add variable
-        </button>
-      </div>
+      <SettingsPanel title="Environment">
+        <div className="cs-env">
+          {Object.entries(env).map(([k, v]) => (
+            <div key={k} className="cs-env-row">
+              <input
+                value={k}
+                spellCheck={false}
+                onChange={(e) => {
+                  const next = { ...env };
+                  delete next[k];
+                  next[e.target.value] = v;
+                  setEnv(next);
+                }}
+              />
+              <input value={v} spellCheck={false} onChange={(e) => setEnv({ ...env, [k]: e.target.value })} />
+              <button
+                className="icon-btn"
+                onClick={() => {
+                  const next = { ...env };
+                  delete next[k];
+                  setEnv(next);
+                }}
+                title="Remove"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+          <button className="ghost" onClick={() => setEnv({ ...env, '': '' })}>
+            + Add variable
+          </button>
+        </div>
+      </SettingsPanel>
 
-      <div className="settings-section">Hooks &amp; Guardrails</div>
-      <div className="cs-card">
+      <SettingsPanel title="Hooks &amp; Guardrails">
         <div className="gr-head">
           <span className="gr-title">Guardrails</span>
           <span className={`gr-badge${guard?.enabled ? ' on' : ''}`}>{guard?.enabled ? 'ON' : 'OFF'}</span>
@@ -305,7 +308,7 @@ export default function ClaudeConfigTab() {
             + Add
           </button>
         </div>
-      </div>
+      </SettingsPanel>
 
       <div className="cs-config-actions">
         <button className="primary" onClick={() => void save()}>

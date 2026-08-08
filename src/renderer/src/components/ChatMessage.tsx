@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import type { ChatMessage as Msg } from '../chat/chat-reducer';
 import Markdown from '../chat/markdown';
 import ToolCallCard from './ToolCallCard';
 import { IconCopy, IconCheck, IconClaude, IconPencil } from './icons';
 
-export default function ChatMessage({
+export default memo(function ChatMessage({
   message,
   onEdit,
   onRewind,
@@ -117,4 +117,4 @@ export default function ChatMessage({
       {message.tools.map((t) => <ToolCallCard key={t.tool_use_id} tool={t} />)}
     </div>
   );
-}
+});

@@ -79,10 +79,11 @@ These are empirically load-bearing; full context in ARCHITECTURE.md §4–§9:
 - **Realtime changes** (mode / model / effort / fast / thinking / MCP) go through
   the `chat:control` SDK `control_request` envelopes — never through the proxy.
   Control responses are ignored by the reducer and `history.record`.
-- **Reducer `assistant` handling must keep `isAssistantTurn` requiring `!parentId`**
-  — main-turn text must not merge into a nested subagent child (subagents nest via
-  `parent_tool_use_id`). A subagent tool_result resolves by scanning **every**
-  message, not just the last.
+- **Reducer `assistant` handling must keep `isAssistantTurn` requiring `!parentId`
+  and `!restored`** — main-turn text must not merge into a nested subagent child
+  (subagents nest via `parent_tool_use_id`), nor into a restored history bubble
+  (resumed transcripts are marked `restored`; a live reply opens its own message).
+  A subagent tool_result resolves by scanning **every** message, not just the last.
 - **CLI thinking blocks use the `thinking` field, not `text`** (may be
   signature-only/empty). `liveTasks` is per-turn and clears on `result`.
 - **`--forward-subagent-text` must stay on** or subagent output disappears.
@@ -91,8 +92,11 @@ These are empirically load-bearing; full context in ARCHITECTURE.md §4–§9:
   otherwise. Restore runs in one `App.tsx` mount effect.
 - **FCC proxy env** on the subprocess: `ANTHROPIC_BASE_URL=http://127.0.0.1:8082`,
   `ANTHROPIC_AUTH_TOKEN=freecc`, `CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1`,
-  `CLAUDE_CODE_AUTO_COMPACT_WINDOW=<k-tokens * 1000>`. The `canUseTool` bridge never
-  fires through the proxy — edits are auto-accepted (`acceptEdits`).
+  and `CLAUDE_CODE_AUTO_COMPACT_WINDOW=<k-tokens * 1000>` **only when the
+  autoCompactWindow setting is > 0** — at 0 (the default) the env is omitted so
+  compaction follows the model's own window (read from `result.modelUsage[model]
+  .contextWindow`). The `canUseTool` bridge never fires through the proxy — edits
+  are auto-accepted (`acceptEdits`).
 - **Claude Code settings editor**: never re-format permission rules (byte-exact
   strings); leave the `claudeCode.environmentVariables` array alone; **never write
   `~/.claude.json`**.
@@ -100,8 +104,17 @@ These are empirically load-bearing; full context in ARCHITECTURE.md §4–§9:
   hex pairs must track the CSS theme (dark `#0e1013`/`#a0a8b4`, light
   `#faf8f6`/`#6f665d`).
 - **History id path guard** `/^[A-Za-z0-9._-]+$/` in `read`/`remove`.
-- **Settings-modal lists load via IPC into local state** — a zustand selector that
-  returns a fresh array caused a white screen.
+- **Settings page** (activity-bar gear → `SettingsPage.tsx`): tabs live in
+  `layout-store.settingsTab` (`openSettings(tab)`/`closeSettings()`); it is a
+  `role="dialog"` reusing `useModalFocus` — Escape closes **unless** an editable
+  field is focused (an input guard keeps typing from closing the page). Entry
+  points map to a tab (`fcc:open-settings`→General, `fcc:open-chat-settings`→Chat).
+  Its list pages load via IPC into **local state** — never a zustand selector that
+  returns a fresh array (that caused a white screen).
+- **Streaming hot path is memoized**: `ChatPanel`→`ChatColumn` and
+  `ChatColumn`→`ChatMessage` are `memo`-wrapped with `useCallback`-stable
+  per-message handlers — don't break the memo by passing new inline closures or
+  new array/object props on the chat tree.
 
 ## Testing & FCC server
 

@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useChatStore } from '../stores/chat-store';
 import { useExplorerStore } from '../stores/explorer-store';
 import { useLayoutStore } from '../stores/layout-store';
-import { useSettingsStore, claudeLabel } from '../stores/settings-store';
-import type { ChatImage } from '@shared/types';
+import { useSettingsStore, claudeLabel, curatedModelOptions } from '../stores/settings-store';
+import { effectiveContextWindow } from '@shared/model-context';
+import type { ChatImage, GatewayModel } from '@shared/types';
 import ChatMessage from './ChatMessage';
 import Markdown from '../chat/markdown';
 import { IconChat, IconClaude, IconClose, IconSend, IconSettings, IconStop } from './icons';
@@ -36,8 +37,7 @@ const KNOWN_COMMANDS: Record<string, string> = {
   '/login': 'Manage account sign-in',
   '/deep-research': 'Orchestrate a research workflow',
   '/code-review': 'Review the current diff',
-  '/simplify': 'Simplify recently changed code',
-  '/new': 'Start a new chat'
+  '/simplify': 'Simplify recently changed code'
 };
 
 const COMMAND_ARGS: Record<string, string> = {
@@ -51,27 +51,149 @@ const COMMAND_ARGS: Record<string, string> = {
   '/terminal': '<question>'
 };
 
+// Module-scope helpers (pure — no component state/props captured), so they keep a
+// stable identity across renders for the memoized column.
+function st(): ReturnType<typeof useChatStore.getState> {
+  return useChatStore.getState();
+}
+
+function mentionStart(value: string): number {
+  for (let i = value.length - 1; i >= 0; i--) {
+    if (value[i] === '@' && (i === 0 || /\s/.test(value[i - 1]))) return i;
+  }
+  return -1;
+}
+
+// Presentational column children (self-contained; no store reads — ChatColumn
+// passes values + callbacks it already has). Kept in this file to avoid a new
+// module boundary, per the split plan.
+function SlashPicker({
+  matches,
+  index,
+  onPick
+}: {
+  matches: string[];
+  index: number;
+  onPick: (cmd: string) => void;
+}) {
+  return (
+    <div className="slash-picker">
+      {matches.map((c, i) => (
+        <div
+          key={c}
+          className={`sp-item${i === index ? ' active' : ''}`}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            onPick(c);
+          }}
+        >
+          <span className="sp-cmd">{c}</span>
+          <span className="sp-desc">{KNOWN_COMMANDS[c] ?? LOCAL_COMMANDS.find((l) => l.name === c)?.desc ?? 'Send to Claude'}</span>
+          {COMMAND_ARGS[c] && <span className="sp-args">{COMMAND_ARGS[c]}</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AtPicker({
+  files,
+  index,
+  onPick
+}: {
+  files: string[];
+  index: number;
+  onPick: (path: string) => void;
+}) {
+  return (
+    <div className="slash-picker">
+      {files.map((f, i) => (
+        <div
+          key={f}
+          className={`sp-item${i === index ? ' active' : ''}`}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            onPick(f);
+          }}
+        >
+          <span className="sp-cmd">@{f}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PlanApproval({
+  plan,
+  onApprove,
+  onReject
+}: {
+  plan: string;
+  onApprove: () => void;
+  onReject: () => void;
+}) {
+  return (
+    <div className="plan-approval">
+      <span className="pa-text">Claude proposed a plan — approve to implement, or reject.</span>
+      <div className="pa-actions">
+        <button className="primary" onClick={onApprove} disabled={!plan}>
+          Approve plan
+        </button>
+        <button onClick={onReject}>Reject</button>
+      </div>
+    </div>
+  );
+}
+
+function ChatAttachmentRow({
+  images,
+  onRemove
+}: {
+  images: ChatImage[];
+  onRemove: (i: number) => void;
+}) {
+  return (
+    <div className="chat-attachments">
+      {images.map((img, i) => (
+        <div key={`${i}-${img.data.length}`} className="attach">
+          <img src={`data:${img.media_type};base64,${img.data}`} alt="attached" />
+          <button
+            className="icon-btn"
+            onClick={() => onRemove(i)}
+            title="Remove image"
+            aria-label="Remove image"
+          >
+            <IconClose width={11} height={11} />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** One independent Claude conversation (message list + input) in the strip of
  *  ChatColumns. Every store call is keyed on `id`. */
-export default function ChatColumn({ id, label }: { id: string; label: string }) {
+export default memo(function ChatColumn({ id, label }: { id: string; label: string }) {
   const session = useChatStore((s) => s.sessions.find((x) => x.id === id));
   const messages = session?.messages ?? [];
   const running = session?.running ?? false;
   const error = session?.error ?? null;
   const lastUsage = session?.lastUsage ?? null;
+  const contextTokens = session?.contextTokens ?? 0;
   const slashCommands = session?.slashCommands ?? [];
   const planMode = session?.planMode ?? false;
   const awaitingPlanApproval = session?.awaitingPlanApproval ?? false;
   const checkpoints = useChatStore((s) => s.checkpoints);
   const root = useExplorerStore((s) => s.root);
   const chatModel = useSettingsStore((s) => s.chatModel);
+  const autoCompactWindow = useSettingsStore((s) => s.autoCompactWindow);
 
   const [input, setInput] = useState('');
   const [help, setHelp] = useState<string | null>(null);
   const [images, setImages] = useState<ChatImage[]>([]);
   const [picker, setPicker] = useState<{ open: boolean; index: number }>({ open: false, index: 0 });
   const [modelOpen, setModelOpen] = useState(false);
-  const [models, setModels] = useState<{ id: string }[] | null>(null);
+  const [models, setModels] = useState<GatewayModel[] | null>(null);
   const [atBottom, setAtBottom] = useState(true);
   const [atPicker, setAtPicker] = useState<{ open: boolean; index: number; files: string[] }>({ open: false, index: 0, files: [] });
   // File list for '@' mentions, cached once per open folder (fs:search walks it).
@@ -111,6 +233,31 @@ export default function ChatColumn({ id, label }: { id: string; label: string })
   // Rough token estimate (chars / 4) for the input footer.
   const tokenEstimate = input.trim() ? Math.max(1, Math.round(input.trim().length / 4)) : 0;
 
+  // Context window: shared resolver prefers the model's real window (correct even
+  // when the CLI table under-reports a true-1M model), then the CLI's report,
+  // then the user's auto-compact window, else 200k.
+  const ctxWindow = Math.max(effectiveContextWindow(chatModel, session?.modelContextWindow ?? 0, autoCompactWindow), 1);
+  const ctxLevel = contextTokens / ctxWindow;
+  const compacted = session?.compacted ?? false;
+
+  // What Claude is doing right now: the newest running tool across messages
+  // (tool_use blocks the reducer is tracking), else a live background task, else
+  // a generic thinking state. Shown next to the running indicator.
+  const currentActivity = useMemo(() => {
+    if (!running) return null;
+    const liveTask = Object.values(session?.liveTasks ?? {})[0];
+    // Scan newest→oldest, first running tool wins — no array allocation per
+    // message on the hot chat-event path (a .filter() array built every chunk).
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const tools = messages[i].tools;
+      for (let j = tools.length - 1; j >= 0; j--) {
+        if (tools[j].state === 'running') return { kind: 'tool', label: tools[j].toolName };
+      }
+    }
+    if (liveTask?.description) return { kind: 'task', label: liveTask.description };
+    return { kind: 'think', label: 'thinking' };
+  }, [running, messages, session?.liveTasks]);
+
   // All discoverable commands: local + CLI slash commands / skills.
   const allCommands = useMemo(() => {
     const loc = LOCAL_COMMANDS.map((c) => c.name);
@@ -134,8 +281,25 @@ export default function ChatColumn({ id, label }: { id: string; label: string })
     return allCommands.filter((c) => c.slice(1).toLowerCase().startsWith(filter));
   }, [picker.open, input, allCommands]);
 
-  const st = (): ReturnType<typeof useChatStore.getState> => useChatStore.getState();
-  const send = (prompt: string, imgs?: ChatImage[]): void => st().send(id, root ?? '', prompt, imgs);
+  const send = useCallback(
+    (prompt: string, imgs?: ChatImage[]): void => st().send(id, root ?? '', prompt, imgs),
+    [id, root]
+  );
+
+  // Stabilized message callbacks so ChatMessage (memo) can bail on unchanged
+  // messages during a stream. Only root/id/checkpoints changes legitimately
+  // re-create these — those invalidate the message anyway.
+  const editMessage = useCallback((t: string) => { if (root) send(t); }, [root, send]);
+  const rewindMessage = useCallback((msgId: string) => st().rewindTo(msgId), []);
+  const regenerateMessage = useCallback((msgId: string) => st().regenerate(id, msgId), [id]);
+
+  // Compact the conversation. The CLI handles /compact over stdin as a regular
+  // user turn and replaces the transcript with a summary; show a lightweight
+  // "compacting" state via the normal send/result flow. No-op when already busy.
+  const compact = (): void => {
+    if (running || !root) return;
+    send('/compact');
+  };
 
   const buildHelp = (): string => {
     const names = LOCAL_COMMANDS.map((c) => `${c.name}  ${c.desc}`).join('\n');
@@ -160,13 +324,6 @@ Type anything else to send it to Claude.`;
     if (filesCache.current.root === r && filesCache.current.list.length > 0) return;
     const list = await window.fcc.fsSearch().catch(() => [] as string[]);
     filesCache.current = { root: r, list };
-  };
-
-  const mentionStart = (value: string): number => {
-    for (let i = value.length - 1; i >= 0; i--) {
-      if (value[i] === '@' && (i === 0 || /\s/.test(value[i - 1]))) return i;
-    }
-    return -1;
   };
 
   const completeAt = (path: string): void => {
@@ -384,6 +541,9 @@ Type anything else to send it to Claude.`;
       <div
         className="chat-messages"
         ref={scrollRef}
+        role="log"
+        aria-live="polite"
+        aria-label="Conversation"
         onScroll={(e) => {
           const el = e.currentTarget;
           setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 40);
@@ -419,17 +579,25 @@ Type anything else to send it to Claude.`;
               <ChatMessage
                 key={m.id}
                 message={m}
-                onEdit={m.role === 'user' ? (t) => root && send(t) : undefined}
-                onRewind={m.role === 'assistant' && checkpoints[m.id] ? () => st().rewindTo(m.id) : undefined}
-                onRegenerate={m.role === 'assistant' ? () => st().regenerate(id, m.id) : undefined}
+                onEdit={m.role === 'user' ? editMessage : undefined}
+                onRewind={m.role === 'assistant' && checkpoints[m.id] ? () => rewindMessage(m.id) : undefined}
+                onRegenerate={m.role === 'assistant' ? () => regenerateMessage(m.id) : undefined}
               />
             ))}
             {running && (
               <div className="running-indicator">
                 <span className="dots"><span /><span /><span /></span>
-                Claude is working
+                <span className="ri-label">
+                  {currentActivity?.kind === 'tool' && <>Using <b>{currentActivity.label}</b>…</>}
+                  {currentActivity?.kind === 'task' && <>{currentActivity.label}</>}
+                  {currentActivity?.kind === 'think' && <>Claude is working…</>}
+                </span>
               </div>
             )}
+            {ctxLevel > 1 && !running && (
+              <div className="chat-ctx-full">Context is past the window ({Math.round(ctxLevel * 100)}%) — press Compact below.</div>
+            )}
+            {compacted && !running && <div className="chat-ctx-note">Conversation was compacted — Claude is working from a summary.</div>}
             {error && <div className="chat-error">{error}</div>}
             {lastUsage && !running && (
               <div className="chat-usage">
@@ -442,69 +610,26 @@ Type anything else to send it to Claude.`;
       </div>
 
       {awaitingPlanApproval && (
-        <div className="plan-approval">
-          <span className="pa-text">Claude proposed a plan — approve to implement, or reject.</span>
-          <div className="pa-actions">
-            <button className="primary" onClick={() => st().approve(id, planText)} disabled={!planText}>
-              Approve plan
-            </button>
-            <button onClick={() => st().reject(id)}>Reject</button>
-          </div>
-        </div>
+        <PlanApproval
+          plan={planText}
+          onApprove={() => st().approve(id, planText)}
+          onReject={() => st().reject(id)}
+        />
       )}
 
       {images.length > 0 && (
-        <div className="chat-attachments">
-          {images.map((img, i) => (
-            <div key={`${i}-${img.data.length}`} className="attach">
-              <img src={`data:${img.media_type};base64,${img.data}`} alt="attached" />
-              <button
-                className="icon-btn"
-                onClick={() => setImages(images.filter((_, j) => j !== i))}
-                title="Remove image"
-                aria-label="Remove image"
-              >
-                <IconClose width={11} height={11} />
-              </button>
-            </div>
-          ))}
-        </div>
+        <ChatAttachmentRow
+          images={images}
+          onRemove={(i) => setImages(images.filter((_, j) => j !== i))}
+        />
       )}
 
       <div className="chat-input">
         {picker.open && matches.length > 0 && (
-          <div className="slash-picker">
-            {matches.map((c, i) => (
-              <div
-                key={c}
-                className={`sp-item${i === picker.index ? ' active' : ''}`}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  completeCommand(c);
-                }}
-              >
-                <span className="sp-cmd">{c}</span>
-                <span className="sp-desc">{KNOWN_COMMANDS[c] ?? LOCAL_COMMANDS.find((l) => l.name === c)?.desc ?? 'Send to Claude'}</span>
-                {COMMAND_ARGS[c] && <span className="sp-args">{COMMAND_ARGS[c]}</span>}
-              </div>
-            ))}
-          </div>
+          <SlashPicker matches={matches} index={picker.index} onPick={completeCommand} />
         )}
         {atPicker.open && atPicker.files.length > 0 && (
-          <div className="slash-picker">
-            {atPicker.files.map((f, i) => (
-              <div
-                key={f}
-                className={`sp-item${i === atPicker.index ? ' active' : ''}`}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  completeAt(f);
-                }}
-              >
-                <span className="sp-cmd">@{f}</span>
-              </div>
-            ))}
-          </div>
+          <AtPicker files={atPicker.files} index={atPicker.index} onPick={completeAt} />
         )}
         {!root && <div className="chat-hint">Open a folder first</div>}
         <div className="chat-field">
@@ -512,6 +637,7 @@ Type anything else to send it to Claude.`;
             ref={inputRef}
             value={input}
             placeholder={root ? 'Message Claude…' : ''}
+            aria-label="Message Claude"
             onChange={(e) => void handleChange(e.target.value)}
             onKeyDown={handleKeyDown}
             onPaste={(e) => void handlePaste(e)}
@@ -530,15 +656,19 @@ Type anything else to send it to Claude.`;
                 className="cbf-model"
                 title={chatModel}
                 onClick={() => {
-                  if (!models) void window.fcc.chatModels().then((l) => setModels(l as { id: string }[])).catch(() => setModels([]));
+                  if (!models) void window.fcc.chatModels().then((l) => setModels(l)).catch(() => setModels([]));
                   setModelOpen((v) => !v);
                 }}
               >
                 {claudeLabel(chatModel)} <span className="cm-caret">▾</span>
               </button>
-              {modelOpen && (
+
+              {modelOpen && (() => {
+                const available = curatedModelOptions(models);
+                const options = available.length ? available : [{ id: chatModel }];
+                return (
                 <div className="chat-model-dd">
-                  {(models && models.length ? models : [{ id: chatModel }]).map((m) => (
+                  {options.map((m) => (
                     <button
                       key={m.id}
                       className={m.id === chatModel ? 'active' : ''}
@@ -548,9 +678,25 @@ Type anything else to send it to Claude.`;
                     </button>
                   ))}
                 </div>
-              )}
+                );
+              })()}
+
             </div>
+            {contextTokens > 0 && (
+              <span
+                className={`cbf-context${ctxLevel > 1 ? ' warn' : ''}${ctxLevel > 1.2 ? ' full' : ''}`}
+                title={`Context: ${contextTokens.toLocaleString()} of ${ctxWindow.toLocaleString()} tokens (${claudeLabel(chatModel)})`}
+              >
+                <i className="ctx-dot" />
+                {Math.round((contextTokens / ctxWindow) * 100)}%
+              </span>
+            )}
             {tokenEstimate > 0 && <span className="cbf-tokens">~{tokenEstimate.toLocaleString()} tokens</span>}
+            {contextTokens > 0 && (
+              <button className="cbf-compact" onClick={compact} disabled={running} title="Compact the conversation (like /compact in the CLI)">
+                Compact
+              </button>
+            )}
             <span className="cbf-spacer" />
             <button
               className="cbf-gear"
@@ -570,6 +716,7 @@ Type anything else to send it to Claude.`;
                 onClick={submit}
                 disabled={!root || (!input.trim() && images.length === 0)}
                 title="Send (Enter)"
+                aria-label="Send message"
               >
                 <IconSend width={14} height={14} />
               </button>
@@ -579,4 +726,4 @@ Type anything else to send it to Claude.`;
       </div>
     </div>
   );
-}
+});

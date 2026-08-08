@@ -2,7 +2,8 @@ import type { BrowserWindow } from 'electron';
 import { IPC } from '@shared/ipc';
 import type { ChatImage, PermissionMode } from '@shared/types';
 import { FCC_BASE_URL, FCC_AUTH_TOKEN } from '../fcc-manager';
-import { getChatConfig } from './config';
+import { getChatConfig, effectiveAutoCompactTokens } from './config';
+import { log } from '../logger';
 import { CliSession, resolveCliBinary } from '../cli/cli-runner';
 import * as history from './history';
 
@@ -108,7 +109,8 @@ export class ChatHost {
   }
 
   private async spawn(sessionId: string, folder: string, prompt: string, opts?: ChatStartOpts): Promise<void> {
-    const { model, maxTurns, autoCompactWindow, effort } = getChatConfig();
+    const { model, maxTurns, effort } = getChatConfig();
+    const autoCompactWindow = effectiveAutoCompactTokens() ?? 0; // raw tokens
     const entry: ActiveSession = {
       session: undefined as unknown as CliSession,
       sawResult: false,
@@ -122,6 +124,7 @@ export class ChatHost {
         // real cause there (missing binary, bad env, node stack trace).
         const trace = entry.session.stderrTrace();
         const message = trace ? `${err.message}\n${trace.trim().split('\n').slice(-3).join('\n')}` : err.message;
+        log.error('chat', 'session error', { sessionId, message: err.message, trace: trace.slice(-500) });
         this.emit(sessionId, { type: 'error', message });
       }
       this.sessions.delete(sessionId);
@@ -176,6 +179,7 @@ export class ChatHost {
     this.sessions.set(sessionId, entry);
     entry.session.start();
     entry.session.send(prompt, opts?.images);
+    log.info('chat', 'spawn', { sessionId, folder, resume: opts?.resume ?? null, model: getChatConfig().model });
   }
 
   /** Forward a live SDK control_request to the running CLI (set_permission_mode

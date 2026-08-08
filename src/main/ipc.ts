@@ -18,6 +18,7 @@ import { listModels } from './chat/models';
 import { ChatHost, type ChatStartOpts } from './chat/chat-host';
 import { setChatConfig } from './chat/config';
 import { checkForUpdates, downloadUpdate, installUpdate } from './updater';
+import { handleRendererError as rendererError } from './logger';
 
 let chatHost: ChatHost | null = null;
 let ipcRegistered = false;
@@ -152,4 +153,5 @@ export function registerIpc(win: BrowserWindow): void {
   ipcMain.handle(IPC.updatesCheck, () => checkForUpdates());
   ipcMain.handle(IPC.updatesDownload, () => downloadUpdate());
   ipcMain.handle(IPC.updatesInstall, () => installUpdate());
+  ipcMain.handle(IPC.logError, (ev, payload) => rendererError(ev, payload));
 }

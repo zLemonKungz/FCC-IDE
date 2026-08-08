@@ -35,7 +35,8 @@ export interface ChatEventPayload {
 export interface ChatSettings {
   model: string;
   maxTurns: number;
-  /** auto-compact threshold in thousands of tokens (CLAUDE_CODE_AUTO_COMPACT_WINDOW / 1000). */
+  /** auto-compact threshold in thousands of tokens (CLAUDE_CODE_AUTO_COMPACT_WINDOW
+   *  / 1000); 0 = auto — follow the model's own context window (env left unset). */
   autoCompactWindow?: number;
   /** model effort level passed as --effort at spawn: 'auto' (model default, unset) or
    *  low|medium|high|xhigh|max. Only models that support effort honor it. */

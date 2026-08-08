@@ -106,6 +106,8 @@ const api = {
   updatesCheck: (): Promise<void> => ipcRenderer.invoke(IPC.updatesCheck),
   updatesDownload: (): Promise<void> => ipcRenderer.invoke(IPC.updatesDownload),
   updatesInstall: (): Promise<void> => ipcRenderer.invoke(IPC.updatesInstall),
+  /** forward a renderer-side error to the main log file (best-effort). */
+  logError: (payload: unknown): Promise<void> => ipcRenderer.invoke(IPC.logError, payload),
   onUpdate: (cb: (state: unknown) => void): void => {
     ipcRenderer.on(IPC.evtUpdate, (_ev, state) => cb(state));
   },

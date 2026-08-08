@@ -24,6 +24,10 @@ export const LAYOUT = {
   TERM_DEFAULT
 } as const;
 
+/** The Settings page's left-nav sections (single source — SettingsPage's NAV,
+ *  the store field, and openSettings all derive from it). */
+export type SettingsTab = 'general' | 'chat' | 'history' | 'mcp' | 'agents' | 'plugins' | 'config';
+
 interface LayoutState {
   sidebarVisible: boolean;
   chatVisible: boolean;
@@ -34,6 +38,8 @@ interface LayoutState {
   chatPosition: 'right' | 'center';
   /** which view the sidebar shows — Explorer, Find-in-files, Subagents, Source control, or Activity */
   sidebarView: 'explorer' | 'search' | 'subagents' | 'source' | 'activity';
+  /** the full-page Settings view is open (tabs for program + chat settings) */
+  settingsTab: SettingsTab | null;
   sidebarWidth: number;
   chatWidth: number;
   terminalHeight: number;
@@ -42,7 +48,10 @@ interface LayoutState {
   toggleSidebar: () => void;
   toggleChat: () => void;
   toggleTerminal: () => void;
-  /** activity-bar icons OPEN their panel — they never hide it */
+  /** open the full-page settings view on a specific tab (null closes it) */
+  openSettings: (tab: SettingsTab) => void;
+  closeSettings: () => void;
+  /** activity-bar buttons OPEN their panel — they never hide it */
   setChatVisible: (v: boolean) => void;
   setTerminalVisible: (v: boolean) => void;
   setTerminalPosition: (p: 'bottom' | 'right') => void;
@@ -65,6 +74,7 @@ export const useLayoutStore = create<LayoutState>()(
       terminalPosition: 'bottom',
       chatPosition: 'right',
       sidebarView: 'explorer',
+      settingsTab: null,
       sidebarWidth: SIDEBAR_DEFAULT,
       chatWidth: CHAT_DEFAULT,
       terminalHeight: TERM_DEFAULT,
@@ -73,6 +83,8 @@ export const useLayoutStore = create<LayoutState>()(
       toggleSidebar: () => set((s) => ({ sidebarVisible: !s.sidebarVisible })),
       toggleChat: () => set((s) => ({ chatVisible: !s.chatVisible })),
       toggleTerminal: () => set((s) => ({ terminalVisible: !s.terminalVisible })),
+      openSettings: (tab) => set({ settingsTab: tab }),
+      closeSettings: () => set({ settingsTab: null }),
       setChatVisible: (chatVisible) => set({ chatVisible }),
       setTerminalVisible: (terminalVisible) => set({ terminalVisible }),
       setTerminalPosition: (terminalPosition) => set({ terminalPosition }),

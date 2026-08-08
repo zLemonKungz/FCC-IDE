@@ -70,6 +70,8 @@ export const IPC = {
   updatesCheck: 'updates:check',
   updatesDownload: 'updates:download',
   updatesInstall: 'updates:install',
+  /** renderer forwards window.onerror / unhandledrejection for the log file */
+  logError: 'log:error',
   // events main -> renderer
   evtChat: 'chat:event',
   evtFcc: 'fcc:status-changed',

@@ -12,6 +12,7 @@ import SearchPanel from './components/SearchPanel';
 import SubagentPanel from './components/SubagentPanel';
 import SourceControlPanel from './components/SourceControlPanel';
 import ActivityPanel from './components/ActivityPanel';
+import SettingsPage from './components/SettingsPage';
 import { useLayoutStore, LAYOUT } from './stores/layout-store';
 import { useSettingsStore, effectiveEffort } from './stores/settings-store';
 import { useExplorerStore } from './stores/explorer-store';
@@ -51,6 +52,22 @@ export default function App() {
     return () => window.removeEventListener('fcc:open-palette', open);
   }, []);
 
+  // The menu bar / palette open the unified Settings page through events: the
+  // "settings" gear targets the General tab, "chat settings" targets the Chat
+  // tab. Escape closes it.
+  const settingsTab = useLayoutStore((s) => s.settingsTab);
+  const openSettings = useLayoutStore((s) => s.openSettings);
+  useEffect(() => {
+    const openGeneral = () => openSettings('general');
+    const openChat = () => openSettings('chat');
+    window.addEventListener('fcc:open-settings', openGeneral);
+    window.addEventListener('fcc:open-chat-settings', openChat);
+    return () => {
+      window.removeEventListener('fcc:open-settings', openGeneral);
+      window.removeEventListener('fcc:open-chat-settings', openChat);
+    };
+  }, [openSettings]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       // Theme chord: Ctrl+K then Ctrl+T (reset on any other key).
@@ -86,7 +103,7 @@ export default function App() {
       } else if (e.code === 'KeyF' && e.shiftKey) {
         e.preventDefault();
         setSidebarView('search');
-        if (!sidebarVisible) toggleSidebar();
+        if (!useLayoutStore.getState().sidebarVisible) toggleSidebar();
       }
     };
     window.addEventListener('keydown', onKey);
@@ -229,6 +246,7 @@ export default function App() {
       </main>
       {terminalPosition === 'bottom' && <Terminal position="bottom" />}
       <StatusBar />
+      {settingsTab && <SettingsPage />}
       {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} />}
     </div>
   );

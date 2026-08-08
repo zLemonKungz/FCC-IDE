@@ -26,6 +26,16 @@ all three via the `@shared` alias (`src/shared`):
   `src/renderer/src/stores/`, components under `components/`, UI theme in
   `styles.css` (see DESIGN.md), Monaco themes in `monaco-setup.ts`.
 
+**Background logging**: `src/main/logger.ts` appends timestamped lines to
+`userData/logs/app.log` (stdlib only, rotates to `app.log.old` at 5 MB, driven by
+`stream.bytesWritten` so the append path does no syscalls). Main logs app
+lifecycle, FCC online/offline transitions, chat spawns/errors, and
+window/renderer crashes (the `render-process-gone`/`unresponsive` watchers live
+in `index.ts`); `initLogging()` also installs `uncaughtException` /
+`unhandledRejection` handlers. The renderer forwards `window.onerror` /
+`unhandledrejection` over the `log:error` IPC, so a blank-screen renderer still
+leaves a trace. Best-effort — logging never throws into the app's control flow.
+
 **Security posture**: the renderer is sandboxed (`contextIsolation: true`,
 `nodeIntegration: false`, `sandbox: true`). Every piece of Node capability goes
 through the preload bridge — the renderer cannot touch the filesystem, spawn
@@ -259,6 +269,13 @@ envelopes to the CLI's stdin — the same mechanism as the SDK's `setPermissionM
   `pendingResume` to the saved CLI `session_id`, and the next `send()` spawns with
   `--resume`. Reliability through the FCC proxy is unverified — if resume fails the
   restored transcript still displays and the CLI error surfaces in chat.
+  **Restored messages are marked `restored:true`** so a live assistant reply never
+  merges into the imported transcript's last bubble (the reducer's
+  `isAssistantTurn` requires `!last.restored`). **The CLI does not replay the
+  conversation on resume** (verified by capture: only `system/init` + the new
+  turn's events; no `history` array) — the restored transcript is the only copy on
+  screen, and resuming loads the full prior context into the model (a tiny session
+  already carried ~44k input tokens).
 - **MCP** — `mcp-service.ts` surfaces servers **per scope** via `mcp:get`
   (`getMcpOverview`): `project` (`.mcp.json` in the open folder — the only
   **editable** scope, `mcp:set`, over the sandboxed file-service), `user`
@@ -288,13 +305,30 @@ envelopes to the CLI's stdin — the same mechanism as the SDK's `setPermissionM
 
 ## 9. Renderer layout & persistence (the non-obvious bits)
 
-- **Workspace restore** — folder persisted by `explorer-store` (persist
+- **Workspace restore** — the folder persisted by `explorer-store` (persist
   `fcc-explorer`, `root` only), tabs by `editor-store` (persist `fcc-tabs`, paths +
   `activePath` only — never content). Restore is one `App.tsx` mount effect **in
   order**: `openFolderAt(root)` (registers root in main) → `fsList(root)` →
   re-open each tab. The order is load-bearing: `assertInside` throws "No folder
-  open" until `setRoot` runs, so any file IPC before registration rejects. If the
+  open" until `setFile` runs, so any file IPC before registration rejects. If the
   folder is gone, both stores clear.
+- **Streaming hot path** — the chat transcript re-renders on every streamed CLI
+  event, so the renderer is memo-boundaried: `ChatPanel`→`ChatColumn` (props are
+  primitives `id`/`label`) and `ChatColumn`→`ChatMessage` (the reducer preserves
+  unchanged message object identity) are both `memo`-wrapped, and the three
+  per-message callbacks (`editMessage`/`rewindMessage`/`regenerateMessage`) are
+  `useCallback`-stable. This lets idle columns and unchanging transcript rows bail
+  while one column streams. Two **bugs** fixed here: the `Ctrl+Shift+F` global
+  keydown handler now reads `useLayoutStore.getState().sidebarVisible` at
+  keydown time (it was a stale mount-time closure that closed the sidebar), and
+  the `send()` in-flight guard is armed only after the resume/no-op early-returns
+  (it previously leaked and poisoned a session).
+- **Settings dialog + a11y** — `SettingsPage` is `role="dialog" aria-modal="true"`
+  and reuses `useModalFocus` (focus in on open, return on close, Escape handled —
+  skipping editable fields). The chat message scroll is `role="log" aria-live=
+  "polite"`, and the ActivityBar nav + chat textarea/Send carry `aria-label`s.
+  The footer model dropdown and the Chat-settings select share the
+  `curatedModelOptions()` filter so both offer the same deduped model set.
 - **Flexible panels** — the `.app` grid is `rows: 34px 1fr auto auto; cols: auto auto
   auto 1fr` (titlebar / activity-bar + sidebar + center / terminal / statusbar).
   `layout-store` (persist `fcc-layout`) drives `terminalPosition`/`chatPosition`/
@@ -327,12 +361,19 @@ envelopes to the CLI's stdin — the same mechanism as the SDK's `setPermissionM
   `onDidUpdateDiff`) with per-hunk Revert. `revertAgentHunk` splices base lines over
   current disk content (tabs can be stale — the store reads the file first); the
   agent-modified flag clears only when the whole file equals base.
-- **Prog/chat settings are separate modals.** Titlebar gear → "Program settings"
-  (editor font size, auto-save); chat gear → "Chat settings" (model/turns/effort/
-  plan toggle + History/MCP/Agents/Config). History/MCP/Agents/Config lists load via
-  IPC into **local component state** — never a zustand selector that returns a fresh
-  array (a `.filter()` in a selector caused "Maximum update depth exceeded" / white
-  screen once).
+- **Settings is a full-page view, not modals.** The activity-bar gear (bottom-left,
+  below the theme toggle) opens `SettingsPage.tsx` — a fixed overlay below the
+  titlebar that keeps the activity bar visible (page starts at `left: 46px`). One
+  vertical nav rail + scrollable content column (`layout-store.settingsTab` picks the
+  active tab; `openSettings(tab)` / `closeSettings()` drive it; Escape closes).
+  Tabs: General (theme/editor/files + Updates) · Chat (model/turns/effort/thinking/
+  auto-compact + context usage) · History · MCP · Agents · Plugins · Claude Code.
+  Entry points map to a tab: `fcc:open-settings` → General, `fcc:open-chat-settings`
+  → Chat (menu bar, chat gear, command palette all dispatch them; App.tsx listens).
+  History/MCP/Agents/Plugins/Config lists load via IPC into **local component state**
+  — never a zustand selector that returns a fresh array (a `.filter()` in a selector
+  caused "Maximum update depth exceeded" / white screen once). Each tab's sections
+  are card panels (`SettingsPanel.tsx`).
 - **Auto-save** is a debounced (800ms) save on editor change, **skipped for
   `agentModified` files** — auto-saving would clobber a Claude edit on disk and
   corrupt accept/revert.
@@ -378,7 +419,19 @@ envelopes to the CLI's stdin — the same mechanism as the SDK's `setPermissionM
 The FCC env goes on the subprocess env (spread over `process.env`):
 `ANTHROPIC_BASE_URL=FCC_BASE_URL` (`http://127.0.0.1:8082`), `ANTHROPIC_AUTH_TOKEN=freecc`,
 `CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1`, and
-`CLAUDE_CODE_AUTO_COMPACT_WINDOW=<autoCompactWindow * 1000>` (thousands→tokens).
+`CLAUDE_CODE_AUTO_COMPACT_WINDOW=<autoCompactWindow * 1000>` (thousands→tokens)
+— **omitted when `autoCompactWindow` is 0**, so the CLI compacts at its own
+model-driven limit instead of a fixed cap.
+The reducer tracks `contextTokens` (the last `result`'s total input — "how full
+is the conversation now", including a resumed transcript) and
+`modelContextWindow` (from `result.modelUsage[model].contextWindow` — the
+model's real window, which the CLI reports per turn). **The effective window is
+resolved once, in `@shared/model-context.ts`** (`effectiveContextWindow`, plus
+the `modelFamilyStem` normalizer the renderer's `effortFamily`/`claudeLabel`
+delegate to): shared by the chat footer meter, the Chat settings usage panel,
+and the main spawn. The chat footer shows a fill dot + % against that window; it
+turns amber past the window and red over it, and a **Compact** pill sends
+`/compact` to the CLI (it compacts over stdin as a single turn).
 FCC is a **request-transforming gateway**, not a dumb relay. It also serves
 `GET /v1/models` — the chat model picker fetches it (`chat/models.ts`) and filters
 to claude-related entries.

@@ -10,10 +10,11 @@ export function useModalFocus(open: boolean, onClose: () => void): React.RefObje
     const prev = document.activeElement as HTMLElement | null;
     ref.current?.focus();
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        onClose();
-      }
+      if (e.key !== 'Escape') return;
+      const el = e.target as HTMLElement | null;
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable)) return;
+      e.stopPropagation();
+      onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => {

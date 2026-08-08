@@ -279,3 +279,32 @@ export function IconActivity(props: SVGProps<SVGSVGElement>) {
     </Svg>
   );
 }
+
+export function IconHistory(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+      <path d="M3 3v5h5" />
+      <path d="M12 7v5l3 2" />
+    </Svg>
+  );
+}
+
+export function IconPlug(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <path d="M9 2v6M15 2v6" />
+      <path d="M6 8h12v3a6 6 0 0 1-12 0z" />
+      <path d="M12 17v5" />
+    </Svg>
+  );
+}
+
+export function IconPuzzle(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <path d="M18.5 12a2.5 2.5 0 0 0 0-5 2.5 2.5 0 0 1-2.5-2.5 2.5 2.5 0 0 0-5 0A2.5 2.5 0 0 1 8.5 7a2.5 2.5 0 0 0 0 5 2.5 2.5 0 0 1 2.5 2.5 2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 1 2.5-2.5z" />
+      <path d="M8 3h8M8 21h8M3 8v8M21 8v8" />
+    </Svg>
+  );
+}

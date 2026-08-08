@@ -1,19 +1,37 @@
 import { useEffect, useState } from 'react';
-import { useSettingsStore, CURATED_CLAUDE_MODELS, claudeLabel, EFFORT_LEVELS, effortCapLabel, effectiveEffort, effortControlSettings } from '../stores/settings-store';
+import { useSettingsStore, CURATED_CLAUDE_MODELS, claudeLabel, curatedModelOptions, EFFORT_LEVELS, effortCapLabel, effectiveEffort, effortControlSettings } from '../stores/settings-store';
 import { useChatStore, useActiveChat } from '../stores/chat-store';
 import { useExplorerStore } from '../stores/explorer-store';
-import { useModalFocus } from '../hooks/useModal';
-import ClaudeConfigTab from './ClaudeConfigTab';
+import SettingsPanel from './SettingsPanel';
 import Switch from './Switch';
+import { modelContextWindow, effectiveContextWindow } from '@shared/model-context';
 import type { AgentSummary, GatewayModel, HistorySummary, McpOverview, McpServerDef, PluginInfo } from '@shared/types';
-import { IconTrash, IconPlus, IconClose } from './icons';
-
-type Tab = 'settings' | 'history' | 'mcp' | 'agents' | 'plugins' | 'config';
+import { IconTrash, IconPlus } from './icons';
 
 function fmtTime(ts: number): string {
   const d = new Date(ts);
   return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
+
+// Module-scope pure helpers (no component state/props captured).
+function liveSessionId(): string | null {
+  return useChatStore.getState().activeId;
+}
+
+// Read-only rows for the user/global scopes (the app never renders these).
+const globalRows = (rows: Record<string, McpServerDef>) => (
+  <>
+    {Object.entries(rows).map(([n, def]) => (
+      <div key={n} className="cs-mcp-row">
+        <div className="cs-hist-main">
+          <div className="cs-hist-title">{n}</div>
+          <div className="cs-hist-meta">{(def as { url?: string }).url ?? def.command ?? '…'}</div>
+        </div>
+        <span className="cs-scope-chip">global</span>
+      </div>
+    ))}
+  </>
+);
 
 // Last-turn token mix as a segmented bar (cache-write / cache-read / fresh
 // input / output) so a huge cache-write or a cheap cache-read is visible.
@@ -48,50 +66,11 @@ function UsageBar({ usage }: { usage: { input: number; output: number; cacheRead
   );
 }
 
-// The chat settings plus the not-yet-surfaced features: session history
-// (persist/resume/delete) and an MCP-server manager for the open folder's
-// .mcp.json. History/MCP data load via IPC into local state — never a zustand
-// selector returning a fresh object (that re-renders forever).
-export default function ChatSettingsModal({ onClose }: { onClose: () => void }) {
-  const [tab, setTab] = useState<Tab>('settings');
-  // Call the hook unconditionally — a hook inside a `tab === 'mcp' &&` JSX
-  // expression would change the hook count between renders and crash React.
-  const root = useExplorerStore((s) => s.root);
-  const modalRef = useModalFocus(true, onClose);
-
-  return (
-    <div className="modal-backdrop" onPointerDown={onClose}>
-      <div ref={modalRef} tabIndex={-1} className="chat-settings-modal" onPointerDown={(e) => e.stopPropagation()}>
-        <div className="settings-title">
-          <div className="st-left">
-            <span className="st-title">Chat settings</span>
-            <span className="st-sub">Model · effort · turns · tooling for the Claude conversation</span>
-          </div>
-          <button className="icon-btn" onClick={onClose} title="Close" aria-label="Close">
-            <IconClose width={13} height={13} />
-          </button>
-        </div>
-        <div className="cs-tabs">
-          {(['settings', 'history', 'mcp', 'agents', 'plugins', 'config'] as Tab[]).map((t) => (
-            <button key={t} className={`cs-tab${tab === t ? ' active' : ''}`} onClick={() => setTab(t)}>
-              {t[0].toUpperCase() + t.slice(1)}
-            </button>
-          ))}
-        </div>
-        <div className="cs-body">
-          {tab === 'settings' && <SettingsTab />}
-          {tab === 'history' && <HistoryTab onClose={onClose} />}
-          {tab === 'mcp' && <McpTab root={root} />}
-          {tab === 'agents' && <AgentsTab root={root} />}
-          {tab === 'plugins' && <PluginsTab />}
-          {tab === 'config' && <ClaudeConfigTab />}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SettingsTab() {
+// Tab-body components for the unified full-page Settings view (see
+// SettingsPage.tsx). Each renders inside the page's cs-body — history/MCP data
+// load via IPC into local state, never a zustand selector returning a fresh
+// object (that re-renders forever).
+export function ChatTab() {
   const thinking = useChatStore((s) => s.thinking);
   const chatModel = useSettingsStore((s) => s.chatModel);
   const chatMaxTurns = useSettingsStore((s) => s.chatMaxTurns);
@@ -104,6 +83,13 @@ function SettingsTab() {
   const active = useActiveChat();
   const sessionUsage = active?.sessionUsage ?? { input: 0, output: 0, cost: 0 };
   const lastUsage = active?.lastUsage ?? null;
+  const ctxTokens = active?.contextTokens ?? 0;
+  // Shared resolver: the app's known window for the selected model (correct even
+  // when the CLI table says 200k for a true-1M model), else CLI report, else the
+  // user's auto-compact window (k → tokens), else 200k.
+  const modelKnown = modelContextWindow(chatModel) !== null;
+  const ctxRef = effectiveContextWindow(chatModel, active?.modelContextWindow ?? 0, autoCompactWindow);
+  const ctxPct = ctxRef > 0 ? Math.round((ctxTokens / ctxRef) * 100) : 0;
 
   // Keep the stored effort snapped to what the current model supports: if the
   // model's ceiling drops below the chosen level (e.g. Sonnet 5 can't do
@@ -137,45 +123,43 @@ function SettingsTab() {
     };
   }, []);
 
-  const curatedLabels = new Set(CURATED_CLAUDE_MODELS.map((m) => m.label));
-  // Gateway models: claude-related, excluding the curated ones (by id AND by
-  // friendly label, so aliases like anthropic/opencode/claude-fable-5 don't
-  // duplicate "Fable 5") and the noisy "no thinking" prefix. De-duped by label.
-  const available = Array.from(
-    new Map(
-      (discovered ?? [])
-        .filter((m) => {
-          const label = claudeLabel(m.id);
-          return (
-            /claude/i.test(m.id) &&
-            !m.id.startsWith('claude-3-freecc-no-thinking/') &&
-            !CURATED_CLAUDE_MODELS.some((c) => c.id === m.id) &&
-            !curatedLabels.has(label)
-          );
-        })
-        .map((m) => [claudeLabel(m.id), m])
-    ).values()
-  ).sort((a, b) => claudeLabel(a.id).localeCompare(claudeLabel(b.id)));
+  // Gateway models: deduped/filtered/sorted by the shared resolver, so the chat
+  // footer dropdown and this select always offer the same set.
+  const available = curatedModelOptions(discovered);
 
   const effNow = effectiveEffort(chatModel, chatEffort);
   const effSnapped = chatEffort !== 'auto' && effNow !== chatEffort;
 
   return (
     <>
-      <div className="cs-usage">
+      <SettingsPanel title="Context usage (this session)">
         <div className="cs-usage-row">
-          <span className="cs-usage-label">Context usage (this session)</span>
+          <span className="cs-usage-label">Context window</span>
+          <span className="cs-usage-nums">
+            {ctxTokens.toLocaleString()} / {ctxRef.toLocaleString()} tokens · {ctxPct}%
+            {modelKnown ? '' : ' (fallback: auto-compact)'}
+          </span>
+        </div>
+        {(ctxTokens > 0 || (lastUsage && (lastUsage?.input ?? 0) > 0)) && (
+          <div className="cs-ctx-track">
+            <div className={`cs-ctx-fill${ctxPct > 100 ? ' full' : ctxPct > 70 ? ' warn' : ''}`} style={{ width: `${Math.min(ctxPct, 100)}%` }} />
+          </div>
+        )}
+        <div className="cs-usage-row" style={{ marginTop: 8 }}>
+          <span className="cs-usage-label">Tokens (cumulative)</span>
           <span className="cs-usage-nums">
             {sessionUsage.input.toLocaleString()} in · {sessionUsage.output.toLocaleString()} out · $
             {sessionUsage.cost.toFixed(4)}
           </span>
         </div>
+        {ctxPct > 100 && <div className="cs-note">Context is past the auto-compact window — compact to keep going (chat footer → Compact).</div>}
         {lastUsage && <UsageBar usage={lastUsage} />}
-      </div>
-      {discovered === null && (
-        <div className="cs-note">Couldn’t reach the gateway — showing the main Claude models.</div>
-      )}
-      <div className="cs-settings-grid">
+      </SettingsPanel>
+      <SettingsPanel title="Conversation">
+        {discovered === null && (
+          <div className="cs-note">Couldn’t reach the gateway — showing the main Claude models.</div>
+        )}
+        <div className="cs-settings-grid">
         <label className="settings-row">
           <span>Model</span>
           <select
@@ -243,27 +227,42 @@ function SettingsTab() {
           <Switch checked={thinking} onChange={() => useChatStore.getState().toggleThinking()} />
         </label>
         <label className="settings-row">
-          <span>Auto-compact (k tokens)</span>
-          <input
-            type="number"
-            min={10}
-            max={1000}
-            step={10}
+          <span>Auto-compact</span>
+          <select
+            className="settings-select"
             value={autoCompactWindow}
-            onChange={(e) => setAutoCompactWindow(Number(e.target.value) || 190)}
-          />
+            onChange={(e) => setAutoCompactWindow(Number(e.target.value))}
+            title="0 = auto: compact at the model's context window; otherwise a fixed k-token threshold"
+          >
+            <option value={0}>Auto — model window</option>
+            {[100, 150, 190, 200, 300, 500].map((k) => (
+              <option key={k} value={k}>
+                {k}k tokens
+              </option>
+            ))}
+            {/* A legacy persisted value (any step under the old number input)
+                must stay selectable, or the control renders blank. */}
+            {autoCompactWindow > 0 && ![100, 150, 190, 200, 300, 500].includes(autoCompactWindow) && (
+              <option value={autoCompactWindow}>{autoCompactWindow}k tokens</option>
+            )}
+          </select>
         </label>
       </div>
-      <div className="cs-note">
-        {claudeLabel(chatModel)} {effortCapLabel(chatModel)}
-        {effSnapped && <> · {chatEffort} adjusted to {effNow}</>}.
-      </div>
-      <div className="settings-note">Model &amp; Effort apply to the current chat’s next turn — Max turns &amp; auto-compact apply to the next conversation.</div>
+        <div className="cs-note">
+          {claudeLabel(chatModel)} {effortCapLabel(chatModel)}
+          {effSnapped && <> · {chatEffort} adjusted to {effNow}</>}.
+        </div>
+        <div className="settings-note">
+          Model &amp; Effort apply to the current chat’s next turn — Max turns apply to the next conversation.
+          Auto-compact at <b>Auto</b> uses the model’s context window (shown once a turn runs); a fixed value
+          caps it early.
+        </div>
+      </SettingsPanel>
     </>
   );
 }
 
-function HistoryTab({ onClose }: { onClose: () => void }) {
+export function HistoryTab({ onClose }: { onClose: () => void }) {
   const [items, setItems] = useState<HistorySummary[] | null>(null);
 
   const load = (): void => {
@@ -297,7 +296,7 @@ function HistoryTab({ onClose }: { onClose: () => void }) {
     );
   if (items.length === 0) return <div className="cs-empty">No saved conversations yet.</div>;
   return (
-    <>
+    <SettingsPanel title="Saved conversations">
       {items.map((h) => (
         <div key={h.id} className="cs-hist-row">
           <div className="cs-hist-main">
@@ -317,11 +316,11 @@ function HistoryTab({ onClose }: { onClose: () => void }) {
           )}
         </div>
       ))}
-    </>
+    </SettingsPanel>
   );
 }
 
-function McpTab({ root }: { root: string | null }) {
+export function McpTab({ root }: { root: string | null }) {
   const [overview, setOverview] = useState<McpOverview | null>(null);
   const [name, setName] = useState('');
   const [command, setCommand] = useState('');
@@ -329,7 +328,6 @@ function McpTab({ root }: { root: string | null }) {
   // Live enabled-state for the running session (absent = enabled by default).
   const [disabled, setDisabled] = useState<Record<string, boolean>>({});
 
-  const liveSessionId = (): string | null => useChatStore.getState().activeId;
   const toggleServer = (n: string): void => {
     const next = !disabled[n];
     setDisabled((d) => ({ ...d, [n]: next }));
@@ -381,115 +379,111 @@ function McpTab({ root }: { root: string | null }) {
       </div>
     );
 
-  // Read-only rows for the user/global scopes (the app never writes these).
-  const globalRows = (rows: Record<string, McpServerDef>) => (
-    <>
-      {Object.entries(rows).map(([n, def]) => (
-        <div key={n} className="cs-mcp-row">
-          <div className="cs-hist-main">
-            <div className="cs-hist-title">{n}</div>
-            <div className="cs-hist-meta">{(def as { url?: string }).url ?? def.command ?? '…'}</div>
-          </div>
-          <span className="cs-scope-chip">global</span>
-        </div>
-      ))}
-    </>
-  );
   const hasGlobal =
     Object.keys(overview.user.claudeJson).length > 0 || Object.keys(overview.user.settingsJson).length > 0;
 
   return (
     <>
       {!root && <div className="cs-note">Open a folder to manage the project’s MCP servers (.mcp.json).</div>}
-      <div className="settings-section">Project · .mcp.json</div>
-      {Object.entries(servers).map(([n, def]) => (
-        <div key={n} className="cs-mcp-row">
-          <div className="cs-hist-main">
-            <div className="cs-hist-title">
-              <span className={`mcp-dot${disabled[n] ? ' off' : ''}`} />
-              {n}
-            </div>
-            <div className="cs-hist-meta mcp-cmd">
-              {def.command}
-              {def.args ? <span className="mcp-args">{def.args.join(' ')}</span> : null}
-            </div>
-          </div>
-          <button
-            className="ghost"
-            disabled={!liveSessionId()}
-            onClick={() => toggleServer(n)}
-            title={disabled[n] ? 'Enable for the running conversation' : 'Disable for the running conversation'}
-          >
-            {disabled[n] ? 'Off' : 'On'}
-          </button>
-          <button className="ghost" disabled={!liveSessionId()} onClick={() => reconnect(n)} title="Reconnect now">
-            ↻
-          </button>
-          <button className="icon-btn" onClick={() => void remove(n)} title="Remove" aria-label="Remove">
-            <IconTrash width={13} height={13} />
-          </button>
-        </div>
-      ))}
-      {Object.keys(servers).length === 0 && root && <div className="cs-empty">No project servers — add one below.</div>}
-      <div className="cs-note">Add a server — Claude Code starts it with this command on the next conversation.</div>
-      <div className="cs-mcp-add">
-        <label className="gr-field">
-          <span>Name</span>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="server-name" disabled={!root} />
-        </label>
-        <label className="gr-field">
-          <span>Command</span>
-          <input value={command} onChange={(e) => setCommand(e.target.value)} placeholder="npx" disabled={!root} />
-        </label>
-        <label className="gr-field grow">
-          <span>Args</span>
-          <input value={args} onChange={(e) => setArgs(e.target.value)} placeholder="-y @server/package" disabled={!root} />
-        </label>
-        <button
-          className="ghost gr-btn gr-add"
-          onClick={() => void add()}
-          disabled={!root || !name.trim() || !command.trim()}
-        >
-          + Add
-        </button>
-      </div>
-      <div className="settings-section">Global (read-only)</div>
-      {!hasGlobal && (
-        <div className="cs-note">
-          No global MCP servers — configure them with Claude Code /mcp (writes ~/.claude.json) or the Config tab
-          (settings.json).
-        </div>
-      )}
-      {Object.keys(overview.user.claudeJson).length > 0 && (
-        <>
-          <div className="cs-scope-label">~/.claude.json</div>
-          {globalRows(overview.user.claudeJson)}
-        </>
-      )}
-      {Object.keys(overview.user.settingsJson).length > 0 && (
-        <>
-          <div className="cs-scope-label">settings.json</div>
-          {globalRows(overview.user.settingsJson)}
-        </>
-      )}
-      {Object.keys(overview.plugins).length > 0 && (
-        <>
-          <div className="settings-section">From plugins (read-only)</div>
-          {Object.entries(overview.plugins).map(([n, def]) => (
-            <div key={n} className="cs-mcp-row">
-              <div className="cs-hist-main">
-                <div className="cs-hist-title">{n}</div>
-                <div className="cs-hist-meta">{(def as { url?: string }).url ?? def.command ?? '…'}</div>
+      <SettingsPanel title="Project · .mcp.json">
+        {Object.entries(servers).map(([n, def]) => (
+          <div key={n} className="cs-mcp-row">
+            <div className="cs-hist-main">
+              <div className="cs-hist-title">
+                <span className={`mcp-dot${disabled[n] ? ' off' : ''}`} />
+                {n}
               </div>
-              <span className="cs-scope-chip">plugin</span>
+              <div className="cs-hist-meta mcp-cmd">
+                {def.command}
+                {def.args ? <span className="mcp-args">{def.args.join(' ')}</span> : null}
+              </div>
             </div>
-          ))}
-        </>
-      )}
-      <div className="cs-note">
-        Project edits apply to new conversations — On/Off &amp; ↻ apply live to the running one
-        {liveSessionId() ? '' : ' (start a chat to use them)'}.
-      </div>
+            <button
+              className="ghost"
+              disabled={!liveSessionId()}
+              onClick={() => toggleServer(n)}
+              title={disabled[n] ? 'Enable for the running conversation' : 'Disable for the running conversation'}
+            >
+              {disabled[n] ? 'Off' : 'On'}
+            </button>
+            <button className="ghost" disabled={!liveSessionId()} onClick={() => reconnect(n)} title="Reconnect now">
+              ↻
+            </button>
+            <button className="icon-btn" onClick={() => void remove(n)} title="Remove" aria-label="Remove">
+              <IconTrash width={13} height={13} />
+            </button>
+          </div>
+        ))}
+        {Object.keys(servers).length === 0 && root && (
+          <div className="cs-empty">No project servers — add one below.</div>
+        )}
+      </SettingsPanel>
+      <SettingsPanel
+        title="Add a server"
+        actions={
+          <button
+            className="ghost gr-btn"
+            onClick={() => void add()}
+            disabled={!root || !name.trim() || !command.trim()}
+          >
+            + Add
+          </button>
+        }
+      >
+        <div className="cs-note">Claude Code starts it with this command on the next conversation.</div>
+        <div className="cs-mcp-add">
+          <label className="gr-field">
+            <span>Name</span>
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="server-name" disabled={!root} />
+          </label>
+          <label className="gr-field">
+            <span>Command</span>
+            <input value={command} onChange={(e) => setCommand(e.target.value)} placeholder="npx" disabled={!root} />
+          </label>
+          <label className="gr-field grow">
+            <span>Args</span>
+            <input value={args} onChange={(e) => setArgs(e.target.value)} placeholder="-y @server/package" disabled={!root} />
+          </label>
+        </div>
+      </SettingsPanel>
+      <SettingsPanel title="Global (read-only)">
+        {!hasGlobal && (
+          <div className="cs-note">
+            No global MCP servers — configure them with Claude Code /mcp (writes ~/.claude.json) or the Config tab
+            (settings.json).
+          </div>
+        )}
+        {Object.keys(overview.user.claudeJson).length > 0 && (
+          <>
+            <div className="cs-scope-label">~/.claude.json</div>
+            {globalRows(overview.user.claudeJson)}
+          </>
+        )}
+        {Object.keys(overview.user.settingsJson).length > 0 && (
+          <>
+            <div className="cs-scope-label">settings.json</div>
+            {globalRows(overview.user.settingsJson)}
+          </>
+        )}
+        {Object.keys(overview.plugins).length > 0 && (
+          <>
+            <div className="settings-section">From plugins</div>
+            {Object.entries(overview.plugins).map(([n, def]) => (
+              <div key={n} className="cs-mcp-row">
+                <div className="cs-hist-main">
+                  <div className="cs-hist-title">{n}</div>
+                  <div className="cs-hist-meta">{(def as { url?: string }).url ?? def.command ?? '…'}</div>
+                </div>
+                <span className="cs-scope-chip">plugin</span>
+              </div>
+            ))}
+          </>
+        )}
+        <div className="cs-note">
+          Project edits apply to new conversations — On/Off &amp; ↻ apply live to the running one
+          {liveSessionId() ? '' : ' (start a chat to use them)'}.
+        </div>
+      </SettingsPanel>
     </>
   );
 }
@@ -506,7 +500,7 @@ tools: Read, Grep, Bash
 You are a focused assistant. Describe the task, style, and any constraints here.
 `;
 
-function AgentsTab({ root }: { root: string | null }) {
+export function AgentsTab({ root }: { root: string | null }) {
   const [agents, setAgents] = useState<AgentSummary[] | null>(null);
   const [editing, setEditing] = useState<{ name: string; content: string; isNew: boolean } | null>(null);
   const [newName, setNewName] = useState('');
@@ -581,32 +575,55 @@ function AgentsTab({ root }: { root: string | null }) {
         </div>
       ) : (
         <>
-          {agents.length === 0 && root && <div className="cs-empty">No custom subagents yet.</div>}
-          {agents.map((a) => (
-            <div key={a.name} className="cs-mcp-row">
-              <div className="cs-hist-main">
-                <div className="cs-hist-title">{a.name}</div>
-                <div className="cs-hist-meta">.claude/agents/{a.name}.md</div>
-              </div>
-              <button className="ghost" onClick={() => void open(a.name)}>
-                Edit
+          <SettingsPanel
+            title="Custom subagents"
+            actions={
+              <button
+                className="ghost gr-btn"
+                disabled={!root}
+                onClick={startNew}
+                title="Create a custom agent"
+              >
+                <IconPlus width={12} height={12} /> New
               </button>
-              <button className="icon-btn" onClick={() => void remove(a.name)} title="Delete" aria-label="Delete">
-                <IconTrash width={13} height={13} />
+            }
+          >
+            {agents.length === 0 && root && <div className="cs-empty">No custom subagents yet.</div>}
+            {agents.map((a) => (
+              <div key={a.name} className="cs-mcp-row">
+                <div className="cs-hist-main">
+                  <div className="cs-hist-title">{a.name}</div>
+                  <div className="cs-hist-meta">.claude/agents/{a.name}.md</div>
+                </div>
+                <button className="ghost" onClick={() => void open(a.name)}>
+                  Edit
+                </button>
+                <button className="icon-btn" onClick={() => void remove(a.name)} title="Delete" aria-label="Delete">
+                  <IconTrash width={13} height={13} />
+                </button>
+              </div>
+            ))}
+          </SettingsPanel>
+          <SettingsPanel title="New agent">
+            <div className="cs-mcp-add">
+              <input
+                placeholder="agent name"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                disabled={!root}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    startNew();
+                  }
+                }}
+              />
+              <button className="ghost" disabled={!root} onClick={startNew} title="Create a custom agent">
+                Create
               </button>
             </div>
-          ))}
-          <div className="cs-mcp-add">
-            <input
-              placeholder="new agent name"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              disabled={!root}
-            />
-            <button disabled={!root} onClick={startNew} title="Create a custom agent">
-              <IconPlus width={13} height={13} />
-            </button>
-          </div>
+            <div className="cs-note">Agents live in .claude/agents/&lt;name&gt;.md and apply to new conversations.</div>
+          </SettingsPanel>
         </>
       )}
     </>
@@ -617,7 +634,7 @@ function AgentsTab({ root }: { root: string | null }) {
 // Lists installed plugins (name@marketplace) with their enabled state and the
 // MCP servers each declares; toggling enable edits ~/.claude/settings.json's
 // enabledPlugins map (preserving everything else). Reload after toggling.
-function PluginsTab() {
+export function PluginsTab() {
   const [plugins, setPlugins] = useState<PluginInfo[] | null>(null);
 
   const load = (): void => {
@@ -638,7 +655,7 @@ function PluginsTab() {
   if (plugins.length === 0) return <div className="cs-empty">No plugins installed (~/.claude/plugins).</div>;
 
   return (
-    <>
+    <SettingsPanel title="Installed plugins">
       {plugins.map((p) => (
         <div key={p.id} className="cs-mcp-row">
           <div className="cs-hist-main">
@@ -665,6 +682,6 @@ function PluginsTab() {
         </div>
       ))}
       <div className="cs-note">Enabling/disabling edits ~/.claude/settings.json (enabledPlugins). It applies to new sessions.</div>
-    </>
+    </SettingsPanel>
   );
 }

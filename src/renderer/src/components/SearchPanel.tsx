@@ -6,6 +6,10 @@ import { IconSearch } from './icons';
 // Find-in-files (Ctrl+Shift+F). Content search runs in main (fs:search-content,
 // capped + binary-skipped); results load into local state and clicking a hit
 // opens the file and reveals the line via the 'fcc:reveal' event.
+function revealFile(path: string, line: number): void {
+  window.dispatchEvent(new CustomEvent('fcc:reveal', { detail: { path, line } }));
+}
+
 export default function SearchPanel() {
   const root = useExplorerStore((s) => s.root);
   const [query, setQuery] = useState('');
@@ -47,10 +51,6 @@ export default function SearchPanel() {
     return () => window.clearTimeout(t);
   }, [query, root]);
 
-  const reveal = (path: string, line: number): void => {
-    window.dispatchEvent(new CustomEvent('fcc:reveal', { detail: { path, line } }));
-  };
-
   return (
     <div className="search-panel">
       <div className="search-input-row">
@@ -80,7 +80,7 @@ export default function SearchPanel() {
           <div className="search-results">
             {results.length === 0 && <div className="search-hint">No matches.</div>}
             {results.map((r, i) => (
-              <button key={`${r.path}:${r.line}:${i}`} className="search-hit" onClick={() => reveal(r.path, r.line)}>
+              <button key={`${r.path}:${r.line}:${i}`} className="search-hit" onClick={() => revealFile(r.path, r.line)}>
                 <span className="search-hit-path">
                   {r.relative}:{r.line}
                 </span>

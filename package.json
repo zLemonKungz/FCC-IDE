@@ -1,6 +1,6 @@
 {
   "name": "fcc-studio",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "IDE for free-claude-code",
   "main": "out/main/index.js",
   "author": "FCC Studio",
@@ -81,7 +81,9 @@
     "artifactName": "FCC Studio-${version}-${arch}.${ext}",
     "npmRebuild": false,
     "publish": [
-      { "provider": "github" }
+      {
+        "provider": "github"
+      }
     ],
     "win": {
       "target": [
