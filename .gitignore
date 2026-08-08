@@ -12,6 +12,10 @@ release/
 # logs
 *.log
 
+# cli protocol probe artifacts (regenerate via npm run protocol)
+smoke/*.jsonl
+smoke/*.raw
+
 # session/harness artifacts (ไม่ใช่โค้ดโปรเจกต์)
 .claude/
 .remember/

@@ -1,6 +1,6 @@
 {
   "name": "fcc-studio",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "IDE for free-claude-code",
   "main": "out/main/index.js",
   "author": "FCC Studio",
@@ -14,6 +14,7 @@
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
     "test": "vitest run",
     "smoke": "node smoke/sdk-smoke.mjs",
+    "protocol": "node smoke/protocol-dump.mjs",
     "icons": "electron scripts/generate-icons.mjs",
     "dist:win": "electron-vite build && electron-builder --win nsis",
     "release": "electron-vite build && electron-builder --win nsis --publish always"

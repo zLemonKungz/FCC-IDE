@@ -135,8 +135,9 @@ export function ChatTab() {
       <SettingsPanel title="Context usage (this session)">
         <div className="cs-usage-row">
           <span className="cs-usage-label">Context window</span>
-          <span className="cs-usage-nums">
+          <span className="cs-usage-nums" title={active?.contextEstimated ? 'Estimated from the loaded transcript — the CLI reports the exact value after the next turn.' : undefined}>
             {ctxTokens.toLocaleString()} / {ctxRef.toLocaleString()} tokens · {ctxPct}%
+            {active?.contextEstimated && ' (estimate)'}
             {modelKnown ? '' : ' (fallback: auto-compact)'}
           </span>
         </div>

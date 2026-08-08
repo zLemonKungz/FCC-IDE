@@ -179,6 +179,9 @@ export default memo(function ChatColumn({ id, label }: { id: string; label: stri
   const running = session?.running ?? false;
   const error = session?.error ?? null;
   const lastUsage = session?.lastUsage ?? null;
+  const lastMeta = session?.lastMeta ?? null;
+  const controlError = session?.controlError ?? null;
+  const contextEstimated = session?.contextEstimated ?? false;
   const contextTokens = session?.contextTokens ?? 0;
   const slashCommands = session?.slashCommands ?? [];
   const planMode = session?.planMode ?? false;
@@ -233,6 +236,9 @@ export default memo(function ChatColumn({ id, label }: { id: string; label: stri
   // Rough token estimate (chars / 4) for the input footer.
   const tokenEstimate = input.trim() ? Math.max(1, Math.round(input.trim().length / 4)) : 0;
 
+  // Turn timing from lastMeta — seconds for human-scale durations, ms below 1s.
+  const fmtMs = (ms: number): string => (ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${Math.round(ms)}ms`);
+
   // Context window: shared resolver prefers the model's real window (correct even
   // when the CLI table under-reports a true-1M model), then the CLI's report,
   // then the user's auto-compact window, else 200k.
@@ -242,8 +248,13 @@ export default memo(function ChatColumn({ id, label }: { id: string; label: stri
 
   // What Claude is doing right now: the newest running tool across messages
   // (tool_use blocks the reducer is tracking), else a live background task, else
-  // a generic thinking state. Shown next to the running indicator.
-  const currentActivity = useMemo(() => {
+  // a generic thinking state (with the live thinking-token counter). Shown next
+  // to the running indicator.
+  type CurrentActivity =
+    | { kind: 'tool'; label: string }
+    | { kind: 'task'; label: string }
+    | { kind: 'think'; label: string; tokens: number };
+  const currentActivity = useMemo<CurrentActivity | null>(() => {
     if (!running) return null;
     const liveTask = Object.values(session?.liveTasks ?? {})[0];
     // Scan newest→oldest, first running tool wins — no array allocation per
@@ -255,8 +266,8 @@ export default memo(function ChatColumn({ id, label }: { id: string; label: stri
       }
     }
     if (liveTask?.description) return { kind: 'task', label: liveTask.description };
-    return { kind: 'think', label: 'thinking' };
-  }, [running, messages, session?.liveTasks]);
+    return { kind: 'think', label: 'thinking', tokens: session?.thinkingTokens ?? 0 };
+  }, [running, messages, session?.liveTasks, session?.thinkingTokens]);
 
   // All discoverable commands: local + CLI slash commands / skills.
   const allCommands = useMemo(() => {
@@ -590,19 +601,55 @@ Type anything else to send it to Claude.`;
                 <span className="ri-label">
                   {currentActivity?.kind === 'tool' && <>Using <b>{currentActivity.label}</b>…</>}
                   {currentActivity?.kind === 'task' && <>{currentActivity.label}</>}
-                  {currentActivity?.kind === 'think' && <>Claude is working…</>}
+                  {currentActivity && currentActivity.kind === 'think' && (
+                    <>
+                      Claude is working
+                      {currentActivity.tokens > 0 && (
+                        <>
+                          {' · '}
+                          <b>{currentActivity.tokens.toLocaleString()}</b> tokens
+                        </>
+                      )}
+                      …
+                    </>
+                  )}
                 </span>
               </div>
             )}
             {ctxLevel > 1 && !running && (
               <div className="chat-ctx-full">Context is past the window ({Math.round(ctxLevel * 100)}%) — press Compact below.</div>
             )}
+            {ctxLevel > 0.55 && ctxLevel <= 1 && !running && !compacted && (
+              <div className="chat-ctx-note">
+                Context is ~{Math.round(ctxLevel * 100)}% — consider Compact below to free tokens and keep replies fast.
+              </div>
+            )}
             {compacted && !running && <div className="chat-ctx-note">Conversation was compacted — Claude is working from a summary.</div>}
             {error && <div className="chat-error">{error}</div>}
+            {controlError && !running && <div className="chat-warn">{controlError}</div>}
             {lastUsage && !running && (
               <div className="chat-usage">
                 {lastUsage.input.toLocaleString()} in · {lastUsage.output.toLocaleString()} out
                 {lastUsage.cost != null && ` · $${lastUsage.cost.toFixed(4)}`}
+                {lastMeta?.durationMs != null && ` · ${fmtMs(lastMeta.durationMs)}`}
+                {lastMeta?.ttftMs != null && ` · first token ${fmtMs(lastMeta.ttftMs)}`}
+              </div>
+            )}
+            {lastMeta && !running && (
+              <div className="chat-meta">
+                {lastMeta.fastState === 'fast' && <span className="chip" title="Fast mode active">Fast</span>}
+                {lastMeta.fastState === 'off' && lastMeta.fastDisabledReason && (
+                  <span className="chip warn" title={lastMeta.fastDisabledReason}>Fast · off</span>
+                )}
+                {lastMeta.fastState !== 'fast' && lastMeta.fastState !== 'off' && lastMeta.fastState != null && (
+                  <span className="chip warn">Fast · {lastMeta.fastState}</span>
+                )}
+                {lastMeta.webSearch + lastMeta.webFetch > 0 && (
+                  <span className="chip">web ×{lastMeta.webSearch + lastMeta.webFetch}</span>
+                )}
+                {lastMeta.tools.map((name) => (
+                  <span className="chip tool" key={name} title={name}>{name}</span>
+                ))}
               </div>
             )}
           </>
@@ -685,10 +732,10 @@ Type anything else to send it to Claude.`;
             {contextTokens > 0 && (
               <span
                 className={`cbf-context${ctxLevel > 1 ? ' warn' : ''}${ctxLevel > 1.2 ? ' full' : ''}`}
-                title={`Context: ${contextTokens.toLocaleString()} of ${ctxWindow.toLocaleString()} tokens (${claudeLabel(chatModel)})`}
+                title={`Context: ${contextTokens.toLocaleString()} of ${ctxWindow.toLocaleString()} tokens (${claudeLabel(chatModel)})${contextEstimated ? ' — estimated from the loaded transcript, exact after the next turn' : ''}`}
               >
                 <i className="ctx-dot" />
-                {Math.round((contextTokens / ctxWindow) * 100)}%
+                {contextEstimated && '≈ '}{Math.round((contextTokens / ctxWindow) * 100)}%
               </span>
             )}
             {tokenEstimate > 0 && <span className="cbf-tokens">~{tokenEstimate.toLocaleString()} tokens</span>}

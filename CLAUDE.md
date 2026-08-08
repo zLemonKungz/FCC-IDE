@@ -22,6 +22,7 @@ npm run preview      # electron-vite preview
 npm run typecheck    # tsc --noEmit for both node + web tsconfigs
 npm run test         # vitest run (tests/ — git-ignored, dev-only)
 npm run smoke        # node smoke/sdk-smoke.mjs — live FCC proxy round-trip check (uses the SDK directly, not the app's chat path)
+npm run protocol     # node smoke/protocol-dump.mjs — dump the claude CLI's raw stream-json events (init/assistant/tool/result) for protocol work
 npm run icons        # electron scripts/generate-icons.mjs — re-render build/icon-*.png + icon.ico from resources/icon.svg
 npm run dist:win     # build + electron-builder NSIS Windows installer
 npm run release      # dist:win + publish to GitHub Releases (needs a v* tag + GH_TOKEN)

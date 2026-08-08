@@ -2492,6 +2492,42 @@ button.icon-btn:hover {
   align-self: flex-end;
   font-variant-numeric: tabular-nums;
 }
+.chat-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px 2px 0;
+  align-self: flex-end;
+}
+.chat-meta .chip {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-3);
+  background: var(--bg-0);
+  border: 1px solid var(--border-0);
+  border-radius: 999px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+.chat-meta .chip.tool {
+  color: var(--accent);
+  border-color: var(--accent-border);
+  background: var(--accent-dim);
+}
+.chat-meta .chip.warn {
+  color: var(--warn-border);
+  border-color: var(--warn-border);
+  background: var(--warn-bg);
+}
+.chat-warn {
+  color: var(--text-2);
+  padding: 8px 12px;
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-border);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  animation: msg-in 180ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
 .chat-input {
   position: relative;
   display: flex;
@@ -2794,6 +2830,8 @@ button.plan-toggle.on {
   color: var(--accent);
   font-family: var(--font-mono);
   font-size: 12px;
+  /* the live thinking-token counter climbs — keep digits from jittering */
+  font-variant-numeric: tabular-nums;
 }
 
 /* Context-full / compacted notes inline in the transcript */
@@ -2898,6 +2936,21 @@ button.plan-toggle.on {
   font-size: 12px;
   color: var(--text-2);
   max-height: 180px;
+}
+.tool-output {
+  margin: 0;
+  padding: 8px 10px 8px 22px;
+  background: var(--bg-0);
+  border-top: 1px solid var(--border-0);
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-2);
+  max-height: 240px;
+  white-space: pre-wrap;
+}
+.tool-output.err {
+  color: var(--red);
 }
 
 /* ---------- Terminal ---------- */

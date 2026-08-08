@@ -154,7 +154,19 @@ cols: auto  auto  auto  minmax(0,1fr)
   `.warn`/`.full` `.ctx-dot` colors. The **Compact** pill (`.cbf-compact`) sends
   `/compact` to the CLI. The footer model dropdown and the Chat-settings model
   select both resolve through the shared `curatedModelOptions()` filter, so the
-  two pickers always offer the same deduped set.
+  two pickers always offer the same deduped set. Once a conversation is **55–100%**
+  of its window a soft `.chat-ctx-note` (amber) nudges "consider Compact" — the
+  red `.chat-ctx-full` note stays reserved for the >100% overflow case.
+- **Running / turn-footer meta**: the `.running-indicator` (dots + `.ri-label`)
+  shows what Claude is doing; when thinking it reads the live
+  `system/thinking_tokens` counter as "Claude is working · *N* tokens…"
+  (`.ri-label b`, monospaced tabular-nums so the climbing number doesn't jitter).
+  After a finished turn the footer adds a run-meta strip (`.chat-meta`): pill
+  chips (`.chip`) for fast-mode gate / `web ×n` server tools / the tools used
+  (MCP servers, Skill names, plugins) — `.chip.tool` accent-dim, `.chip.warn`
+  warn-border — plus `.chat-usage` appended with `· duration · first token N`.
+  Tool cards expand to show captured stdout (`.tool-output`, `.err` red for
+  stderr), and a failed realtime setting surfaces as a warn banner `.chat-warn`.
 - **Resumed/saved transcripts** render message bubbles with `restored:true` so a
   live assistant reply opens its own bubble instead of merging into the imported
   conversation's last bubble (prevents "stacked answers" on resume).

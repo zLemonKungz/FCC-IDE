@@ -144,8 +144,14 @@ export class ChatHost {
       onEvent: (msg) => {
         const m = msg as CliEvent;
         if (m.type === 'result') entry.sawResult = true;
+        // Hook telemetry (SessionStart/UserPromptSubmit/…) fires multiple times
+        // per turn and the renderer reducer drops every payload — don't pay the
+        // IPC cost of shipping it across. session_id/tasks/etc. still flow.
+        // typeof guard: startsWith throws on a non-string, and the onEvent loop
+        // has no try/catch — a TypeError would abort the whole parsed chunk.
+        const isHookNoise = m.type === 'system' && typeof m.subtype === 'string' && m.subtype.startsWith('hook_');
         // Emit the raw CLI event — the reducer dispatches on message.type.
-        this.emit(sessionId, msg);
+        if (!isHookNoise) this.emit(sessionId, msg);
         if (m.type === 'result' && m.session_id) {
           this.emit(sessionId, { type: 'session-id', session_id: m.session_id });
         }

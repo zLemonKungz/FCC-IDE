@@ -4,6 +4,46 @@ All notable changes to **FCC Studio** are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/) and the project uses
 [SemVer](https://semver.org/).
 
+## [0.1.6] - 2026-08-09
+
+### Added
+- **Live thinking-token counter** — while the model is thinking, the running
+  indicator shows the live estimate from the CLI's `system/thinking_tokens`
+  events (`Claude is working · 1,234 tokens`), with monospaced tabular digits so
+  the number doesn't jitter as it climbs.
+- **Per-turn run meta** — after a finished turn the chat footer shows the turn
+  duration and time-to-first-token (`… · 17.9s · first token 9.1s`), the
+  fast-mode gate as a chip (a `Fast · off` chip's tooltip explains why the Fast
+  toggle didn't take, e.g. `sdk_opt_in_required`), server web-tool usage
+  (`web ×n`), and the tools Claude actually used — MCP server names
+  (`mcp__server__…` → `MCP · server`), skill names resolved from the `Skill`
+  call, and plugin tools — as small chips.
+- **Tool output** — expanding a finished tool call shows its captured `stdout`
+  (or `stderr` in red when it raised), read from `user.tool_use_result`.
+- **Realtime-setting failures no longer silent** — when a live model/effort/
+  mode/fast/thinking/MCP control comes back with a `control_response` error, a
+  warn banner appears above the input instead of the failure being dropped.
+
+### Changed
+- **CLI protocol probe** — `npm run protocol` (smoke/protocol-dump.mjs) spawns
+  the same claude CLI flags the app uses (`--input-format stream-json --verbose
+  --forward-subagent-text`) and dumps the raw event stream to
+  `smoke/protocol-dump.log.jsonl` for protocol work.
+- **Hook telemetry no longer crosses IPC** — `system/hook_*` events (SessionStart
+  etc., which fire several times per turn) are dropped in `chat-host.ts` before
+  the renderer; an audit confirmed zero consumers (reducer, history, tests, UI).
+- **Context meter reads the CLI's real session context** — the fill % now uses
+  `result.modelUsage[model].inputTokens` (cumulative across turns, incl. a
+  resumed transcript) instead of the last turn's per-turn input, which
+  under-reported once a conversation grew (e.g. turn-2 showed ~46k when the CLI
+  held ~138k).
+- **Restored chats show an estimated context** — opening a saved/imported
+  session seeds the meter with a chars/4 estimate (marked `≈` / `(estimate)`;
+  the CLI's exact value replaces it after the first live turn) instead of 0.
+- **Compact nudge** — when a conversation fills 55–100% of its window, the chat
+  shows a soft note suggesting Compact before the turn gets expensive (replaces
+  the old behavior of only warning once past 100%).
+
 ## [0.1.5] - 2026-08-08
 
 ### Changed

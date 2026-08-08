@@ -186,10 +186,12 @@ extension parity (skills, plugins, hooks, MCP, slash commands).
 Equal to the SDK's: there is no top-level `tool_use` type — tool calls are content
 blocks inside `assistant` messages, and tool results are `tool_result` blocks
 inside `user` messages. The renderer reducer (`chat-reducer.ts`) dispatches on
-`message.type` (`assistant` | `user` | `result` | `system`). `system/init` and
-`system/hook_*` events are ignored by the reducer. `chat-host.ts` forwards raw
-events and also emits a `session-id` event derived from `result.session_id`, plus
-synthetic `user-message` / `started` events.
+`message.type` (`assistant` | `user` | `result` | `system`). `system/init` events
+are ignored by the reducer (chat-host re-derives slash-commands from it).
+`system/hook_*` hook telemetry fires several times per turn and nothing consumes
+it, so `chat-host.ts` drops it before IPC. `chat-host.ts` forwards the remaining
+raw events and also emits a `session-id` event derived from `result.session_id`,
+plus synthetic `user-message` / `started` events.
 
 ### Slash commands
 
@@ -223,8 +225,11 @@ envelopes to the CLI's stdin — the same mechanism as the SDK's `setPermissionM
   - `mcp_toggle {serverName,enabled}` / `mcp_reconnect {serverName}` → live MCP.
 - Routing: `chat-host.control()` forwards to the live session and keeps its stored
   spawn-mode in sync (so a later respawn keeps the mode); `chat-store.control()`
-  is the renderer entry (no-op with no live session). Control responses are
-  ignored by the reducer and by `history.record` (its `default:` branch).
+  is the renderer entry (no-op with no live session). A `control_response` with
+  `response.subtype === 'error'` surfaces as `chat-store.controlError` (shown as a
+  warn banner; cleared on the next `started`) instead of failing silently — the
+  success response (`{subtype:'success', request_id}`) stays ignored, as do
+  control envelopes in `history.record` (its `default:` branch).
 - **CLI thinking blocks carry the text in the `thinking` field, not `text`**
   (short tool-selection thoughts can be signature-only, `thinking:''`). The
   reducer reads `b.thinking`; `ChatMessage` renders it as a foldable `.msg-thinking`.
@@ -256,6 +261,24 @@ envelopes to the CLI's stdin — the same mechanism as the SDK's `setPermissionM
   `system:thinking_tokens`, `system:hook_started/progress/response` also appear).
   The reducer folds `task_*` into `chat-store.liveTasks` and clears it on `result`
   (tasks are per-turn); `SubagentPanel` shows a live "Running" section.
+- **Turn footer meta**: `result` feeds `chat-store.lastMeta` — `ttft_ms` /
+  `duration_ms`, the fast-mode gate (`fast_mode_state` + `fast_mode_disabled_reason`,
+  which reports *why* a `fastMode` control didn't take, e.g. `sdk_opt_in_required`),
+  `usage.server_tool_use` (web search/fetch counts), and the finished turn's used
+  tools — every assistant message since the last user message (main + nested
+  subagent children — labels via `toolUsageLabel`: `mcp__<server>__…` /
+  `Skill` names from its input / plugin `server::` tools). `user.tool_use_result.stdout/stderr` is captured on
+  the owning `ToolCall` so `ToolCallCard` can show it when expanded.
+- **Live thinking counter**: `system/thinking_tokens` events (each carrying
+  `estimated_tokens`) feed `chat-store.thinkingTokens`, one running number per
+  turn (reset on `started`). The running indicator renders it as
+  "Claude is working · *N* tokens…" (tabular digits so the counter doesn't
+  jitter) — CLI status-line parity. Emitted on every model (present on haiku-4.5
+  runs too), so counter support is model-independent.
+- **Compact nudge**: the chat footer's context meter now also suggests Compact
+  once a conversation is 55–100% of its window (a soft `.chat-ctx-note`), keeping
+  the 100%+ "past the window" red note for the overflow case — nudges users to
+  reclaim tokens before a turn gets expensive.
 
 ## 8. Chat history, resume, MCP, agents, settings
 
@@ -422,8 +445,13 @@ The FCC env goes on the subprocess env (spread over `process.env`):
 `CLAUDE_CODE_AUTO_COMPACT_WINDOW=<autoCompactWindow * 1000>` (thousands→tokens)
 — **omitted when `autoCompactWindow` is 0**, so the CLI compacts at its own
 model-driven limit instead of a fixed cap.
-The reducer tracks `contextTokens` (the last `result`'s total input — "how full
-is the conversation now", including a resumed transcript) and
+The reducer tracks `contextTokens` = the CLI's cumulative session context
+(`result.modelUsage[model].inputTokens`, verified cumulative across turns —
+turn-1 91.0k → turn-2 138.1k — and covering a resumed transcript; falls back to
+the last `result`'s per-turn input total when modelUsage is absent). Until a live
+result exists (a transcript just opened from history), `openHistory` seeds a
+chars/4 estimate flagged `contextEstimated` (UI shows a `≈`/"(estimate)" prefix;
+the CLI's exact value replaces it on the next `result`) and
 `modelContextWindow` (from `result.modelUsage[model].contextWindow` — the
 model's real window, which the CLI reports per turn). **The effective window is
 resolved once, in `@shared/model-context.ts`** (`effectiveContextWindow`, plus

@@ -203,12 +203,18 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   openHistory: (rec) => {
     const id = uid();
+    // The CLI only reports the real cumulative context on the next result, so
+    // seed a chars/4 estimate (marked `contextEstimated`) until the first live
+    // turn overwrites it — the settings meter shouldn't read 0 for a loaded chat.
+    const estTokens = rec.messages.reduce((sum, m) => sum + Math.max(1, Math.round(m.text.length / 4)), 0);
     const session: ChatSession = {
       ...emptyChatState(),
       id,
       folder: rec.folder,
       planMode: false,
       pendingResume: rec.cliSessionId,
+      contextTokens: estTokens,
+      contextEstimated: true,
       messages: rec.messages.map((m) => ({
         id: `h-${Math.random().toString(36).slice(2)}`,
         role: m.role,

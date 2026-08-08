@@ -3,6 +3,10 @@ export interface ToolCall {
   toolName: string;
   input: unknown;
   state: 'running' | 'success' | 'error';
+  /** stdout from the matching user.tool_use_result — shown when expanded. */
+  output?: string;
+  /** stderr from the same tool_use_result (usually empty). */
+  stderr?: string;
 }
 export interface ChatMessage {
   id: string;
@@ -33,6 +37,10 @@ export interface ChatUiState {
   /** current context-window size (input tokens the CLI holds across turns,
    *  incl. a resumed transcript) — the "how full is this conversation" number. */
   contextTokens: number;
+  /** true while contextTokens is only a chars/4 estimate from a restored
+   *  transcript (opened from history) — replaced by the CLI's real cumulative
+   *  context on the next result. UI shows the estimate with a ≈ prefix. */
+  contextEstimated: boolean;
   /** the model's context window (tokens) as reported by the CLI via
    *  result.modelUsage[model].contextWindow — set once a turn runs. Falls back
    *  to the user's auto-compact window when unknown. */
@@ -52,6 +60,24 @@ export interface ChatUiState {
   /** set when the CLI reports a compact boundary (history was auto-compacted) —
    *  shown as a "compacted" note in the transcript; cleared on a new turn. */
   compacted: boolean;
+  /** live thinking-token estimate from system/thinking_tokens (the CLI status
+   *  line's "Thinking • N tokens") — one running number per turn, reset at the
+   *  next 'started'. */
+  thinkingTokens: number;
+  /** per-turn run metrics from the last result — timing, fast-mode gate, server
+   *  web tools, and the tool names (MCP / skills / plugins) Claude used. */
+  lastMeta: {
+    ttftMs: number | null;
+    durationMs: number | null;
+    fastState: string | null;
+    fastDisabledReason: string | null;
+    webSearch: number;
+    webFetch: number;
+    tools: string[];
+  } | null;
+  /** a realtime setting (model / effort / mode / fast / thinking / MCP) failed
+   *  to apply — surfaced instead of failing silently. */
+  controlError: string | null;
 }
 
 export interface LiveTask {
@@ -69,16 +95,30 @@ export type ChatEvent =
   | { type: 'user-message'; text: string; images?: number }
   | { type: 'plan-approval' }
   | { type: 'assistant'; message: { content?: { type: string; text?: string; id?: string; name?: string; input?: unknown }[] } }
-  | { type: 'user'; message?: { content?: { type: string; tool_use_id?: string; is_error?: boolean }[] } }
+  | { type: 'user'; message?: { content?: { type: string; tool_use_id?: string; is_error?: boolean }[] }; tool_use_result?: { stdout?: string; stderr?: string } }
   | {
       type: 'result';
       is_error?: boolean;
       errors?: string[];
-      usage?: { input_tokens?: number; cache_creation_input_tokens?: number; cache_read_input_tokens?: number; output_tokens?: number };
+      usage?: {
+        input_tokens?: number;
+        cache_creation_input_tokens?: number;
+        cache_read_input_tokens?: number;
+        output_tokens?: number;
+        /** server-side tools the gateway ran (web search / fetch). */
+        server_tool_use?: { web_search_requests?: number; web_fetch_requests?: number };
+      };
       total_cost_usd?: number;
       /** per-model usage the CLI reports (model id → usage + context window). */
       modelUsage?: Record<string, { contextWindow?: number; inputTokens?: number }>;
+      /** turn timing in ms (the CLI's status footer). */
+      ttft_ms?: number;
+      duration_ms?: number;
+      /** whether the fast-mode control actually took effect, and why not. */
+      fast_mode_state?: string;
+      fast_mode_disabled_reason?: string | null;
     }
+  | { type: 'control_response'; response?: { subtype?: string; request_id?: string; error?: string; message?: string } }
   | { type: 'session-id'; session_id: string }
   | { type: 'slash-commands'; commands: string[] }
   | {
@@ -91,6 +131,8 @@ export type ChatEvent =
       subagent_type?: string;
       last_tool_name?: string;
       usage?: { total_tokens?: number };
+      /** live think-token estimate carried by system/thinking_tokens events. */
+      estimated_tokens?: number;
     }
   | { type: 'started' }
   | { type: 'stopped' }
@@ -104,18 +146,37 @@ export function emptyChatState(): ChatUiState {
     sessionId: null,
     lastUsage: null,
     contextTokens: 0,
+    contextEstimated: false,
     modelContextWindow: 0,
     slashCommands: [],
     awaitingPlanApproval: false,
     sessionUsage: { input: 0, output: 0, cost: 0 },
     liveStatus: {},
     liveTasks: {},
+    thinkingTokens: 0,
+    lastMeta: null,
+    controlError: null,
     compacted: false
   };
 }
 
 function uid(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+/** Human label for the turn footer's used-tool list: resolve the Skill tool's
+ *  name from its input and strip an MCP tool name down to its server. */
+function toolUsageLabel(t: ToolCall): string {
+  if (t.toolName === 'Skill') {
+    const skill = (t.input as { skill?: string })?.skill;
+    return skill ? `Skill · ${skill}` : 'Skill';
+  }
+  // mcp__<server>__<method>, or a plugin/namespaced tool "plugin:foo::bar".
+  // second alternative: group 1 is the optional "plugin:" prefix, group 2 is
+  // the actual namespace.
+  const mcp = /^mcp__(.+?)__/.exec(t.toolName) ?? /^(?:plugin:)?([^:]+?)::/.exec(t.toolName);
+  if (mcp) return `MCP · ${mcp[2] ?? mcp[1]}`;
+  return t.toolName;
 }
 
 type SdkContentBlock =
@@ -226,7 +287,9 @@ export function applyChatEvent(
             const p = (t.input as { file_path?: string })?.file_path;
             if (p) fileEvents.push({ path: p });
           }
-          return { ...t, state };
+          const output = ev.tool_use_result?.stdout ?? t.output;
+          const stderr = ev.tool_use_result?.stderr ?? t.stderr;
+          return { ...t, state, output, stderr };
         });
         return changed ? { ...m, tools } : m;
       });
@@ -250,10 +313,20 @@ export function applyChatEvent(
         running: false,
         error: ev.is_error ? (ev.errors ?? ['Agent error']).join('; ') : null,
         lastUsage: usage,
-        // The context footprint is the tokens the CLI held this turn — for a
-        // resumed session that includes the restored transcript. Keeping the
-        // last-turn input (not an accumulated sum) is "how full are we now".
-        contextTokens: usage ? usage.input : s.contextTokens,
+        // A first live result replaces any restored-transcript estimate.
+        contextEstimated: false,
+        // The CLI's real session context: result.modelUsage[model].inputTokens
+        // is cumulative across turns (probe: 91,963 → 138,134) and covers a
+        // resumed transcript — what the CLI's own context meter tracks. Fall
+        // back to the per-turn usage total when the CLI omits modelUsage.
+        contextTokens: (() => {
+          if (ev.modelUsage) {
+            for (const u of Object.values(ev.modelUsage)) {
+              if (u && Number.isFinite(u.inputTokens) && u.inputTokens! > 0) return u.inputTokens!;
+            }
+          }
+          return usage ? usage.input : s.contextTokens;
+        })(),
         // The model's real context window, reported per-model by the CLI. Use
         // the first modelUsage entry that carries one; keep an already-known
         // window if the CLI stops sending it on a later turn.
@@ -273,7 +346,34 @@ export function applyChatEvent(
               output: s.sessionUsage.output + usage.output,
               cost: s.sessionUsage.cost + (usage.cost ?? 0)
             }
-          : s.sessionUsage
+          : s.sessionUsage,
+        // Per-run meta; the tool list covers the finished turn (every assistant
+        // message since the last user message — main + nested subagent children)
+        // so an Agent workflow whose final bubble has no tools still lists them.
+        lastMeta: {
+          ttftMs: typeof ev.ttft_ms === 'number' ? ev.ttft_ms : null,
+          durationMs: typeof ev.duration_ms === 'number' ? ev.duration_ms : null,
+          fastState: ev.fast_mode_state ?? null,
+          fastDisabledReason: ev.fast_mode_disabled_reason ?? null,
+          webSearch: ev.usage?.server_tool_use?.web_search_requests ?? 0,
+          webFetch: ev.usage?.server_tool_use?.web_fetch_requests ?? 0,
+          tools: (() => {
+            const lastUser = [...s.messages].map((m) => m.role).lastIndexOf('user');
+            const labels: string[] = [];
+            const seen = new Set<string>();
+            for (const m of s.messages.slice(lastUser + 1)) {
+              if (m.role !== 'assistant') continue;
+              for (const t of m.tools) {
+                const label = toolUsageLabel(t);
+                if (!seen.has(label)) {
+                  seen.add(label);
+                  labels.push(label);
+                }
+              }
+            }
+            return labels;
+          })()
+        }
       };
       break;
     }
@@ -287,7 +387,17 @@ export function applyChatEvent(
       break;
 
     case 'started':
-      s = { ...s, running: true, error: null };
+      s = { ...s, running: true, error: null, thinkingTokens: 0, controlError: null };
+      break;
+
+    case 'control_response':
+      // A realtime control (model/effort/mode/fast/…) fails silently today — the
+      // CLI only echoes {subtype:'success', request_id} on success, so surface
+      // the error response instead of dropping it with everything else.
+      if (ev.response?.subtype === 'error') {
+        // The CLI's error envelope carries the reason in `error` (not `message`).
+        s = { ...s, controlError: ev.response.error ?? ev.response.message ?? 'Realtime setting failed to apply.' };
+      }
       break;
 
     case 'stopped':
@@ -350,6 +460,10 @@ export function applyChatEvent(
         // a fresh /compact path). No pre-warning event exists (auto-compact is
         // silent), so this is post-hoc only.
         s = { ...s, compacted: true };
+      } else if (ev.subtype === 'thinking_tokens' && typeof ev.estimated_tokens === 'number') {
+        // Live think-token counter — a running estimate per event from the CLI
+        // status line. Cleared at the next 'started'.
+        s = { ...s, thinkingTokens: ev.estimated_tokens };
       }
       break;
     }

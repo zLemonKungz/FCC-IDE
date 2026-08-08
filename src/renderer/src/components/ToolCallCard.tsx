@@ -31,7 +31,16 @@ export default function ToolCallCard({ tool }: { tool: ToolCall }) {
           {tool.state === 'running' ? 'Running' : tool.state === 'success' ? 'Done' : 'Failed'}
         </span>
       </div>
-      {open && <pre className="tool-input">{JSON.stringify(tool.input, null, 2)}</pre>}
+      {open && (
+        <>
+          <pre className="tool-input">{JSON.stringify(tool.input, null, 2)}</pre>
+          {tool.stderr && tool.state === 'error' ? (
+            <pre className="tool-output err">{tool.stderr}</pre>
+          ) : tool.output ? (
+            <pre className="tool-output">{tool.output}</pre>
+          ) : null}
+        </>
+      )}
     </div>
   );
 }
