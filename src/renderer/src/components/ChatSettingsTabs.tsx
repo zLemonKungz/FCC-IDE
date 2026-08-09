@@ -13,6 +13,32 @@ function fmtTime(ts: number): string {
   return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+/** Best-effort currency from a get_session_cost control_response body. */
+function fmtLiveCost(v: unknown): string {
+  if (v == null) return '—';
+  if (typeof v === 'number') return `$${(v as number).toFixed(4)}`;
+  const o = (v ?? {}) as Record<string, unknown>;
+  const c = o.totalCostUSD ?? o.costUSD ?? o.total_cost_usd ?? o.cost;
+  return typeof c === 'number' ? `$${c.toFixed(4)}` : '—';
+}
+
+/** Best-effort context summary from a get_context_usage control_response body. */
+function fmtLiveCtx(v: unknown): string {
+  if (v == null) return '—';
+  const o = (v ?? {}) as Record<string, unknown>;
+  if (typeof o.totalTokens === 'number') {
+    const max = typeof o.maxTokens === 'number' ? o.maxTokens : 0;
+    const pct =
+      typeof o.percentage === 'number'
+        ? o.percentage
+        : max > 0
+          ? Math.round(((o.totalTokens as number) / max) * 100)
+          : 0;
+    return `${(o.totalTokens as number).toLocaleString()} / ${max.toLocaleString()} (${pct}%)`;
+  }
+  return '—';
+}
+
 // Module-scope pure helpers (no component state/props captured).
 function liveSessionId(): string | null {
   return useChatStore.getState().activeId;
@@ -84,6 +110,7 @@ export function ChatTab() {
   const sessionUsage = active?.sessionUsage ?? { input: 0, output: 0, cost: 0 };
   const lastUsage = active?.lastUsage ?? null;
   const ctxTokens = active?.contextTokens ?? 0;
+  const [refreshing, setRefreshing] = useState(false);
   // Shared resolver: the app's known window for the selected model (correct even
   // when the CLI table says 200k for a true-1M model), else CLI report, else the
   // user's auto-compact window (k → tokens), else 200k.
@@ -132,7 +159,23 @@ export function ChatTab() {
 
   return (
     <>
-      <SettingsPanel title="Context usage (this session)">
+      <SettingsPanel
+        title="Context usage (this session)"
+        actions={
+          <button
+            className="ghost gr-btn"
+            disabled={!active || refreshing}
+            onClick={() => {
+              if (!active) return;
+              setRefreshing(true);
+              void useChatStore.getState().refreshMeta(active.id).finally(() => setRefreshing(false));
+            }}
+            title="Query the CLI's reported session cost / context usage"
+          >
+            {refreshing ? '…' : 'Refresh'}
+          </button>
+        }
+      >
         <div className="cs-usage-row">
           <span className="cs-usage-label">Context window</span>
           <span className="cs-usage-nums" title={active?.contextEstimated ? 'Estimated from the loaded transcript — the CLI reports the exact value after the next turn.' : undefined}>
@@ -155,7 +198,19 @@ export function ChatTab() {
         </div>
         {ctxPct > 100 && <div className="cs-note">Context is past the auto-compact window — compact to keep going (chat footer → Compact).</div>}
         {lastUsage && <UsageBar usage={lastUsage} />}
-      </SettingsPanel>
+        {active?.liveCtx != null && (
+          <div className="cs-usage-row" style={{ marginTop: 8 }}>
+            <span className="cs-usage-label">Live context (CLI)</span>
+            <span className="cs-usage-nums">{fmtLiveCtx(active.liveCtx)}</span>
+          </div>
+        )}
+        {active?.liveCost != null && (
+          <div className="cs-usage-row">
+            <span className="cs-usage-label">Live cost (CLI)</span>
+            <span className="cs-usage-nums">{fmtLiveCost(active.liveCost)}</span>
+          </div>
+        )}
+        </SettingsPanel>
       <SettingsPanel title="Conversation">
         {discovered === null && (
           <div className="cs-note">Couldn’t reach the gateway — showing the main Claude models.</div>

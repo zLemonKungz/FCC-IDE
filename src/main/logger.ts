@@ -14,12 +14,15 @@
 import { app } from 'electron';
 import { promises as fs, createWriteStream, type WriteStream } from 'fs';
 import { join } from 'path';
+import { collectSecrets, redactSecrets } from './redact';
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
 let dir: string | null = null;
 let stream: WriteStream | null = null;
 let opening: Promise<void> | null = null;
+/** Exact env secrets to scrub from every written line (captured at load). */
+const SECRETS = collectSecrets();
 /** size already in app.log when the stream opened (pre-existing bytes). */
 let baseBytes = 0;
 
@@ -72,13 +75,15 @@ async function logLine(level: 'info' | 'warn' | 'error', scope: string, message:
   const ts = new Date().toISOString();
   const detail = extra === undefined ? '' : '  ' + safeJSON(extra);
   const line = `${ts} [${level.toUpperCase()}] [${scope}] ${message}${detail}\n`;
+  // Strip env-derived secrets + known token shapes before it touches disk.
+  const safe = redactSecrets(line, SECRETS);
   // Rotate before the write when the total (pre-existing + streamed) exceeds
   // the cap — single in-memory check, no fs.stat on the common path.
-  if (baseBytes + stream.bytesWritten + line.length > MAX_BYTES) {
+  if (baseBytes + stream.bytesWritten + safe.length > MAX_BYTES) {
     await rotate().catch(() => undefined);
     if (!stream) return;
   }
-  stream.write(line);
+  stream.write(safe);
 }
 
 function safeJSON(v: unknown): string {

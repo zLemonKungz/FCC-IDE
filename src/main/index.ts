@@ -2,6 +2,7 @@ import { app, BrowserWindow } from 'electron';
 import { join } from 'path';
 import { disposeChatHost, registerIpc } from './ipc';
 import * as fcc from './fcc-manager';
+import * as terminal from './terminal-service';
 import { createSplash, closeSplash } from './splash';
 import { initUpdater } from './updater';
 import { initLogging, log, logFilePath, handleRendererError as rendererError } from './logger';
@@ -34,6 +35,9 @@ function createWindow(): void {
   // webContents leaves a trace in the log file.
   win.webContents.on('render-process-gone', (_e, details) => {
     rendererError(undefined, { type: 'render-process-gone', message: `${details.reason} (exit ${details.exitCode})` });
+    // The renderer can't reattach to the pty streams after a crash/reload —
+    // kill them so orphaned shells don't accumulate in the terminals map.
+    terminal.disposeAll();
   });
   win.on('unresponsive', () => log.info('window', 'renderer unresponsive'));
   win.on('responsive', () => log.info('window', 'renderer responsive again'));
@@ -82,5 +86,6 @@ app.on('will-quit', () => {
   // Stop the fcc-server we spawned (the kill is detached, so it completes
   // even as the app exits). A tray-app server is left alone.
   void fcc.stopServer();
+  terminal.disposeAll();
   disposeChatHost();
 });

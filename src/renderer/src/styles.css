@@ -2318,6 +2318,35 @@ button.icon-btn:hover {
   align-items: center;
   gap: 6px;
   color: var(--text-2);
+  min-width: 0;
+}
+.chat-col-header .chat-col-name {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chat-col-header .chat-col-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  color: var(--text-1);
+  background: var(--bg-0);
+  border: 1px solid var(--accent-border);
+  border-radius: 4px;
+}
+.chat-col-header .chat-col-title:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.chat-rename {
+  opacity: 0.5;
+}
+.chat-rename:hover {
+  opacity: 1;
 }
 .chat-col-header button {
   padding: 2px 7px;
@@ -2564,6 +2593,113 @@ button.icon-btn:hover {
   display: flex;
   gap: 6px;
   flex-shrink: 0;
+}
+.question-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-md);
+  background: var(--bg-1);
+  flex-shrink: 0;
+  animation: fade-up 180ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.qc-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.qc-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.qc-header {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+  background: var(--accent-dim);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+.qc-question {
+  font-size: 13px;
+  color: var(--text-1);
+}
+.qc-multi {
+  font-size: 10px;
+  color: var(--text-3);
+  border: 1px solid var(--border-1);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.qc-options {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.qc-option {
+  text-align: left;
+  padding: 6px 8px;
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-sm);
+  background: var(--bg-0);
+  color: var(--text-1);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  cursor: pointer;
+}
+.qc-option:hover {
+  border-color: var(--accent-border);
+}
+.qc-option.active {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+.qc-opt-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+.qc-opt-desc {
+  font-size: 12px;
+  color: var(--text-2);
+}
+.qc-opt-preview {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-2);
+  background: var(--bg-1);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-sm);
+  padding: 4px 6px;
+  margin: 2px 0 0;
+  white-space: pre-wrap;
+  max-height: 120px;
+  overflow: auto;
+}
+.qc-free {
+  font-size: 12px;
+  color: var(--text-1);
+  background: var(--bg-0);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-sm);
+  padding: 5px 8px;
+}
+.qc-free:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.qc-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
 }
 button.plan-toggle.on {
   color: var(--accent);

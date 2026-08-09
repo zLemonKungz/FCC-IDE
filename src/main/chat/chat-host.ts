@@ -1,9 +1,11 @@
 import type { BrowserWindow } from 'electron';
+import { Notification } from 'electron';
 import { IPC } from '@shared/ipc';
 import type { ChatImage, PermissionMode } from '@shared/types';
 import { FCC_BASE_URL, FCC_AUTH_TOKEN } from '../fcc-manager';
 import { getChatConfig, effectiveAutoCompactTokens } from './config';
 import { log } from '../logger';
+import { collectSecrets, scrubEvent } from '../redact';
 import { CliSession, resolveCliBinary } from '../cli/cli-runner';
 import * as history from './history';
 
@@ -25,6 +27,8 @@ interface CliEvent {
   session_id?: string;
   slash_commands?: unknown;
   permission_mode?: string;
+  request_id?: string;
+  request?: { subtype?: string; tool_name?: string; tool_use_id?: string; input?: Record<string, unknown> };
 }
 
 // Drives the `claude` CLI as a subprocess instead of the Agent SDK. The CLI's
@@ -40,6 +44,9 @@ export class ChatHost {
   private folders = new Map<string, string>();
   /** sessionId -> permission mode of the spawned process (respawn keeps it). */
   private modes = new Map<string, PermissionMode>();
+  /** Exact secret values scraped from the env at startup — scrubbed from every
+   *  chat event before it is recorded or forwarded. */
+  private secrets = collectSecrets();
 
   constructor(private win: BrowserWindow) {}
 
@@ -143,7 +150,11 @@ export class ChatHost {
       effort,
       onEvent: (msg) => {
         const m = msg as CliEvent;
-        if (m.type === 'result') entry.sawResult = true;
+        if (m.type === 'result') {
+          entry.sawResult = true;
+          // A finished turn is the natural notification point for a long run.
+          this.notifyIfBackground('Chat turn finished');
+        }
         // Hook telemetry (SessionStart/UserPromptSubmit/…) fires multiple times
         // per turn and the renderer reducer drops every payload — don't pay the
         // IPC cost of shipping it across. session_id/tasks/etc. still flow.
@@ -162,6 +173,26 @@ export class ChatHost {
         // Plan mode: the CLI signals a proposal is waiting for user approval.
         if (m.type === 'control' && m.subtype === 'plan_approval') {
           this.emit(sessionId, { type: 'plan-approval' });
+          this.notifyIfBackground('Claude is waiting for plan approval');
+        }
+        // can_use_tool: the CLI parks an AskUserQuestion card for THIS process
+        // to render. Auto-allow everything else (the app never interrupts agent
+        // edits — acceptEdits), so an unrelated permission can't stall the turn.
+        if (m.type === 'control' && m.subtype === 'can_use_tool') {
+          const toolName = m.request?.tool_name;
+          if (toolName === 'AskUserQuestion' && m.request_id && m.request?.input) {
+            this.emit(sessionId, {
+              type: 'question',
+              requestId: m.request_id,
+              toolUseId: m.request.tool_use_id,
+              questions: m.request.input.questions
+            });
+          } else if (m.request_id) {
+            entry.session.sendControlResponse(m.request_id, {
+              behavior: 'allow',
+              updatedInput: m.request?.input ?? {}
+            });
+          }
         }
       },
       onExit: (code) => {
@@ -202,6 +233,41 @@ export class ChatHost {
     }
   }
 
+  /** Round-trip a host query to the live CLI and return the control_response body
+   *  (inner `response`), e.g. get_session_cost / get_context_usage. Null when no
+   *  live session or the CLI didn't answer. */
+  async meta(sessionId: string, kind: 'cost' | 'context'): Promise<unknown> {
+    const live = this.sessions.get(sessionId);
+    if (!live || live.cleaned) return null;
+    const envelope = await live.session.query(kind === 'cost' ? 'get_session_cost' : 'get_context_usage');
+    return (envelope as { response?: { response?: unknown } } | null)?.response?.response ?? null;
+  }
+
+  /** Rename the live CLI session (keeps the CLI's own transcript title tidy). */
+  rename(sessionId: string, title: string): void {
+    const live = this.sessions.get(sessionId);
+    if (live && !live.cleaned) live.session.sendControl('rename_session', { title });
+  }
+
+  /** Answer a parked AskUserQuestion card: echo a can_use_tool control_response
+   *  with the user's selections so the CLI resumes the turn. */
+  answer(sessionId: string, requestId: string, questions: unknown, answers: Record<string, string>, response?: string): void {
+    const live = this.sessions.get(sessionId);
+    if (live && !live.cleaned) {
+      const updated: Record<string, unknown> = { questions, answers };
+      if (response) updated.response = response;
+      live.session.sendControlResponse(requestId, { behavior: 'allow', updatedInput: updated });
+    }
+  }
+
+  /** Dismiss the pending card without answering (control_response deny). */
+  dismiss(sessionId: string, requestId: string): void {
+    const live = this.sessions.get(sessionId);
+    if (live && !live.cleaned) {
+      live.session.sendControlResponse(requestId, { behavior: 'deny', message: 'User dismissed the question.' });
+    }
+  }
+
   stop(sessionId: string): void {
     const s = this.sessions.get(sessionId);
     if (s) {
@@ -228,7 +294,19 @@ export class ChatHost {
 
   private emit(sessionId: string, message: unknown): void {
     // Record every chat event (synthetic + raw) into the transcript funnel.
-    history.record(sessionId, message);
-    this.win.webContents.send(IPC.evtChat, { sessionId, message });
+    const scrubbed = scrubEvent(message, this.secrets);
+    history.record(sessionId, scrubbed);
+    this.win.webContents.send(IPC.evtChat, { sessionId, message: scrubbed });
+  }
+
+  /** Native notification when a long turn ends while the window is unfocused —
+   *  agentic runs otherwise surface nothing until you tab back. */
+  private notifyIfBackground(body: string): void {
+    if (this.win.isDestroyed() || this.win.isFocused()) return;
+    try {
+      new Notification({ title: 'FCC Studio', body }).show();
+    } catch {
+      /* OS notification unavailable — never crash the chat loop */
+    }
   }
 }

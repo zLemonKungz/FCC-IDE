@@ -40,6 +40,14 @@ export const IPC = {
   /** send a live control_request to the running CLI (set_permission_mode,
    *  apply_flag_settings, …) — realtime change without restarting the chat */
   chatControl: 'chat:control',
+  /** answer a model-issued AskUserQuestion card (control_response, echoes requestId) */
+  chatAnswer: 'chat:answer',
+  /** dismiss/cancel a pending AskUserQuestion card (behavior:deny) */
+  chatAnswerDismiss: 'chat:answer-dismiss',
+  /** round-trip a host query to the live CLI (get_session_cost / get_context_usage) */
+  chatMeta: 'chat:meta',
+  /** rename the live CLI session (rename_session control) */
+  chatRename: 'chat:rename',
   chatModels: 'chat:models',
   claudeSettingsGet: 'claude-settings:get',
   claudeSettingsSet: 'claude-settings:set',

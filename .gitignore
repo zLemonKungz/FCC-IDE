@@ -30,6 +30,7 @@ tmp_logo/
 .shot-demo/
 shot*.png
 tmp-*.mjs
+site/
 
 # os
 .DS_Store

@@ -16,7 +16,32 @@ import SettingsPage from './components/SettingsPage';
 import { useLayoutStore, LAYOUT } from './stores/layout-store';
 import { useSettingsStore, effectiveEffort } from './stores/settings-store';
 import { useExplorerStore } from './stores/explorer-store';
+import { useChatStore } from './stores/chat-store';
 import { useEditorStore } from './stores/editor-store';
+
+interface SavedChatMeta {
+  meta: { id: string; folder: string; title?: string }[];
+  active?: string | null;
+}
+
+const CHAT_META_KEY = 'fcc-chat-meta';
+
+/** Write the current chat column set (id/folder/title/active) to localStorage —
+ *  transcripts themselves live in main (userData/sessions/*.json). */
+function persistChatColumns(): void {
+  const st = useChatStore.getState();
+  try {
+    localStorage.setItem(
+      CHAT_META_KEY,
+      JSON.stringify({
+        meta: st.sessions.map((x) => ({ id: x.id, folder: x.folder, title: x.title ?? undefined })),
+        active: st.activeId
+      })
+    );
+  } catch {
+    /* storage unavailable/denied — recovery is best-effort */
+  }
+}
 
 export default function App() {
   const sidebarVisible = useLayoutStore((s) => s.sidebarVisible);
@@ -173,6 +198,51 @@ export default function App() {
       if (active) useEditorStore.setState({ activePath: active });
     };
     void restore();
+  }, []);
+
+  // Chat columns survive restarts: persist their meta (id/folder/title/active)
+  // to localStorage; the transcripts themselves live on disk in main
+  // (userData/sessions/*.json), so recovery only needs to re-mount each id.
+  useEffect(() => {
+    return useChatStore.subscribe((state, prev) => {
+      // Only the column set changes warrant a write (id/folder/title/active) —
+      // the chat stream mutates messages constantly and must not rewrite storage.
+      // NOTE: never write on mount — that would clobber the saved list before
+      // the restore effect has a chance to read it.
+      if (
+        prev.sessions.length !== state.sessions.length ||
+        state.sessions.some((x, i) => {
+          const p = prev.sessions[i];
+          return !p || p.id !== x.id || p.folder !== x.folder || p.title !== x.title;
+        }) ||
+        prev.activeId !== state.activeId
+      ) {
+        persistChatColumns();
+      }
+    });
+  }, []);
+
+  // Relaunch recovery: re-mount the saved chat columns from their transcript
+  // files, then persist the result (the restored set IS the new truth). Each
+  // next message resumes the live CLI thread via --resume.
+  useEffect(() => {
+    void (async () => {
+      let saved: SavedChatMeta | null = null;
+      try {
+        const raw = localStorage.getItem(CHAT_META_KEY);
+        if (raw) saved = JSON.parse(raw) as SavedChatMeta;
+      } catch {
+        saved = null;
+      }
+      for (const m of saved?.meta ?? []) {
+        const rec = await window.fcc.historyOpen(m.id).catch(() => null);
+        if (rec) useChatStore.getState().restoreSession(rec, m.title);
+      }
+      if (useChatStore.getState().sessions.length === 0) {
+        useChatStore.getState().addChat(); // nothing to restore — keep the default column
+      }
+      persistChatColumns();
+    })();
   }, []);
 
   // The right column holds the side chat and/or a right-docked terminal. When

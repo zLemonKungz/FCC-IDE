@@ -1,3 +1,5 @@
+import type { AskQuestion } from '@shared/types';
+
 export interface ToolCall {
   tool_use_id: string;
   toolName: string;
@@ -54,6 +56,11 @@ export interface ChatUiState {
   /** live session status from the backend's system/status events (mode/model),
    *  for the status bar — reflects realtime set_permission_mode / set_model. */
   liveStatus: { permissionMode?: string; model?: string };
+  /** a model-issued AskUserQuestion card parked by the CLI, awaiting a choice
+   *  (control_response). Rendered by the chat column; cleared on turn end. */
+  pendingQuestion: { requestId: string; toolUseId?: string; questions: AskQuestion[] } | null;
+  /** latest CLI UX notice (system/notice) — a thin banner until the next turn. */
+  notice: string | null;
   /** running background/subagent tasks from system:task_started/task_progress,
    *  keyed by task_id — cleared when the turn finishes (result). */
   liveTasks: Record<string, LiveTask>;
@@ -133,10 +140,14 @@ export type ChatEvent =
       usage?: { total_tokens?: number };
       /** live think-token estimate carried by system/thinking_tokens events. */
       estimated_tokens?: number;
+      /** UX notice (context overflow / compaction forewarning) — surfaced as a banner. */
+      notice?: { message?: string; text?: string; type?: string; level?: string };
     }
   | { type: 'started' }
   | { type: 'stopped' }
-  | { type: 'error'; message: string };
+  | { type: 'error'; message: string }
+  | { type: 'question'; requestId: string; toolUseId?: string; questions: AskQuestion[] }
+  | { type: 'conversation_reset'; new_conversation_id?: string };
 
 export function emptyChatState(): ChatUiState {
   return {
@@ -152,6 +163,8 @@ export function emptyChatState(): ChatUiState {
     awaitingPlanApproval: false,
     sessionUsage: { input: 0, output: 0, cost: 0 },
     liveStatus: {},
+    pendingQuestion: null,
+    notice: null,
     liveTasks: {},
     thinkingTokens: 0,
     lastMeta: null,
@@ -196,7 +209,7 @@ export function applyChatEvent(
 
   switch (ev.type) {
     case 'user-message':
-      s = { ...s, compacted: false, messages: [...s.messages, { id: uid(), role: 'user', text: ev.text, tools: [], imageCount: ev.images }] };
+      s = { ...s, compacted: false, notice: null, pendingQuestion: null, messages: [...s.messages, { id: uid(), role: 'user', text: ev.text, tools: [], imageCount: ev.images }] };
       break;
 
     case 'assistant': {
@@ -313,20 +326,17 @@ export function applyChatEvent(
         running: false,
         error: ev.is_error ? (ev.errors ?? ['Agent error']).join('; ') : null,
         lastUsage: usage,
+        pendingQuestion: null,
         // A first live result replaces any restored-transcript estimate.
         contextEstimated: false,
-        // The CLI's real session context: result.modelUsage[model].inputTokens
-        // is cumulative across turns (probe: 91,963 → 138,134) and covers a
-        // resumed transcript — what the CLI's own context meter tracks. Fall
-        // back to the per-turn usage total when the CLI omits modelUsage.
-        contextTokens: (() => {
-          if (ev.modelUsage) {
-            for (const u of Object.values(ev.modelUsage)) {
-              if (u && Number.isFinite(u.inputTokens) && u.inputTokens! > 0) return u.inputTokens!;
-            }
-          }
-          return usage ? usage.input : s.contextTokens;
-        })(),
+        // The live window fill = the input the model actually received THIS
+        // turn (fresh + cache read + cache write). result.modelUsage[model]
+        // .inputTokens is NOT that — it is the CLI's cumulative session TOTAL,
+        // summed on every result (probe: 42,650 → 85,349 → 128,097 = exact sum
+        // of each turn). Driving the meter with it made a short chat read as
+        // hundreds of thousands of tokens while each request stayed ~43k. Keep
+        // the previous value when a result carries no usage at all.
+        contextTokens: usage ? usage.input : s.contextTokens,
         // The model's real context window, reported per-model by the CLI. Use
         // the first modelUsage entry that carries one; keep an already-known
         // window if the CLI stops sending it on a later turn.
@@ -382,12 +392,18 @@ export function applyChatEvent(
       s = { ...s, sessionId: ev.session_id };
       break;
 
+    case 'conversation_reset':
+      // /clear / plan-exit / fresh-session: the CLI reset its transcript under
+      // new_conversation_id. Mount a fresh bubble list (session/process live on).
+      s = { ...s, messages: [], compacted: false, notice: null, pendingQuestion: null };
+      break;
+
     case 'slash-commands':
       s = { ...s, slashCommands: ev.commands };
       break;
 
     case 'started':
-      s = { ...s, running: true, error: null, thinkingTokens: 0, controlError: null };
+      s = { ...s, running: true, error: null, thinkingTokens: 0, controlError: null, pendingQuestion: null, notice: null };
       break;
 
     case 'control_response':
@@ -401,7 +417,7 @@ export function applyChatEvent(
       break;
 
     case 'stopped':
-      s = { ...s, running: false };
+      s = { ...s, running: false, pendingQuestion: null };
       break;
 
     case 'plan-approval':
@@ -410,8 +426,14 @@ export function applyChatEvent(
       s = { ...s, running: false, awaitingPlanApproval: true };
       break;
 
+    case 'question':
+      // AskUserQuestion card parked by the CLI — the column renders the options
+      // and answers via control_response (chat-store.answerQuestion).
+      s = { ...s, pendingQuestion: { requestId: ev.requestId, toolUseId: ev.toolUseId, questions: ev.questions } };
+      break;
+
     case 'error':
-      s = { ...s, running: false, error: ev.message };
+      s = { ...s, running: false, error: ev.message, pendingQuestion: null };
       break;
 
     case 'system': {
@@ -464,6 +486,11 @@ export function applyChatEvent(
         // Live think-token counter — a running estimate per event from the CLI
         // status line. Cleared at the next 'started'.
         s = { ...s, thinkingTokens: ev.estimated_tokens };
+      } else if (ev.subtype === 'notice' || ev.notice) {
+        // UX notice (context forewarning, pending compaction) — a soft banner
+        // that clears on the next user message.
+        const text = ev.notice?.message ?? ev.notice?.text ?? '';
+        if (text) s = { ...s, notice: text };
       }
       break;
     }

@@ -100,8 +100,13 @@ processes, or read env on its own.
   permission mode (hooks can tighten, never loosen).
 - **Compose workbench + CLI health** — chat-store `parallelWorkers` / `mergeWorkers`
   clone the active prompt into N fresh parallel columns and merge every column's
-  latest assistant output into one synthesized answer; `regenerate` truncates a
-  message (and onwards) then re-asks its prompt. `claude-compat.ts` (`cli:compat`)
+  latest assistant output into one synthesized answer. `regenerate` truncates a
+  message (and onwards) then re-asks its prompt: it **stops the live subprocess
+  first** when the turn is mid-stream and arms a `regenDrop` gate so stale
+  old-turn events (incl. its `result`) already in the IPC queue are dropped until
+  the fresh turn's `started` — sending a new prompt down a still-running process
+  used to interleave old-answer fragments into the regenerated transcript and
+  double-count the usage. `claude-compat.ts` (`cli:compat`)
   resolves the exact binary the chat spawns and reports its version (a `--help`
   flag check was dropped — Claude Code's help omits internal flags, so absence
   there is not a reliable compatibility signal).
@@ -230,6 +235,58 @@ envelopes to the CLI's stdin — the same mechanism as the SDK's `setPermissionM
   warn banner; cleared on the next `started`) instead of failing silently — the
   success response (`{subtype:'success', request_id}`) stays ignored, as do
   control envelopes in `history.record` (its `default:` branch).
+
+### AskUserQuestion question cards (`chat:answer`)
+
+A model-issued multiple-choice question is a **CLI → host control**, not a normal
+tool result, so a renderer that ignores controls would show nothing at all:
+
+- The CLI sends `control_request` `subtype:"can_use_tool"`, `tool_name:
+  "AskUserQuestion"`, with `input.questions` (structured schema: question,
+  header, 2-4 options {label, description, preview?}, multiSelect) plus a
+  matching `assistant` tool_use block.
+- `chat-host` routes it to a `question` chat event; the column renders
+  `QuestionCard` (options + previews + free-text "Other") and the user answers
+  via `chat:answer` → `CliSession.sendControlResponse`:
+  `{"type":"control_response","response":{subtype:"success",request_id,
+  response:{behavior:"allow",updatedInput:{questions,answers}}}}`
+  (dismiss = `behavior:"deny"`). Every other `can_use_tool` is auto-`allow`ed —
+  acceptEdits is untouched.
+- On spawn the runner sends an `initialize` `control_request` advertising
+  `supportedDialogKinds`, because the CLI treats a consumer with no declared
+  renderer as "fails closed". **Verified on the bundled CLI**: even with that
+  handshake the current FCC-routed models are still not offered the
+  `AskUserQuestion` tool (init tool list unchanged), so the card is dormant
+  until a route/model exposes the tool — the renderer + answer path are ready
+  either way.
+
+### Session meta queries (`chat:meta`) + chat rename (`chat:rename`)
+
+`CliSession.query(subtype)` round-trips a host control and resolves its
+`control_response` (correlated by request_id, 15s timeout) — used for
+`get_session_cost` and `get_context_usage`. `chat:meta` exposes them to the
+renderer (Chat settings → "Refresh live meta" shows the CLI's reported session
+cost and a real context breakdown); `chat:rename` sends `rename_session{title}`
+and stores a display title on the chat. Responses are consumed inside
+`cli-runner` (never forwarded to the renderer as chat events).
+
+### Chat column persistence + secret redaction
+
+- **Columns survive restarts**: App.tsx persists `{id, folder, title}` per chat
+  column in `localStorage` (`fcc-chat-meta`) and re-mounts each from its saved
+  transcript (`history.read`, the file main already flushes on stop/quit) via
+  `chat-store.restoreSession`, arming `pendingResume` so the next message
+  resumes the live CLI thread with `--resume`. Falls back to the usual empty
+  column when nothing restores.
+- **Secret redaction** (`src/main/redact.ts`): `ChatHost.emit` scrubs every chat
+  event (before `history.record` + IPC) and `logger` scrubs every written line
+  — exact env values matching `*_TOKEN`/`*_API_KEY`/… and known shapes
+  (`sk-ant-…`, `ghp_…`, `AKIA…`, `xox…`, `Bearer …`). Conservative (no heuristic
+  content scrubbing); complements the Bash guardrails which only blocked
+  commands.
+- `system/conversation_reset` (`/clear`, plan-exit) clears the bubble list; UX
+  notices (`system/notice`) show as a banner; turn-finish notifications fire
+  from `chat-host` when the window is unfocused.
 - **CLI thinking blocks carry the text in the `thinking` field, not `text`**
   (short tool-selection thoughts can be signature-only, `thinking:''`). The
   reducer reads `b.thinking`; `ChatMessage` renders it as a foldable `.msg-thinking`.
@@ -362,11 +419,17 @@ envelopes to the CLI's stdin — the same mechanism as the SDK's `setPermissionM
   overlays the editor (`position:absolute; inset:0`) while the editor stays mounted
   underneath so Monaco buffers survive. Switching dock positions remounts the pane
   (accepted tradeoff).
-- **Multi-terminal tabs** — backend already had a `Map<id, pty>`, so tabs are
-  renderer-only: each tab is an always-mounted `TerminalTab` (`display:none` hides
-  inactive). `preload.onTermData` returns an unsubscribe — **must** call it on
-  unmount or listeners accumulate on the shared `term:output` channel. The term
-  header is `flex-wrap: wrap` with `.term-tabs` at `min-width: 88px`.
+- **Multi-terminal tabs** — the backend owns one `Map<id, pty>`; the pane's
+  `addTerminal` spawns the pty and its id IS the tab id (a previous bug spawned a
+  second, idle pty per tab — the tab-floor id and the wired pty were different
+  shells, so Run/Clear/Fix acted on the dead one). Each `TerminalTab` is
+  always-mounted (`display:none` hides inactive) and just subscribes
+  `preload.onTermData(id)` to the pty it was given. Renderer reloads / app quit
+  call `terminal.disposeAll()`. **Every preload subscription (`onTermData`,
+  `onChatEvent`, `onFccStatus`) returns an unsubscribe — callers must clean up on
+  unmount** or listeners accumulate on the shared stream channels and every event
+  gets delivered N times. The term header is `flex-wrap: wrap` with `.term-tabs`
+  at `min-width: 88px`.
 - **Command palette (Ctrl+Shift+P)** — top-centered overlay (`CommandPalette.tsx`).
   Slash commands are NOT sent directly: the palette dispatches `fcc:chat-input` with
   the completed `"/cmd "`; ChatPanel fills its input so `submit()` keeps the
@@ -430,9 +493,14 @@ envelopes to the CLI's stdin — the same mechanism as the SDK's `setPermissionM
   swallows spawn errors so a missing binary can't crash the app.
 - **The app owns the server lifecycle** when it spawned it (`autoStartServer` on
   window creation; `FccStatus.managed` only for its own server → "Stop server").
-  `stopServer()` kills via `taskkill /pid <pid> /T /F` (win32, detached). A server
-  already running (e.g. the tray app) is left untouched — never killed. `will-quit`
-  stops our own server.
+  Ownership (`managedPid`) is granted at spawn — even if a cold uv/Python boot
+  outlives the 5s boot loop — and released only when the process is *confirmed
+  dead* (`shouldClearManagedPid`), never on a transient health-poll timeout or a
+  slow/ busy response (a timeout used to clear it, losing the Stop button and
+  leaking our detached server at quit). `stopServer()` kills via
+  `taskkill /pid <pid> /T /F` (win32, detached). A server already running (e.g.
+  the tray app) is left untouched — never killed. `will-quit` stops our own
+  server.
 - Chat defaults from env: `FCC_CHAT_MODEL` (default `claude-haiku-4-5-20251001`),
   `FCC_CHAT_MAX_TURNS` (default 50). `settings-store` (persist `fcc-settings`) is the
   source of truth, pushed via `settings:set` → `setChatConfig`.
@@ -445,15 +513,18 @@ The FCC env goes on the subprocess env (spread over `process.env`):
 `CLAUDE_CODE_AUTO_COMPACT_WINDOW=<autoCompactWindow * 1000>` (thousands→tokens)
 — **omitted when `autoCompactWindow` is 0**, so the CLI compacts at its own
 model-driven limit instead of a fixed cap.
-The reducer tracks `contextTokens` = the CLI's cumulative session context
-(`result.modelUsage[model].inputTokens`, verified cumulative across turns —
-turn-1 91.0k → turn-2 138.1k — and covering a resumed transcript; falls back to
-the last `result`'s per-turn input total when modelUsage is absent). Until a live
-result exists (a transcript just opened from history), `openHistory` seeds a
-chars/4 estimate flagged `contextEstimated` (UI shows a `≈`/"(estimate)" prefix;
-the CLI's exact value replaces it on the next `result`) and
-`modelContextWindow` (from `result.modelUsage[model].contextWindow` — the
-model's real window, which the CLI reports per turn). **The effective window is
+The reducer tracks `contextTokens` = the live window fill: the input the model
+actually received on the last `result` (`usage.input_tokens` + cache read/write;
+falls back to the previous value when a result carries no usage). Do **not** use
+`result.modelUsage[model].inputTokens` for the meter — it is the CLI's
+cumulative session *total* (probe: 42,650 → 85,349 → 128,097 — the exact sum of
+each turn's input), which made a short chat read as hundreds of thousands of
+tokens while every request stayed ~43k; the cumulative total is instead
+tracked separately in `sessionUsage`. A resumed transcript's first turn
+reflects the full reloaded history; before any live result, `openHistory` seeds
+a chars/4 estimate flagged `contextEstimated` (UI shows a `≈`/"(estimate)"
+prefix). `modelContextWindow` comes from `result.modelUsage[model].contextWindow`
+(the model's real window, reported per turn). **The effective window is
 resolved once, in `@shared/model-context.ts`** (`effectiveContextWindow`, plus
 the `modelFamilyStem` normalizer the renderer's `effortFamily`/`claudeLabel`
 delegate to): shared by the chat footer meter, the Chat settings usage panel,

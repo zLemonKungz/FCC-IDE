@@ -53,7 +53,24 @@ export interface ChatImage {
  *  or 'plan' (analyze + propose before acting). */
 export type PermissionMode = 'acceptEdits' | 'plan';
 
-/** One turn in a persisted chat transcript (display + resume, not tool detail). */
+/** One AskUserQuestion option (Claude Code's card schema — header + 2-4 options,
+ *  optional preview code). The renderer shows these as the choice card. */
+export interface QuestionOption {
+  label: string;
+  description: string;
+  preview?: string;
+}
+
+export interface AskQuestion {
+  question: string;
+  /** short chip/tag shown next to the question (max ~12 chars) */
+  header?: string;
+  options: QuestionOption[];
+  /** whether the user may pick several options */
+  multiSelect?: boolean;
+}
+
+/** One turn in a parsed chat transcript (display + resume, not tool detail). */
 export interface HistoryMessage {
   role: 'user' | 'assistant';
   text: string;

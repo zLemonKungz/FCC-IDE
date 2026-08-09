@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ChatImage, HistoryRecord, PermissionMode } from '@shared/types';
+import type { AskQuestion, ChatImage, HistoryRecord, PermissionMode } from '@shared/types';
 import { emptyChatState, applyChatEvent, type ChatEvent, type ChatUiState, type FileEvent } from '../chat/chat-reducer';
 import { useEditorStore } from './editor-store';
 import { useTelemetryStore } from './telemetry-store';
@@ -9,6 +9,15 @@ type ChatSession = ChatUiState & {
   folder: string;
   planMode: boolean;
   pendingResume: string | null;
+  /** regenerate killed a mid-stream turn — drop stale events until the fresh
+   *  turn's `started` arrives, so old chunks/results can't interleave or
+   *  double-count into the truncated transcript. */
+  regenDrop: boolean;
+  /** display title (local rename; not yet persisted to the history file). */
+  title?: string;
+  /** live get_session_cost / get_context_usage replies (refreshed on demand). */
+  liveCost?: unknown;
+  liveCtx?: unknown;
 };
 
 interface ChatStore {
@@ -29,6 +38,8 @@ interface ChatStore {
   control: (id: string, subtype: string, request: Record<string, unknown>) => void;
   reset: (id: string) => void;
   openHistory: (rec: HistoryRecord) => void;
+  /** mount a previous session back under its own id (auto-recovery on relaunch) */
+  restoreSession: (rec: HistoryRecord, title?: string) => void;
   handleEvent: (sessionId: string, message: unknown) => void;
   rewindTo: (msgId: string) => void;
 
@@ -41,6 +52,20 @@ interface ChatStore {
   controlActive: (subtype: string, request: Record<string, unknown>) => void;
   toggleFastMode: () => void;
   toggleThinking: () => void;
+  /** answer a model-issued AskUserQuestion card via control_response */
+  answerQuestion: (
+    sessionId: string,
+    requestId: string,
+    questions: AskQuestion[],
+    answers: Record<string, string>,
+    response?: string
+  ) => void;
+  /** dismiss the pending AskUserQuestion card (control_response deny) */
+  dismissQuestion: (sessionId: string, requestId: string) => void;
+  /** round-trip live get_session_cost + get_context_usage and cache on the session */
+  refreshMeta: (sessionId: string) => Promise<void>;
+  /** rename the chat (store + live CLI session) */
+  renameSession: (sessionId: string, title: string) => void;
 }
 
 const uid = (): string => `s-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -52,7 +77,7 @@ const uid = (): string => `s-${Date.now()}-${Math.random().toString(36).slice(2,
 const inFlightSend = new Set<string>();
 
 function emptySession(id: string, folder: string): ChatSession {
-  return { ...emptyChatState(), id, folder, planMode: false, pendingResume: null };
+  return { ...emptyChatState(), id, folder, planMode: false, pendingResume: null, regenDrop: false };
 }
 
 export const useChatStore = create<ChatStore>((set, get) => ({
@@ -137,20 +162,36 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   // Cut everything from this assistant message onward and re-ask its prompt.
   regenerate: (sessionId, msgId) => {
-    const s = get();
-    const idx = s.sessions.findIndex((x) => x.id === sessionId);
-    if (idx < 0) return;
-    const sess = s.sessions[idx];
-    const mi = sess.messages.findIndex((m) => m.id === msgId);
-    if (mi < 0) return;
-    const before = sess.messages.slice(0, mi);
-    const prompt = [...before].reverse().find((m) => m.role === 'user')?.text ?? '';
-    set((st) => {
-      const sessions = st.sessions.slice();
-      sessions[idx] = { ...st.sessions[idx], messages: before, running: false, error: null };
-      return { sessions, activeId: sessionId };
-    });
-    if (prompt && sess.folder) get().send(sessionId, sess.folder, prompt);
+    void (async () => {
+      const s = get();
+      const idx = s.sessions.findIndex((x) => x.id === sessionId);
+      if (idx < 0) return;
+      const sess = s.sessions[idx];
+      const mi = sess.messages.findIndex((m) => m.id === msgId);
+      if (mi < 0) return;
+      const before = sess.messages.slice(0, mi);
+      const prompt = [...before].reverse().find((m) => m.role === 'user')?.text ?? '';
+      const folder = sess.folder;
+      // A live turn is mid-stream: kill the subprocess FIRST so its remaining
+      // events can't interleave back into the truncated transcript (they used
+      // to re-open the old turn) nor double-count the result usage. Sending a
+      // new prompt down the still-running process was the root of the mess.
+      if (sess.running) await window.fcc.chatStop(sessionId).catch(() => undefined);
+      set((st) => {
+        const sessions = st.sessions.slice();
+        sessions[idx] = {
+          ...st.sessions[idx],
+          messages: before,
+          running: false,
+          error: null,
+          // Stale old-turn events (already in the IPC queue when we killed the
+          // process) must be dropped until the fresh turn's `started` lands.
+          regenDrop: true
+        };
+        return { sessions, activeId: sessionId };
+      });
+      if (prompt && folder) get().send(sessionId, folder, prompt);
+    })();
   },
 
   approve: (id, plan) => {
@@ -213,6 +254,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       folder: rec.folder,
       planMode: false,
       pendingResume: rec.cliSessionId,
+      regenDrop: false,
       contextTokens: estTokens,
       contextEstimated: true,
       messages: rec.messages.map((m) => ({
@@ -226,17 +268,56 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set((s) => ({ sessions: [...s.sessions, session], activeId: id }));
   },
 
+  restoreSession: (rec, title) => {
+    const estTokens = rec.messages.reduce((sum, m) => sum + Math.max(1, Math.round(m.text.length / 4)), 0);
+    const session: ChatSession = {
+      ...emptyChatState(),
+      id: rec.id,
+      folder: rec.folder,
+      planMode: false,
+      pendingResume: rec.cliSessionId,
+      regenDrop: false,
+      title,
+      contextTokens: estTokens,
+      contextEstimated: true,
+      messages: rec.messages.map((m) => ({
+        id: `h-${Math.random().toString(36).slice(2)}`,
+        role: m.role,
+        text: m.text,
+        tools: [],
+        restored: true
+      }))
+    };
+    set((s) => ({ sessions: [...s.sessions, session], activeId: rec.id }));
+  },
+
   handleEvent: (sessionId, message) => {
     inFlightSend.delete(sessionId); // any event = the send round-trip returned
     const s = get();
     const idx = s.sessions.findIndex((x) => x.id === sessionId);
     if (idx < 0) return;
     const session = s.sessions[idx];
+    const type = (message as ChatEvent).type;
+    // Post-regenerate drop-guard: the turn we killed still has events in the
+    // IPC queue. Anything except the fresh turn's `started` is stale — drop it
+    // (incl. the old `result`, which would double-count sessionUsage). The gate
+    // clears inside the final merge below — applyChatEvent carries the input
+    // session through `{...s}`, so clearing in a separate set would be
+    // overwritten by the merge's spread.
+    let clearDrop = false;
+    if (session.regenDrop) {
+      if (type !== 'started') return;
+      clearDrop = true;
+    }
     const prevLastId = session.messages[session.messages.length - 1]?.id ?? null;
     const { state, fileEvents } = applyChatEvent(session, message as ChatEvent);
     set((st) => {
       const sessions = st.sessions.slice();
-      sessions[idx] = { ...sessions[idx], ...state };
+      sessions[idx] = {
+        ...sessions[idx],
+        ...state,
+        regenDrop: clearDrop ? false : st.sessions[idx].regenDrop
+      };
       return { sessions };
     });
     fileEvents.forEach((f: FileEvent) =>
@@ -280,6 +361,61 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }
   },
 
+  // -- AskUserQuestion card ---------------------------------
+  answerQuestion: (sessionId, requestId, questions, answers, response) => {
+    void window.fcc.answerQuestion(sessionId, requestId, questions, answers, response);
+    // Clear the card immediately; the resumed turn's events confirm it.
+    const idx = get().sessions.findIndex((x) => x.id === sessionId);
+    if (idx >= 0) {
+      set((st) => {
+        const sessions = st.sessions.slice();
+        sessions[idx] = { ...sessions[idx], pendingQuestion: null };
+        return { sessions };
+      });
+    }
+  },
+  dismissQuestion: (sessionId, requestId) => {
+    void window.fcc.dismissQuestion(sessionId, requestId);
+    const idx = get().sessions.findIndex((x) => x.id === sessionId);
+    if (idx >= 0) {
+      set((st) => {
+        const sessions = st.sessions.slice();
+        sessions[idx] = { ...sessions[idx], pendingQuestion: null };
+        return { sessions };
+      });
+    }
+  },
+  refreshMeta: (sessionId) => {
+    const run = async (): Promise<void> => {
+      const [cost, ctx] = await Promise.all([
+        window.fcc.chatMeta(sessionId, 'cost').catch(() => null),
+        window.fcc.chatMeta(sessionId, 'context').catch(() => null)
+      ]);
+      const idx = get().sessions.findIndex((x) => x.id === sessionId);
+      if (idx < 0) return;
+      set((st) => {
+        const sessions = st.sessions.slice();
+        sessions[idx] = {
+          ...sessions[idx],
+          liveCost: cost ?? undefined,
+          liveCtx: ctx ?? undefined
+        };
+        return { sessions };
+      });
+    };
+    return run();
+  },
+  renameSession: (sessionId, title) => {
+    void window.fcc.renameSession(sessionId, title);
+    const idx = get().sessions.findIndex((x) => x.id === sessionId);
+    if (idx >= 0) {
+      set((st) => {
+        const sessions = st.sessions.slice();
+        sessions[idx] = { ...sessions[idx], title };
+        return { sessions };
+      });
+    }
+  },
   // -- Compose workbench: parallel workers + merge ---------------------------------
   // Re-run the active column's last user prompt into `count` fresh parallel columns.
   parallelWorkers: (count) => {

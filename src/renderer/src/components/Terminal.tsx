@@ -68,17 +68,18 @@ interface TermTab {
 }
 
 // One terminal session, owned by its XTerm instance. Always mounted (the pane
-// CSS hides inactive/collapsed bodies) so sessions survive tab switches.
+// CSS hides inactive/collapsed bodies) so sessions survive tab switches. The
+// pty for this tab is spawned once by the pane's addTerminal — `id` IS the pty
+// id (a previous bug created a second, idle pty here; the tab id and the wired
+// pty were different shells, so Run/Clear/Fix all targeted the wrong one).
 function TerminalTab({
   id,
-  cwd,
   theme,
   active,
   visible,
   register
 }: {
   id: number;
-  cwd: string;
   theme: 'dark' | 'light';
   active: boolean;
   /** the whole pane is visible — refit when it comes back from display:none */
@@ -115,23 +116,17 @@ function TerminalTab({
     }
     register(id, term);
 
-    // cwd is captured at creation — each tab keeps the folder it was opened in.
-    void window.fcc
-      .termCreate(cwd)
-      .then((tid) => {
-        ptyRef.current = tid;
-        offRef.current = window.fcc.onTermData(tid, (data) => {
-          term.write(data);
-          tailRef.current = (tailRef.current + data).slice(-2000);
-          if (!errorShownRef.current && ERROR_RE.test(tailRef.current)) {
-            errorShownRef.current = true;
-            setErrorDetected(true);
-          }
-        });
-      })
-      .catch((err: Error) => {
-        term.write(`\r\n[terminal error] ${err.message}\r\n`);
-      });
+    // cwd is captured at creation by the pane's termCreate — the pty for this
+    // tab already exists under `id`. Subscribe to its stream output now.
+    ptyRef.current = id;
+    offRef.current = window.fcc.onTermData(id, (data) => {
+      term.write(data);
+      tailRef.current = (tailRef.current + data).slice(-2000);
+      if (!errorShownRef.current && ERROR_RE.test(tailRef.current)) {
+        errorShownRef.current = true;
+        setErrorDetected(true);
+      }
+    });
 
     const offInput = term.onData((data) => {
       if (ptyRef.current !== null) window.fcc.termData(ptyRef.current, data);
@@ -340,7 +335,6 @@ export default function TerminalPane({ position }: { position: 'bottom' | 'right
         <TerminalTab
           key={t.id}
           id={t.id}
-          cwd={root ?? ''}
           theme={theme}
           active={t.id === activeId}
           visible={visible}

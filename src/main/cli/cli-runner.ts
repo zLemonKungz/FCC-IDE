@@ -93,6 +93,11 @@ export class CliSession {
   private stopped = false;
   /** Tail of stderr, kept so a crash produces a diagnosable error message. */
   private stderrTail = '';
+  /** Request-id → resolver for host-initiated control queries (get_session_cost,
+   *  get_context_usage, …): the CLI answers asynchronously on stdout with a
+   *  control_response using the same request_id. */
+  private pendingQueries = new Map<string, (payload: unknown) => void>();
+  private queryTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   constructor(private opts: CliSessionOptions) {}
 
@@ -135,7 +140,22 @@ export class CliSession {
     child.stdout.on('data', (d) => {
       const { events, rest } = parseJsonLines(d.toString(), this.buffer);
       this.buffer = rest;
-      for (const ev of events) this.opts.onEvent(ev);
+      for (const ev of events) {
+        // A control_response answering this process's own query completes the
+        // pending promise (never forwarded — the host initiated it).
+        const msg = ev as { type?: string; response?: { request_id?: string } };
+        const rid = msg.response?.request_id;
+        if (msg.type === 'control_response' && rid && this.pendingQueries.has(rid)) {
+          const resolve = this.pendingQueries.get(rid)!;
+          this.pendingQueries.delete(rid);
+          const t = this.queryTimers.get(rid);
+          if (t) clearTimeout(t);
+          this.queryTimers.delete(rid);
+          resolve(msg);
+          continue;
+        }
+        this.opts.onEvent(ev);
+      }
     });
     child.stderr.on('data', (d) => {
       // Keep a bounded tail; the CLI writes non-JSON diagnostics (node
@@ -144,9 +164,17 @@ export class CliSession {
     });
     child.on('error', (err) => this.opts.onError(err));
     child.on('exit', (code) => this.opts.onExit(code));
-    // Swallow stdin EPIPE — writing to a child that just died must not crash
-    // the main process (an unhandled 'error' on the stream does).
+    // Swallow stdin EPIPE (writing to a child that just died must not crash the
+    // main process — an unhandled 'error' on the stream does).
     child.stdin.on('error', () => {});
+    // Host handshake: declare this process is a UI host that can render dialog
+    // kinds (AskUserQuestion / refusal fallback). Without it the CLI treats the
+    // consumer as renderless ("fails closed") and the model is never offered the
+    // AskUserQuestion tool — so the choice UI the interactive CLI shows would be
+    // absent here. Write it before the first user message; order on stdin wins.
+    this.sendControl('initialize', {
+      supportedDialogKinds: ['ask_user_question', 'ask_user', 'refusal_fallback_prompt']
+    });
   }
 
   /** Send a live SDK control_request over stdin (e.g. subtype 'set_permission_mode'
@@ -163,6 +191,44 @@ export class CliSession {
         request: { subtype, ...request }
       }) + '\n'
     );
+  }
+
+  /** Answer a CLI-initiated control_request (can_use_tool incl. AskUserQuestion).
+   *  The response echoes the request_id so the CLI can match it to the parked
+   *  tool call and resume the turn. `response` is the control body, e.g.
+   *  { behavior:'allow', updatedInput:{ questions, answers } }. */
+  sendControlResponse(requestId: string, response: Record<string, unknown>): void {
+    if (!this.child || this.stopped) return;
+    const stdin = this.child.stdin;
+    if (stdin.destroyed || stdin.writableEnded) return;
+    stdin.write(
+      JSON.stringify({
+        type: 'control_response',
+        response: { subtype: 'success', request_id: requestId, response }
+      }) + '\n'
+    );
+  }
+
+  /** Round-trip a host-initiated control_request and resolve with its
+   *  control_response payload (e.g. `get_session_cost`, `get_context_usage`).
+   *  Resolves null on timeout/stop so the caller never hangs. */
+  query<T = unknown>(subtype: string, request: Record<string, unknown> = {}): Promise<T | null> {
+    if (!this.child || this.stopped) return Promise.resolve(null);
+    const stdin = this.child.stdin;
+    if (stdin.destroyed || stdin.writableEnded) return Promise.resolve(null);
+    return new Promise((resolve) => {
+      const requestId = `qry-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const finish = (payload: unknown): void => {
+        this.queryTimers.delete(requestId);
+        resolve(payload as T | null);
+      };
+      const timer = setTimeout(() => {
+        if (this.pendingQueries.delete(requestId)) finish(null);
+      }, 15000);
+      this.queryTimers.set(requestId, timer);
+      this.pendingQueries.set(requestId, (payload) => finish(payload));
+      stdin.write(JSON.stringify({ type: 'control_request', request_id: requestId, request: { subtype, ...request } }) + '\n');
+    });
   }
 
   /** Send a user turn over stdin. Safe to call repeatedly on one process.

@@ -6,8 +6,9 @@ import { useSettingsStore, claudeLabel, curatedModelOptions } from '../stores/se
 import { effectiveContextWindow } from '@shared/model-context';
 import type { ChatImage, GatewayModel } from '@shared/types';
 import ChatMessage from './ChatMessage';
+import QuestionCard from './QuestionCard';
 import Markdown from '../chat/markdown';
-import { IconChat, IconClaude, IconClose, IconSend, IconSettings, IconStop } from './icons';
+import { IconChat, IconClaude, IconClose, IconPencil, IconSend, IconSettings, IconStop } from './icons';
 
 // Client-side commands handled here; every other `/cmd` is forwarded to the
 // claude CLI subprocess (slash commands / skills discovered via the init msg).
@@ -186,6 +187,8 @@ export default memo(function ChatColumn({ id, label }: { id: string; label: stri
   const slashCommands = session?.slashCommands ?? [];
   const planMode = session?.planMode ?? false;
   const awaitingPlanApproval = session?.awaitingPlanApproval ?? false;
+  const pendingQuestion = session?.pendingQuestion ?? null;
+  const notice = session?.notice ?? null;
   const checkpoints = useChatStore((s) => s.checkpoints);
   const root = useExplorerStore((s) => s.root);
   const chatModel = useSettingsStore((s) => s.chatModel);
@@ -199,6 +202,8 @@ export default memo(function ChatColumn({ id, label }: { id: string; label: stri
   const [models, setModels] = useState<GatewayModel[] | null>(null);
   const [atBottom, setAtBottom] = useState(true);
   const [atPicker, setAtPicker] = useState<{ open: boolean; index: number; files: string[] }>({ open: false, index: 0, files: [] });
+  const [renaming, setRenaming] = useState(false);
+  const [draft, setDraft] = useState('');
   // File list for '@' mentions, cached once per open folder (fs:search walks it).
   const filesCache = useRef<{ root: string | null; list: string[] }>({ root: null, list: [] });
   const atStartRef = useRef(-1);
@@ -301,6 +306,13 @@ export default memo(function ChatColumn({ id, label }: { id: string; label: stri
   // messages during a stream. Only root/id/checkpoints changes legitimately
   // re-create these — those invalidate the message anyway.
   const editMessage = useCallback((t: string) => { if (root) send(t); }, [root, send]);
+  // Inline rename: Enter/blur saves, Escape cancels; an empty draft keeps the
+  // previous title (renameSession only fires with a non-empty name).
+  const saveRename = (): void => {
+    const t = draft.trim();
+    setRenaming(false);
+    if (t) st().renameSession(id, t);
+  };
   const rewindMessage = useCallback((msgId: string) => st().rewindTo(msgId), []);
   const regenerateMessage = useCallback((msgId: string) => st().regenerate(id, msgId), [id]);
 
@@ -533,7 +545,42 @@ Type anything else to send it to Claude.`;
   return (
     <div className="chat-column">
       <div className="chat-col-header">
-        <span className="title"><IconChat width={12} height={12} />{label}</span>
+        <span className="title">
+          <IconChat width={12} height={12} />
+          {renaming ? (
+            <input
+              className="chat-col-title"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              autoFocus
+              onBlur={saveRename}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  saveRename();
+                } else if (e.key === 'Escape') {
+                  setRenaming(false);
+                }
+              }}
+              aria-label="Chat name"
+            />
+          ) : (
+            <>
+              <span className="chat-col-name">{session?.title ?? label}</span>
+              <button
+                className="icon-btn chat-rename"
+                title="Rename chat"
+                aria-label="Rename chat"
+                onClick={() => {
+                  setDraft(session?.title ?? label);
+                  setRenaming(true);
+                }}
+              >
+                <IconPencil width={11} height={11} />
+              </button>
+            </>
+          )}
+        </span>
         {running && (
           <button className="ghost" onClick={() => st().stop(id)} title="Stop">
             <IconStop width={12} height={12} />Stop
@@ -625,6 +672,7 @@ Type anything else to send it to Claude.`;
               </div>
             )}
             {compacted && !running && <div className="chat-ctx-note">Conversation was compacted — Claude is working from a summary.</div>}
+            {notice && !running && <div className="chat-warn">{notice}</div>}
             {error && <div className="chat-error">{error}</div>}
             {controlError && !running && <div className="chat-warn">{controlError}</div>}
             {lastUsage && !running && (
@@ -661,6 +709,17 @@ Type anything else to send it to Claude.`;
           plan={planText}
           onApprove={() => st().approve(id, planText)}
           onReject={() => st().reject(id)}
+        />
+      )}
+
+      {pendingQuestion && (
+        <QuestionCard
+          questions={pendingQuestion.questions}
+          onAnswer={(answers, response) =>
+            st().answerQuestion(id, pendingQuestion.requestId, pendingQuestion.questions, answers, response)
+          }
+          onDismiss={() => st().dismissQuestion(id, pendingQuestion.requestId)}
+          disabled={running}
         />
       )}
 

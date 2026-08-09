@@ -70,6 +70,19 @@ const api = {
   chatApprove: (sessionId: string, plan: string): Promise<void> => ipcRenderer.invoke(IPC.chatApprove, sessionId, plan),
   chatControl: (sessionId: string, subtype: string, request: Record<string, unknown>): Promise<void> =>
     ipcRenderer.invoke(IPC.chatControl, sessionId, subtype, request),
+  answerQuestion: (
+    sessionId: string,
+    requestId: string,
+    questions: unknown,
+    answers: Record<string, string>,
+    response?: string
+  ): Promise<void> => ipcRenderer.invoke(IPC.chatAnswer, sessionId, requestId, questions, answers, response),
+  dismissQuestion: (sessionId: string, requestId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.chatAnswerDismiss, sessionId, requestId),
+  chatMeta: (sessionId: string, kind: 'cost' | 'context'): Promise<unknown> =>
+    ipcRenderer.invoke(IPC.chatMeta, sessionId, kind),
+  renameSession: (sessionId: string, title: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.chatRename, sessionId, title),
   clipboardReadImage: (): Promise<string | null> => ipcRenderer.invoke(IPC.clipboardReadImage),
   historyList: (): Promise<HistorySummary[]> => ipcRenderer.invoke(IPC.historyList),
   historyOpen: (id: string): Promise<HistoryRecord | null> => ipcRenderer.invoke(IPC.historyOpen, id),
@@ -111,11 +124,18 @@ const api = {
   onUpdate: (cb: (state: unknown) => void): void => {
     ipcRenderer.on(IPC.evtUpdate, (_ev, state) => cb(state));
   },
-  onChatEvent: (cb: (payload: { sessionId: string; message: unknown }) => void): void => {
-    ipcRenderer.on(IPC.evtChat, (_ev, payload) => cb(payload));
+  // Every subscription returns an unsubscribe — the ChatPanel/StatusBar mount
+  // and unmount (chat hidden, position switch, HMR), so a listener left behind
+  // would double-deliver every stream event on the shared channel.
+  onChatEvent: (cb: (payload: { sessionId: string; message: unknown }) => void): (() => void) => {
+    const listener = (_ev: unknown, payload: { sessionId: string; message: unknown }): void => cb(payload);
+    ipcRenderer.on(IPC.evtChat, listener);
+    return () => ipcRenderer.removeListener(IPC.evtChat, listener);
   },
-  onFccStatus: (cb: (s: FccStatus) => void): void => {
-    ipcRenderer.on(IPC.evtFcc, (_ev, s) => cb(s));
+  onFccStatus: (cb: (s: FccStatus) => void): (() => void) => {
+    const listener = (_ev: unknown, s: FccStatus): void => cb(s);
+    ipcRenderer.on(IPC.evtFcc, listener);
+    return () => ipcRenderer.removeListener(IPC.evtFcc, listener);
   },
   onTermData: (id: number, cb: (data: string) => void): () => void => {
     const listener = (_ev: unknown, tid: number, data: string): void => {

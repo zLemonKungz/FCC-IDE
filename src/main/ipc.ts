@@ -117,6 +117,18 @@ export function registerIpc(win: BrowserWindow): void {
   ipcMain.handle(IPC.chatControl, (_e, sessionId: string, subtype: string, request: Record<string, unknown>) =>
     chatHost!.control(sessionId, subtype, request)
   );
+  ipcMain.handle(
+    IPC.chatAnswer,
+    (_e, sessionId: string, requestId: string, questions: unknown, answers: Record<string, string>, response?: string) =>
+      chatHost!.answer(sessionId, requestId, questions, answers, response)
+  );
+  ipcMain.handle(IPC.chatAnswerDismiss, (_e, sessionId: string, requestId: string) =>
+    chatHost!.dismiss(sessionId, requestId)
+  );
+  ipcMain.handle(IPC.chatMeta, (_e, sessionId: string, kind: 'cost' | 'context') =>
+    chatHost!.meta(sessionId, kind)
+  );
+  ipcMain.handle(IPC.chatRename, (_e, sessionId: string, title: string) => chatHost!.rename(sessionId, title));
 
   // A bitmap on the system clipboard (e.g. a Win+Shift+S screenshot) can't be
   // read by the sandboxed renderer's Clipboard API under file:// — read it in

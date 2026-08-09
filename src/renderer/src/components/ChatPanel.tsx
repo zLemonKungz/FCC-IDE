@@ -20,7 +20,12 @@ export default function ChatPanel({ style }: { style?: CSSProperties }) {
   const setChatPosition = useLayoutStore((s) => s.setChatPosition);
 
   useEffect(() => {
-    window.fcc.onChatEvent(({ sessionId: s, message }) => handleEvent(s, message));
+    // ChatPanel unmounts when the chat is hidden or switched right/center, and
+    // every remount used to stack a new ipcRenderer listener on the shared
+    // evtChat channel — after a couple of show/hide cycles each stream event
+    // was delivered N times (duplicate bubbles, doubled usage). Unsubscribe on
+    // unmount so the subscription lives exactly as long as the panel.
+    return window.fcc.onChatEvent(({ sessionId: s, message }) => handleEvent(s, message));
   }, [handleEvent]);
 
   // Terminal "Fix" button → review the captured error output in the ACTIVE chat.

@@ -52,9 +52,12 @@ export default function StatusBar() {
   useEffect(() => {
     refresh();
     void detect();
-    window.fcc.onFccStatus((s) => useFccStore.setState({ status: s }));
+    const off = window.fcc.onFccStatus((s) => useFccStore.setState({ status: s }));
     const id = setInterval(refresh, 5000);
-    return () => clearInterval(id);
+    return () => {
+      clearInterval(id);
+      off();
+    };
   }, [refresh, detect]);
 
   return (

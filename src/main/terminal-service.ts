@@ -60,3 +60,12 @@ export function disposeTerminal(id: number): void {
   terminals.get(id)?.kill();
   terminals.delete(id);
 }
+
+/** Kill every terminal (app quit, or renderer gone/evicted). The renderer can't
+ *  reattach after a page reload, so the pty shells must not be left orphaned. */
+export function disposeAll(): void {
+  for (const term of terminals.values()) term.kill();
+  terminals.clear();
+  recent.clear();
+  lastActiveId = null;
+}

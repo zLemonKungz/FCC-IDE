@@ -101,6 +101,24 @@ let lastStatus: FccStatus = { online: false, port: FCC_PORT };
 /** PID of the fcc-server this app spawned (null when it's not ours, e.g. the
  *  FCC tray app started it). Only our own server gets a Stop button. */
 let managedPid: number | null = null;
+
+/** True while the target pid still exists as a process (works on win32 too:
+ *  kill(pid, 0) signals nothing but still probes liveness — EPERM means alive). */
+function processAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    return (err as NodeJS.ErrnoException).code !== 'ESRCH';
+  }
+}
+
+/** Whether the health poll outcome drops our ownership of the fcc-server we
+ *  spawned. Only a confirmed-dead process counts — a mere offline (timeout,
+ *  slow boot, busy server) must keep the pid so Stop/quit cleanup still works. */
+export function shouldClearManagedPid(ok: boolean, pid: number | null): boolean {
+  return !ok && pid !== null && !processAlive(pid);
+}
 /** True while our spawn is booting — the status bar shows "Starting…" instead
  *  of "offline" until the first healthy /health. */
 let starting = false;
@@ -130,8 +148,12 @@ export async function checkHealth(): Promise<FccStatus> {
     });
     req.end();
   });
-  // If it's offline, the process we spawned is gone — stop claiming it.
-  if (!ok) managedPid = null;
+  // If it's offline, drop our ownership of the process only when it is actually
+  // gone. A failed poll here is indistinguishable from the server being busy
+  // (slow boot, load spike, sleep/resume); clearing managedPid on a timeout made
+  // the Stop button vanish permanently and our own detached server leak past
+  // app quit (stopServer would no-op on a null pid).
+  if (shouldClearManagedPid(ok, managedPid)) managedPid = null;
   // Log a change of state (avoids a line every 5s poll when it's stable).
   if (ok !== lastStatus.online) log.info('fcc', ok ? 'server online' : 'server offline');
   lastStatus = buildStatus(ok, FCC_PORT);
@@ -155,12 +177,14 @@ export async function startServer(win?: BrowserWindow): Promise<FccStatus> {
     // simply keeps reporting offline.
     child.on('error', () => {});
     child.unref();
-    const pid = child.pid ?? null;
+    // We own this child from the moment it spawns — a cold uv/Python start can
+    // outlive the boot loop below, and ownership must not depend on the server
+    // coming online within 5s or the Stop button / quit-cleanup would no-op.
+    managedPid = child.pid ?? null;
     for (let i = 0; i < 10; i++) {
       await new Promise((r) => setTimeout(r, 500));
       const s = await checkHealth();
       if (s.online) {
-        managedPid = pid;
         starting = false;
         // Rebuild so the just-set managed flag is reflected immediately.
         const f = buildStatus(true, FCC_PORT);

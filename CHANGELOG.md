@@ -4,6 +4,67 @@ All notable changes to **FCC Studio** are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/) and the project uses
 [SemVer](https://semver.org/).
 
+## [0.1.7] - 2026-08-09
+
+### Added
+- **AskUserQuestion cards** — when a model asks a multiple-choice question via
+  the CLI's `can_use_tool`/AskUserQuestion control, the chat shows a rendered
+  card (options with descriptions and previews, multi-select, free-text) and
+  answers through a `control_response` (the same flow the interactive CLI's
+  choices use). The runner advertises dialog capability at spawn (`initialize`
+  + `supportedDialogKinds`); other `can_use_tool` requests stay auto-allowed.
+  Verified: current FCC-routed models are not yet offered the tool, so the card
+  is dormant until a capable route/model appears.
+- **Chat rename + live session meta** — rename a chat (sends the CLI's
+  `rename_session` and keeps a display title), and a "Refresh live meta" button
+  in Chat settings round-trips `get_session_cost` / `get_context_usage` to show
+  the CLI's own reported session cost and a real context window breakdown
+  (request-id-correlated additions in `cli-runner.query`).
+- **`conversation_reset` + UX notices + turn notifications** — `/clear` and
+  plan-exit (which make the CLI reset its transcript under a new conversation
+  id) now clear the bubble list instead of leaving a ghost conversation; CLI UX
+  notices (`system/notice`, e.g. context forewarning) surface as a banner; and a
+  native notification fires when a turn/plan-approval finishes while the window
+  is unfocused.
+- **Chat columns survive restarts** — the app re-mounts the open chats (id,
+  folder, title) from their saved transcripts on relaunch, with `--resume`
+  armed so the next message continues the live CLI thread. Falls back to the
+  default empty column when nothing to restore.
+- **Secret redaction guard** — exact env-derived secret values (`*_TOKEN` /
+  `*_API_KEY` etc.) and standard token shapes (`sk-ant-…`, `ghp_…`, `AKIA…`,
+  `xox…`, Bearer…) are scrubbed from every streamed chat event (before
+  transcript + IPC) and from `app.log`, instead of only blocking Bash commands.
+
+### Fixed
+- **Context meter no longer counts the CLI's cumulative session total** — the
+  fill % was being driven by `result.modelUsage[model].inputTokens`, which
+  the CLI *sums* on every result (probe: 42,650 → 85,349 → 128,097 = the exact
+  sum of each turn's input), so a short chat read as "300k / 200k" after a few
+  messages while each request actually stayed ~43k. The meter now shows the
+  live window fill: this turn's real input (fresh + cache read + cache write).
+  The cumulative session total is still accumulated in `sessionUsage` for the
+  Chat settings usage panel.
+- **Chat events no longer double-deliver after hiding/switching the panel** —
+  `preload.onChatEvent`/`onFccStatus`/`onTermData` now return an unsubscribe and
+  every caller cleans up on unmount. Before, hiding the chat (Ctrl+Shift+`) or
+  moving it right/center remounted ChatPanel and stacked a new
+  `ipcRenderer.on(evtChat)` listener each time — a couple of show/hide cycles
+  delivered each stream event N times (duplicate bubbles, doubled usage).
+- **Regenerating a mid-stream turn no longer interleaves the old answer** —
+  `regenerate` used to re-ask while the still-running subprocess kept emitting;
+  leftover frames re-appended into the truncated transcript and both `result`
+  events double-counted usage. Regenerate now stops (kills) the subprocess first
+  and drops stale old-turn events until the fresh turn's `started` arrives.
+- **Terminal tabs spawn one pty, not two** — `addTerminal` creates the pty and
+  the tab id IS the pty id; a second idle shell (whose output the error-Fix /
+  Run / Clear actions read instead) is gone. Renderer crashes/reloads and app
+  quit now call `terminal.disposeAll()` so pty shells don't get orphaned.
+- **FCC server ownership survives transient health-check failures** — a single
+  slow poll used to clear `managedPid`, so the Stop button vanished and the app
+  couldn't clean up the detached fcc-server at quit. Ownership is granted at
+  spawn and released only when the process is confirmed dead
+  (`shouldClearManagedPid`).
+
 ## [0.1.6] - 2026-08-09
 
 ### Added
