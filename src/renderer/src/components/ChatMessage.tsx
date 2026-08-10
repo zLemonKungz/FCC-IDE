@@ -86,7 +86,9 @@ export default memo(function ChatMessage({
         </div>
       )}
       {message.thinking && (
-        <details className="msg-thinking" open={false}>
+        /* Uncontrolled on purpose: a controlled open={false} would be re-pinned
+           shut on every stream re-render, snapping a user-expanded block closed. */
+        <details className="msg-thinking">
           <summary>Thinking</summary>
           <pre className="msg-thinking-body">{message.thinking}</pre>
         </details>

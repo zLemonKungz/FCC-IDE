@@ -2,8 +2,9 @@ import { spawn } from 'child_process';
 import { existsSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
-import { net, type BrowserWindow } from 'electron';
+import { app, net, type BrowserWindow } from 'electron';
 import { IPC } from '@shared/ipc';
+import { ensureRelayScript, resolveVenvPython } from './fcc-cache-relay';
 import { log } from './logger';
 import type { FccInstallStatus, FccStatus } from '@shared/types';
 
@@ -168,11 +169,28 @@ export async function startServer(win?: BrowserWindow): Promise<FccStatus> {
     // the renderer route to the setup guide.
     if (!inst.installed) return buildStatus(false, FCC_PORT);
     const bin = inst.serverPath ?? 'fcc-server';
+    // Prefer the cache-relay sidecar: same server, plus a runtime monkey-patch
+    // that surfaces OpenAI-compat prompt-cache usage (cached_tokens) so chats
+    // see real cacheRead/ cost savings. Falls back to the plain binary when the
+    // venv python or relay script is unavailable, so the server still starts.
+    const python = resolveVenvPython();
+    const relayScript = ensureRelayScript(typeof app?.getPath === 'function' ? app.getPath('userData') : null);
+    const useRelay = relayScript !== null && python !== null;
+    const cmd = useRelay ? python! : bin;
+    const cmdArgs = useRelay ? [relayScript] : [];
+    if (useRelay) log.info('fcc', 'cache relay active', { python, script: relayScript });
+    else if (python === null) log.warn('fcc', 'fcc venv python not found — starting the plain fcc-server');
     // Push "starting" immediately so the status bar shows the boot in progress
     // instead of a misleading "offline" during the spawn delay.
     starting = true;
     if (win) win.webContents.send(IPC.evtFcc, buildStatus(false, FCC_PORT));
-    const child = spawn(bin, [], { detached: true, stdio: 'ignore', windowsHide: true });
+    const child = spawn(cmd, cmdArgs, {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true,
+      // The relay legacy has no TTY to open the admin browser for — suppress it.
+      env: useRelay ? { ...process.env, FCC_OPEN_BROWSER: '0' } : process.env
+    });
     // Missing/invalid binary shouldn't crash the app — the 5s health poll
     // simply keeps reporting offline.
     child.on('error', () => {});

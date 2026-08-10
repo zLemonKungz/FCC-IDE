@@ -268,7 +268,10 @@ tool result, so a renderer that ignores controls would show nothing at all:
 renderer (Chat settings → "Refresh live meta" shows the CLI's reported session
 cost and a real context breakdown); `chat:rename` sends `rename_session{title}`
 and stores a display title on the chat. Responses are consumed inside
-`cli-runner` (never forwarded to the renderer as chat events).
+`cli-runner` (never forwarded to the renderer as chat events). Inline rename
+in the column header re-uses the same path: Enter/blur save, Escape cancels via
+a cancel flag — Escape must not rely on blur-unmount (blur would re-fire
+`saveRename` and re-save the cancelled draft).
 
 ### Chat column persistence + secret redaction
 
@@ -289,7 +292,10 @@ and stores a display title on the chat. Responses are consumed inside
   from `chat-host` when the window is unfocused.
 - **CLI thinking blocks carry the text in the `thinking` field, not `text`**
   (short tool-selection thoughts can be signature-only, `thinking:''`). The
-  reducer reads `b.thinking`; `ChatMessage` renders it as a foldable `.msg-thinking`.
+  reducer reads `b.thinking`; `ChatMessage` renders it as a foldable
+  `.msg-thinking` `<details>` — deliberately **uncontrolled** (`open` not
+  pinned): a controlled `open={false}` re-applies on every stream re-render and
+  snaps a user-expanded block shut.
 
 ## 6. Effort & model support detection
 
@@ -402,7 +408,10 @@ and stores a display title on the chat. Responses are consumed inside
   keydown handler now reads `useLayoutStore.getState().sidebarVisible` at
   keydown time (it was a stale mount-time closure that closed the sidebar), and
   the `send()` in-flight guard is armed only after the resume/no-op early-returns
-  (it previously leaked and poisoned a session).
+  (it previously leaked and poisoned a session). The follow-scroll effect uses an
+  **instant** jump on the stream hot path (`behavior:'smooth'` would queue one
+  animating scroll per token batch, each interrupting the last); the explicit
+  scroll-down button is the only place smooth scrolling is used.
 - **Settings dialog + a11y** — `SettingsPage` is `role="dialog" aria-modal="true"`
   and reuses `useModalFocus` (focus in on open, return on close, Escape handled —
   skipping editable fields). The chat message scroll is `role="log" aria-live=
@@ -501,6 +510,19 @@ and stores a display title on the chat. Responses are consumed inside
   `taskkill /pid <pid> /T /F` (win32, detached). A server already running (e.g.
   the tray app) is left untouched — never killed. `will-quit` stops our own
   server.
+- **Cache relay sidecar** (`src/main/fcc-cache-relay.ts` + `scripts/
+  fcc-server-cache.py`): when the app spawns the server it prefers booting the
+  installed proxy through our relay, which monkey-patches
+  `OpenAIChatProvider._anthropic_usage_fields` at runtime so OpenAI-compat
+  upstreams that report prompt-cache fields (Moonshot/Kimi via tokenrouter —
+  `cached_tokens` / `created_cache_tokens`) surface them as
+  `cache_read_input_tokens` / `cache_creation_input_tokens` to the chat. The
+  installed package is never edited, and the python source is embedded in the
+  bundle + written to userData at startup, so it survives `uv tool upgrade` and
+  the asar. Falls back to the plain `fcc-server` whenever the venv python or
+  the script cannot be resolved (`FCC_RELAY_PYTHON` can point at a different
+  python). The relay spawn also sets `FCC_OPEN_BROWSER=0` so managed starts
+  don't pop the admin UI.
 - Chat defaults from env: `FCC_CHAT_MODEL` (default `claude-haiku-4-5-20251001`),
   `FCC_CHAT_MAX_TURNS` (default 50). `settings-store` (persist `fcc-settings`) is the
   source of truth, pushed via `settings:set` → `setChatConfig`.

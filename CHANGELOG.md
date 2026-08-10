@@ -4,6 +4,40 @@ All notable changes to **FCC Studio** are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/) and the project uses
 [SemVer](https://semver.org/).
 
+## [0.1.8] - 2026-08-10
+
+### Added
+- **Cache relay for OpenAI-compat upstreams** — the app now boots the FCC proxy
+  through a sidecar that relays upstream prompt-cache usage (`cached_tokens` /
+  `created_cache_tokens`, e.g. Moonshot Kimi via tokenrouter) into the chat's
+  `cacheRead`/`cacheWrite` numbers, so cached turns actually show as cheaper
+  reads. The installed proxy is never modified (patch lives in this repo, is
+  embedded in the bundle, and is written to userData at startup), and FCC
+  Studio falls back to the plain `fcc-server` when the venv python isn't
+  available.
+
+### Fixed
+- **Chat error banner now uses theme tokens** — its background/border were raw
+  `rgba(224,108,90,…)` literals (the one state banner that didn't follow
+  `--warn`/`--red` tokens), so it wouldn't track a light or red-tinted theme.
+  Now `color-mix` from `--red`.
+- **Escape really cancels an inline chat rename** — blur fired as the title
+  input unmounted after Escape, re-running save and re-saving the draft the
+  user intended to discard. A cancel flag now makes Escape a true cancel while
+  Enter/blur still save.
+
+### Changed
+- **Question cards are keyboard-visible** — `:focus-visible` on the option
+  buttons (a keyboard user tabbing couldn't see which option was focused), and
+  the disabled Answer button explains why it's disabled (`title` hint).
+- **Thinking fold no longer resets while streaming** — the `.msg-thinking`
+  `<details>` was `open={false}`-controlled, so a user-expanded "Thinking" block
+  snapped shut on the next streamed chunk. It's uncontrolled now and stays open.
+- **Streaming auto-scroll is instant, not animated** — the follow-scroll effect
+  ran `behavior:'smooth'` per streamed chunk (one interrupted smooth animation
+  per token batch on the hot path). It now jumps instantly; the explicit
+  scroll-down button keeps the smooth feel.
+
 ## [0.1.7] - 2026-08-09
 
 ### Added

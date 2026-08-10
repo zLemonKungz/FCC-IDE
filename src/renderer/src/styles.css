@@ -2481,8 +2481,8 @@ button.icon-btn:hover {
 .chat-error {
   color: var(--red);
   padding: 8px 12px;
-  background: rgba(224, 108, 90, 0.08);
-  border: 1px solid rgba(224, 108, 90, 0.25);
+  background: color-mix(in srgb, var(--red) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--red) 25%, transparent);
   border-radius: var(--radius-md);
   font-size: 13px;
   animation: msg-in 180ms cubic-bezier(0.4, 0, 0.2, 1) both;
@@ -2658,6 +2658,11 @@ button.icon-btn:hover {
 }
 .qc-option:hover {
   border-color: var(--accent-border);
+}
+.qc-option:focus-visible {
+  border-color: var(--accent-border);
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 .qc-option.active {
   border-color: var(--accent);

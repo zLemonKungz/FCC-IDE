@@ -56,7 +56,9 @@ Semantic status: `--green #4caf7d` (success/online), `--red #e06c5a` (error/offl
 `--yellow #d9a44e` (warning/output), `--blue #6c8cff` (info/running tool).
 Warning surfaces use `--warn-bg` / `--warn-border` — translucent tints of the theme
 `--yellow`, so the context-full banner/meter share the hue without hardcoding a color
-(dark `rgba(217,164,78,.08/.35)`, light `rgba(185,138,46,.10/.35)`).
+(dark `rgba(217,164,78,.08/.35)`, light `rgba(185,138,46,.10/.35)`). Error surfaces
+(`.chat-error`) do the same with `--red` via `color-mix(in srgb, var(--red) 8%/25%,
+transparent)` — no raw rgba error literals in styles.
 
 ### Light
 
@@ -202,6 +204,13 @@ the window center grows the panel); the left sidebar is **not** inverted.
   **⚡ Fix** chip (`term-fix`, appears on error output) opens the error in chat.
   **Checkpoints**: hovering an assistant bubble shows a **⟲** (`rewind-btn`) that
   restores the open files to their state just before that message.
+- **Question card** (`.question-card`, model-issued AskUserQuestion): one header
+  chip + question + `multi-select` tag, option buttons `.qc-option` (radio/
+  checkbox dots, description + optional preview lines), and a free-text "own
+  answer" input. Options are real `<button>`s — `:hover`/`.active` tint the
+  accent border, and `:focus-visible` gets the standard 3px `--accent-dim` ring
+  so keyboard users see focus. The Answer button carries a `title` explaining
+  why it's disabled (nothing picked / nothing typed).
 - **Markdown** renders through a single shared component (`src/renderer/src/chat/
   markdown.tsx`, react-markdown + GFM + math/katex + slug/autolink headings)
   wrapping its output in **`.fcc-md`** — style markdown via `.fcc-md` element

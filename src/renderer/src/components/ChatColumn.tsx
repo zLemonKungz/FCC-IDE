@@ -204,6 +204,9 @@ export default memo(function ChatColumn({ id, label }: { id: string; label: stri
   const [atPicker, setAtPicker] = useState<{ open: boolean; index: number; files: string[] }>({ open: false, index: 0, files: [] });
   const [renaming, setRenaming] = useState(false);
   const [draft, setDraft] = useState('');
+  // Set true when Escape cancels a rename — blur fires as the input unmounts and
+  // would otherwise re-run saveRename, re-saving the draft the user cancelled.
+  const renameCancelRef = useRef(false);
   // File list for '@' mentions, cached once per open folder (fs:search walks it).
   const filesCache = useRef<{ root: string | null; list: string[] }>({ root: null, list: [] });
   const atStartRef = useRef(-1);
@@ -226,8 +229,11 @@ export default memo(function ChatColumn({ id, label }: { id: string; label: stri
 
   useEffect(() => {
     // Follow new content only while the user is at the bottom — otherwise they
-    // are reading older turns and shouldn't be yanked down.
-    if (atBottom) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    // are reading older turns and shouldn't be yanked down. Instant jump on the
+    // stream hot path: behavior:'smooth' here queues one smooth animation per
+    // token batch mid-stream (they interrupt each other); the explicit
+    // scroll-down button is the place for the animated feel.
+    if (atBottom) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages, help, atBottom]);
 
   // Auto-grow the input with its content (1 line up to a ~5-line cap).
@@ -309,6 +315,10 @@ export default memo(function ChatColumn({ id, label }: { id: string; label: stri
   // Inline rename: Enter/blur saves, Escape cancels; an empty draft keeps the
   // previous title (renameSession only fires with a non-empty name).
   const saveRename = (): void => {
+    if (renameCancelRef.current) {
+      renameCancelRef.current = false;
+      return;
+    }
     const t = draft.trim();
     setRenaming(false);
     if (t) st().renameSession(id, t);
@@ -559,6 +569,7 @@ Type anything else to send it to Claude.`;
                   e.preventDefault();
                   saveRename();
                 } else if (e.key === 'Escape') {
+                  renameCancelRef.current = true;
                   setRenaming(false);
                 }
               }}
@@ -572,6 +583,7 @@ Type anything else to send it to Claude.`;
                 title="Rename chat"
                 aria-label="Rename chat"
                 onClick={() => {
+                  renameCancelRef.current = false;
                   setDraft(session?.title ?? label);
                   setRenaming(true);
                 }}

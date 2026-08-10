@@ -89,7 +89,13 @@ export default memo(function QuestionCard({
         </div>
       ))}
       <div className="qc-actions">
-        <button type="button" className="call primary" onClick={() => onAnswer(answers)} disabled={!complete || disabled}>
+        <button
+          type="button"
+          className="call primary"
+          onClick={() => onAnswer(answers)}
+          disabled={!complete || disabled}
+          title={complete ? 'Submit answers' : 'Pick an option or type an answer for each question'}
+        >
           Answer
         </button>
         <button type="button" className="call ghost" onClick={onDismiss} disabled={disabled}>
